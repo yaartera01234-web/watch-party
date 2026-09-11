@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🎬 Watch Party — Solo Test</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  height: 100%; overflow: hidden;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  color: #fff;
+}
+.hidden { display: none !important; }
+#join-screen { height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.join-card {
+  background: rgba(255,255,255,0.08); backdrop-filter: blur(15px);
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 24px;
+  padding: 40px 35px; text-align: center; width: 100%; max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.join-card .logo { font-size: 64px; animation: bounce 2s infinite; }
+@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+.join-card h1 { font-size: 34px; background: linear-gradient(90deg,#ff6ec4,#7873f5,#4ade80); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; margin: 5px 0; }
+.tagline { color: #c4b5fd; margin-bottom: 18px; font-size: 14px; }
+.test-badge { display:inline-block; font-size:14px; font-weight:bold; background:rgba(244,114,182,0.18); color:#f9a8d4; padding:7px 18px; border-radius:20px; margin-bottom:16px; border:1px solid rgba(244,114,182,0.45); box-shadow:0 0 18px rgba(244,114,182,0.35); }
+#name-input { width:100%; padding:14px 18px; border-radius:14px; border:2px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.1); color:#fff; font-size:17px; outline:none; text-align:center; }
+#name-input:focus { border-color:#a78bfa; }
+#join-btn { width:100%; margin-top:14px; padding:14px; border:none; border-radius:14px; font-size:18px; font-weight:bold; color:#fff; cursor:pointer; background:linear-gradient(90deg,#f472b6,#a78bfa,#60a5fa); }
+#join-btn:hover { transform:scale(1.03); }
+.features { margin-top:18px; display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+.features span { font-size:12px; background:rgba(255,255,255,0.12); padding:5px 12px; border-radius:20px; }
+#app { height:100vh; display:flex; flex-direction:column; }
+header { display:flex; justify-content:space-between; align-items:center; padding:10px 18px; background:rgba(0,0,0,0.35); border-bottom:1px solid rgba(255,255,255,0.1); flex-shrink:0; }
+.brand { font-size:22px; font-weight:bold; }
+.brand span { background:linear-gradient(90deg,#ff6ec4,#7873f5); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+.header-right { display:flex; gap:10px; align-items:center; font-size:14px; }
+#online-count { background:rgba(74,222,128,0.15); padding:5px 12px; border-radius:20px; }
+#my-name-badge { background:linear-gradient(90deg,#f472b6,#a78bfa); padding:5px 14px; border-radius:20px; font-weight:bold; }
+main { flex:1; display:flex; gap:12px; padding:12px; min-height:0; }
+.video-side { flex:2.2; display:flex; flex-direction:column; gap:8px; min-width:0; }
+.url-bar { display:flex; gap:8px; flex-shrink:0; }
+#url-input { flex:1; padding:12px 16px; border-radius:12px; border:2px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.08); color:#fff; font-size:14px; outline:none; min-width:0; }
+#url-input:focus { border-color:#a78bfa; }
+#load-btn { padding:12px 18px; border:none; border-radius:12px; font-weight:bold; color:#fff; cursor:pointer; background:linear-gradient(90deg,#22c55e,#16a34a); white-space:nowrap; }
+#load-btn:hover { filter:brightness(1.15); }
+.row-mini-title { font-size:11px; color:#a5b4fc; font-weight:bold; flex-shrink:0; margin-bottom:-4px; }
+.quick-row { display:flex; gap:8px; flex-shrink:0; flex-wrap:wrap; }
+.quick-row button { flex:1; min-width:100px; padding:9px 6px; border:none; border-radius:10px; font-size:12px; font-weight:bold; color:#fff; cursor:pointer; }
+#test-song1-btn { background:linear-gradient(90deg,#ef4444,#f97316); }
+#test-song2-btn { background:linear-gradient(90deg,#ec4899,#8b5cf6); }
+#test-song3-btn { background:linear-gradient(90deg,#06b6d4,#3b82f6); }
+#test-mp3a-btn { background:linear-gradient(90deg,#10b981,#14b8a6); }
+#test-mp3b-btn { background:linear-gradient(90deg,#84cc16,#10b981); }
+#test-mp4-btn { background:linear-gradient(90deg,#8b5cf6,#6366f1); }
+#test-mp4b-btn { background:linear-gradient(90deg,#6366f1,#3b82f6); }
+.quick-row button:hover { filter:brightness(1.15); }
+.alt-row { display:flex; gap:8px; flex-shrink:0; }
+.alt-row button, .alt-row a { flex:1; padding:8px 6px; border-radius:10px; font-size:12px; font-weight:bold; color:#fff; cursor:pointer; text-align:center; text-decoration:none; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.1); }
+.alt-row button:hover, .alt-row a:hover { background:rgba(255,255,255,0.2); }
+.player-wrap { flex:1; min-height:0; background:#000; border-radius:16px; overflow:hidden; position:relative; border:1px solid rgba(255,255,255,0.12); }
+#yt-frame, #mp4-player { width:100%; height:100%; position:absolute; inset:0; border:none; }
+#mp4-player { object-fit:contain; background:#000; }
+#audio-art { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; font-size:64px; background:radial-gradient(circle at 50% 40%, #312e81, #000); color:#fff; z-index:2; pointer-events:none; }
+#audio-art small { font-size:14px; color:#a5b4fc; }
+#no-video { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#a5b5fc; gap:10px; padding:20px; }
+.big-emoji { font-size:60px; }
+#now-playing { flex-shrink:0; font-size:13px; color:#c4b5fd; background:rgba(0,0,0,0.3); padding:9px 14px; border-radius:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.chat-side { flex:1; min-width:280px; max-width:380px; display:flex; flex-direction:column; background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.1); border-radius:16px; overflow:hidden; min-height:0; }
+.users-box { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.08); flex-shrink:0; max-height:110px; overflow-y:auto; }
+.users-title { font-size:13px; color:#c4b5fd; margin-bottom:6px; font-weight:bold; }
+#user-list { display:flex; flex-wrap:wrap; gap:6px; }
+.user-chip { font-size:12px; padding:3px 10px; border-radius:20px; background:rgba(255,255,255,0.1); border-left:3px solid #fff; }
+.chat-title { padding:8px 14px 0; font-weight:bold; font-size:15px; flex-shrink:0; }
+.reply-hint { font-size:11px; color:#8b8bad; padding:2px 14px 6px; flex-shrink:0; }
+#chat-messages { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:8px; min-height:0; scroll-behavior:smooth; }
+#chat-messages::-webkit-scrollbar { width:6px; }
+#chat-messages::-webkit-scrollbar-thumb { background:#a78bfa; border-radius:3px; }
+.msg { display:flex; flex-direction:column; max-width:85%; animation:pop 0.2s ease; touch-action:pan-y; user-select:none; -webkit-user-select:none; }
+@keyframes pop { from{transform:scale(0.9);opacity:0} to{transform:scale(1);opacity:1} }
+.msg.other { align-self:flex-start; }
+.msg.own { align-self:flex-end; }
+.msg .sender { font-size:11px; font-weight:bold; margin-bottom:2px; padding-left:8px; }
+.msg .bubble { padding:8px 12px 6px; border-radius:16px; font-size:14px; word-wrap:break-word; line-height:1.35; }
+.msg.other .bubble { background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.1); border-top-left-radius:4px; }
+.msg.own .bubble { background:linear-gradient(135deg,#f472b6,#a78bfa); border-top-right-radius:4px; }
+.msg .time { font-size:10px; opacity:0.65; margin-top:2px; padding:0 8px; align-self:flex-end; }
+.msg.other .time { align-self:flex-start; }
+/* WhatsApp style quote inside bubble */
+.quote { background:rgba(0,0,0,0.28); border-left:3px solid #4ade80; border-radius:8px; padding:5px 9px; margin-bottom:6px; }
+.msg.own .quote { border-left-color:#fde68a; background:rgba(0,0,0,0.22); }
+.quote .q-name { font-weight:bold; font-size:11px; margin-bottom:1px; }
+.msg.other .quote .q-name { color:#4ade80; }
+.msg.own .quote .q-name { color:#fde68a; }
+.quote .q-text { opacity:0.9; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; }
+.sys-msg { align-self:center; font-size:12px; color:#fcd34d; background:rgba(252,211,77,0.1); padding:4px 14px; border-radius:20px; text-align:center; }
+#typing-indicator { font-size:12px; color:#4ade80; padding:2px 14px; flex-shrink:0; font-style:italic; }
+#new-msg-btn { align-self:center; margin:4px; padding:5px 16px; border-radius:20px; border:none; background:#a78bfa; color:#fff; font-size:12px; cursor:pointer; flex-shrink:0; }
+.chat-input-bar { flex-shrink:0; border-top:1px solid rgba(255,255,255,0.08); padding:8px 10px 10px; }
+/* Reply preview bar above input */
+#reply-bar { display:none; align-items:center; gap:8px; background:rgba(255,255,255,0.08); border-radius:12px; padding:7px 10px; margin-bottom:6px; animation:pop 0.15s ease; }
+#reply-bar.show { display:flex; }
+.rb-line { width:4px; align-self:stretch; border-radius:2px; background:linear-gradient(#f472b6,#a78bfa); flex-shrink:0; }
+.rb-text { flex:1; min-width:0; }
+#rb-name { font-size:11px; font-weight:bold; color:#f9a8d4; }
+#rb-msg { font-size:12px; color:#d1d5db; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#rb-cancel { background:rgba(255,255,255,0.12); border:none; color:#fff; width:26px; height:26px; border-radius:50%; font-size:13px; cursor:pointer; flex-shrink:0; }
+.emoji-row { display:flex; gap:2px; margin-bottom:6px; }
+.emoji { background:none; border:none; font-size:20px; cursor:pointer; }
+.emoji:hover { transform:scale(1.3); }
+.input-row { display:flex; gap:8px; }
+#chat-input { flex:1; padding:11px 14px; border-radius:24px; border:2px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.08); color:#fff; font-size:14px; outline:none; min-width:0; }
+#chat-input:focus { border-color:#f472b6; }
+#send-btn { width:44px; height:44px; border-radius:50%; border:none; background:linear-gradient(135deg,#f472b6,#a78bfa); color:#fff; font-size:18px; cursor:pointer; flex-shrink:0; }
+@media (max-width:850px) { main{flex-direction:column; overflow-y:auto;} .video-side{flex:none;} .player-wrap{height:260px; flex:none;} .chat-side{flex:none; max-width:none; height:420px;} }
+</style>
+</head>
+<body>
+
+<div id="join-screen">
+  <div class="join-card">
+    <div class="logo">🎬</div>
+    <h1>Watch Party</h1>
+    <div class="test-badge">Feel Special With Me 🥰 💗</div>
+    <p class="tagline">Songs, videos + chatting!</p>
+    <input id="name-input" type="text" placeholder="Apna name likho..." maxlength="20" autocomplete="off" />
+    <button id="join-btn">🥳 Party Me Enter Ho</button>
+    <div class="features"><span>🎵 MP3 Songs</span><span>🎞️ MP4 Videos</span><span>▶️ YouTube</span><span>↩️ Swipe Reply</span></div>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <header>
+    <div class="brand">🎬 <span>Watch Party</span></div>
+    <div class="header-right">
+      <div id="online-count">🟢 2 online</div>
+      <div id="my-name-badge"></div>
+    </div>
+  </header>
+  <main>
+    <section class="video-side">
+      <div class="url-bar">
+        <input id="url-input" type="text" placeholder="YouTube / MP4 / MP3 link paste karo..." autocomplete="off" />
+        <button id="load-btn">▶ Play</button>
+      </div>
+      <div class="row-mini-title">🎵 SONGS & VIDEOS:</div>
+      <div class="quick-row">
+        <button id="test-mp3a-btn">🎵 Song A</button>
+        <button id="test-mp3b-btn">🎵 Song B</button>
+        <button id="test-mp4-btn">🎞️ Video 1</button>
+        <button id="test-mp4b-btn">🎞️ Video 2</button>
+      </div>
+      <div class="row-mini-title">▶️ YOUTUBE:</div>
+      <div class="quick-row">
+        <button id="test-song1-btn">YT 1: Faded</button>
+        <button id="test-song2-btn">YT 2</button>
+        <button id="test-song3-btn">YT 3</button>
+      </div>
+      <div class="alt-row hidden" id="yt-tools">
+        <button id="alt-player-btn">🔄 Alt Player Try Karo</button>
+        <a id="yt-open-link" href="#" target="_blank">📺 YouTube App Me Kholo</a>
+      </div>
+      <div class="player-wrap">
+        <iframe id="yt-frame" class="hidden" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <video id="mp4-player" class="hidden" controls playsinline></video>
+        <div id="audio-art" class="hidden">🎵<small id="audio-label">Song chal raha hai...</small></div>
+        <div id="no-video"><div class="big-emoji">🍿</div><p><b>🎵 Song A</b> dabao — foran song chalega!<br/>Ya apna link paste karo 👆</p></div>
+      </div>
+      <div id="now-playing">🎵 Song ke liye Song A dabao | 🎞️ Video ke liye Video 1 dabao 👆</div>
+    </section>
+    <aside class="chat-side">
+      <div class="users-box">
+        <div class="users-title">👥 Party Members (<span id="user-count">2</span>)</div>
+        <div id="user-list"></div>
+      </div>
+      <div class="chat-title">💬 Live Chat</div>
+      <div class="reply-hint">↩️ Reply: kisi msg ko <b>swipe right</b> ya <b>double-tap</b> karo</div>
+      <div id="chat-messages"></div>
+      <div id="typing-indicator" class="hidden"></div>
+      <button id="new-msg-btn" class="hidden">⬇ Naye messages</button>
+      <div class="chat-input-bar">
+        <div id="reply-bar">
+          <div class="rb-line"></div>
+          <div class="rb-text"><div id="rb-name"></div><div id="rb-msg"></div></div>
+          <button id="rb-cancel">✕</button>
+        </div>
+        <div class="emoji-row">
+          <button class="emoji" data-e="😂">😂</button>
+          <button class="emoji" data-e="❤️">❤️</button>
+          <button class="emoji" data-e="🔥">🔥</button>
+          <button class="emoji" data-e="😭">😭</button>
+          <button class="emoji" data-e="👏">👏</button>
+          <button class="emoji" data-e="🥳">🥳</button>
+          <button class="emoji" data-e="😮">😮</button>
+          <button class="emoji" data-e="👍">👍</button>
+        </div>
+        <div class="input-row">
+          <input id="chat-input" type="text" placeholder="Message likho..." maxlength="500" autocomplete="off" />
+          <button id="send-btn">➤</button>
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let myName = 'Guest';
+let currentYT = null;
+let useNoCookie = false;
+let replyTo = null; // { name, text } — jis msg ka reply ho raha hai
+
+const joinScreen=$('join-screen'), app=$('app'), nameInput=$('name-input'), joinBtn=$('join-btn');
+const urlInput=$('url-input'), loadBtn=$('load-btn');
+const ytFrame=$('yt-frame'), mp4=$('mp4-player'), noVideo=$('no-video'), nowPlaying=$('now-playing');
+const audioArt=$('audio-art'), audioLabel=$('audio-label');
+const chatBox=$('chat-messages'), chatInput=$('chat-input'), sendBtn=$('send-btn');
+const userList=$('user-list'), typingInd=$('typing-indicator'), newMsgBtn=$('new-msg-btn');
+const ytTools=$('yt-tools'), ytOpenLink=$('yt-open-link');
+const replyBar=$('reply-bar'), rbName=$('rb-name'), rbMsg=$('rb-msg');
+
+const SONGS = {
+  song1: { id: '60ItHLz5WEA', label: 'Faded - Alan Walker' },
+  song2: { id: 'dQw4w9WgXcQ', label: 'Never Gonna Give You Up' },
+  song3: { id: '9bZkp7q19f0', label: 'Gangnam Style - PSY' }
+};
+const MP3_A = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
+const MP3_B = 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3';
+const MP4_A = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+const MP4_B = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+
+const BOT_REPLIES = [
+  'Wah kya song hai! 🔥', 'Ye wala mera favourite hai ❤️', 'Volume full karo! 🔊',
+  '😂😂😂', 'Party shuru! 🥳', 'Next song meri pasand ka lagega 😎',
+  'Kya beat hai 👏👏', 'Maza aa gaya! 🤩', 'Ye scene best tha 😮', 'Aur tez! 🚀'
+];
+let replyIdx = 0;
+
+function now() { return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
+function isNearBottom() { return chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight < 80; }
+function scrollChatDown() { chatBox.scrollTop = chatBox.scrollHeight; }
+chatBox.addEventListener('scroll', () => { if (isNearBottom()) newMsgBtn.classList.add('hidden'); });
+newMsgBtn.onclick = () => { scrollChatDown(); newMsgBtn.classList.add('hidden'); };
+
+// ===== REPLY: swipe-right / double-tap par msg select =====
+function setReply(msg) {
+  replyTo = { name: msg.own ? 'You' : msg.name, text: msg.text };
+  rbName.textContent = '↩ Replying to ' + replyTo.name;
+  rbMsg.textContent = replyTo.text;
+  replyBar.classList.add('show');
+  chatInput.focus();
+}
+function cancelReply() {
+  replyTo = null;
+  replyBar.classList.remove('show');
+}
+$('rb-cancel').onclick = cancelReply;
+
+function attachReplyGestures(el, msg) {
+  // Desktop: double-click
+  el.addEventListener('dblclick', (e) => { e.preventDefault(); setReply(msg); });
+  // Mobile: swipe right
+  let sx = 0, sy = 0, dx = 0, swiping = false;
+  el.addEventListener('touchstart', (e) => {
+    const t = e.touches[0]; sx = t.clientX; sy = t.clientY; dx = 0; swiping = false;
+  }, { passive: true });
+  el.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 1) return;
+    const t = e.touches[0]; dx = t.clientX - sx; const dy = t.clientY - sy;
+    if (!swiping && dx > 12 && Math.abs(dx) > Math.abs(dy) * 1.5) swiping = true;
+    if (swiping) {
+      e.preventDefault();
+      el.style.transition = 'none';
+      el.style.transform = 'translateX(' + Math.min(dx, 110) + 'px)';
+    }
+  }, { passive: false });
+  el.addEventListener('touchend', () => {
+    el.style.transition = 'transform 0.2s ease';
+    el.style.transform = '';
+    if (swiping && dx > 60) setReply(msg);
+    swiping = false; dx = 0;
+  });
+}
+
+function addMsg(name, color, text, own, reply) {
+  const wasBottom = isNearBottom();
+  const wrap = document.createElement('div');
+  wrap.className = 'msg ' + (own ? 'own' : 'other');
+  const s = document.createElement('div'); s.className='sender'; s.textContent = own ? 'You' : name; s.style.color = own ? '#f9a8d4' : color;
+  const b = document.createElement('div'); b.className='bubble';
+  if (reply) {
+    const q = document.createElement('div'); q.className='quote';
+    const qn = document.createElement('div'); qn.className='q-name'; qn.textContent = reply.name;
+    const qt = document.createElement('div'); qt.className='q-text'; qt.textContent = reply.text;
+    q.appendChild(qn); q.appendChild(qt); b.appendChild(q);
+  }
+  b.appendChild(document.createTextNode(text));
+  const t = document.createElement('div'); t.className='time'; t.textContent = now() + (own ? ' ✓✓' : '');
+  wrap.appendChild(s); wrap.appendChild(b); wrap.appendChild(t);
+  chatBox.appendChild(wrap);
+  attachReplyGestures(wrap, { name, text, own });
+  if (wasBottom || own) scrollChatDown(); else newMsgBtn.classList.remove('hidden');
+}
+function addSys(text) {
+  const d = document.createElement('div'); d.className='sys-msg'; d.textContent = text;
+  chatBox.appendChild(d); if (isNearBottom()) scrollChatDown();
+}
+
+function join() {
+  const n = nameInput.value.trim();
+  if (!n) { alert('Pehle apna name likho! 😊'); return; }
+  myName = n.slice(0,20);
+  joinScreen.classList.add('hidden'); app.classList.remove('hidden');
+  $('my-name-badge').textContent = '😎 ' + myName;
+  userList.innerHTML = '';
+  [['😎 '+myName,'#f472b6'],['🤖 Party Bot','#4ade80']].forEach(([nm,c]) => {
+    const chip = document.createElement('span'); chip.className='user-chip';
+    chip.style.borderLeftColor = c; chip.textContent = nm; userList.appendChild(chip);
+  });
+  addSys(myName + ' party me join ho gaya 🎉');
+  setTimeout(() => addMsg('Party Bot 🤖','#4ade80','Welcome '+myName+'! 🎉 Mere msg ko swipe/double-tap kar ke reply try karo! ↩️', false, null), 800);
+}
+joinBtn.onclick = join;
+nameInput.addEventListener('keydown', e => { if (e.key==='Enter') join(); });
+
+// ===== VIDEO / AUDIO =====
+function hideAllPlayers() {
+  ytFrame.classList.add('hidden'); ytFrame.removeAttribute('src');
+  mp4.classList.add('hidden'); mp4.pause();
+  audioArt.classList.add('hidden');
+  noVideo.classList.add('hidden'); ytTools.classList.add('hidden');
+}
+function renderYT() {
+  if (!currentYT) return;
+  const host = useNoCookie ? 'https://www.youtube-nocookie.com' : 'https://www.youtube.com';
+  ytFrame.src = host + '/embed/' + currentYT.id + '?autoplay=1&rel=0';
+  ytOpenLink.href = 'https://www.youtube.com/watch?v=' + currentYT.id;
+  nowPlaying.textContent = '▶ ' + currentYT.label + (useNoCookie ? ' (alt player 🔄)' : '') + ' — na chale to video par tap karo 🔊';
+}
+function playYouTube(id, label) {
+  hideAllPlayers();
+  ytFrame.classList.remove('hidden'); ytTools.classList.remove('hidden');
+  currentYT = { id, label };
+  renderYT();
+  addSys('🎬 ' + myName + ' ne YouTube lagaya: ' + label + ' 🎵');
+}
+function playDirect(url, kind, label) {
+  hideAllPlayers();
+  currentYT = null;
+  mp4.classList.remove('hidden');
+  if (kind === 'audio') { audioArt.classList.remove('hidden'); audioLabel.textContent = '🎵 ' + label + ' chal raha hai...'; }
+  mp4.src = url;
+  mp4.play().then(() => {
+    nowPlaying.textContent = kind === 'audio' ? ('🔊 MP3 song chal raha hai ✅ — ' + label + ' 🎵') : ('🎞 MP4 video chal rahi hai ✅ — ' + label);
+  }).catch(() => {
+    nowPlaying.textContent = 'Load ho gaya — player par tap kar ke Play dabao ▶';
+  });
+  addSys(kind === 'audio' ? ('🎵 ' + myName + ' ne song lagaya: ' + label) : ('🎞 ' + myName + ' ne video lagai: ' + label));
+}
+function parseURL(url) {
+  url = url.trim();
+  const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  if (yt) return { type:'youtube', videoId: yt[1] };
+  if (/\.(mp3|wav|ogg|m4a)(\?|#|$)/i.test(url)) return { type:'audio', url };
+  return { type:'video', url };
+}
+loadBtn.onclick = () => {
+  const val = urlInput.value.trim();
+  if (!val) { alert('Pehle link paste karo! 🔗 (YouTube / MP4 / MP3)'); return; }
+  const d = parseURL(val);
+  if (d.type === 'youtube') playYouTube(d.videoId, 'YouTube video');
+  else if (d.type === 'audio') playDirect(d.url, 'audio', 'MP3 song');
+  else playDirect(d.url, 'video', 'MP4 video');
+  urlInput.value = '';
+};
+$('test-song1-btn').onclick = () => playYouTube(SONGS.song1.id, SONGS.song1.label);
+$('test-song2-btn').onclick = () => playYouTube(SONGS.song2.id, SONGS.song2.label);
+$('test-song3-btn').onclick = () => playYouTube(SONGS.song3.id, SONGS.song3.label);
+$('test-mp3a-btn').onclick = () => playDirect(MP3_A, 'audio', 'Song A');
+$('test-mp3b-btn').onclick = () => playDirect(MP3_B, 'audio', 'Song B');
+$('test-mp4-btn').onclick = () => playDirect(MP4_A, 'video', 'Video 1');
+$('test-mp4b-btn').onclick = () => playDirect(MP4_B, 'video', 'Video 2');
+$('alt-player-btn').onclick = () => {
+  useNoCookie = !useNoCookie;
+  renderYT();
+  addSys(useNoCookie ? '🔄 Alt player try ho raha hai...' : '🔄 Normal player wapis...');
+};
+
+// ===== CHAT + BOT =====
+function sendChat() {
+  const text = chatInput.value.trim();
+  if (!text) return;
+  const myReply = replyTo;
+  addMsg(myName, '#f472b6', text, true, myReply);
+  chatInput.value = '';
+  cancelReply();
+  typingInd.textContent = '✍ Party Bot likh raha hai...'; typingInd.classList.remove('hidden');
+  setTimeout(() => {
+    typingInd.classList.add('hidden');
+    // Bot bhi quote ke sath jawab deta hai (jaise real dost karega!)
+    addMsg('Party Bot 🤖', '#4ade80', BOT_REPLIES[replyIdx % BOT_REPLIES.length], false, { name: 'You', text: text });
+    replyIdx++;
+  }, 1200);
+}
+sendBtn.onclick = sendChat;
+chatInput.addEventListener('keydown', e => { if (e.key==='Enter') sendChat(); });
+document.querySelectorAll('.emoji').forEach(b => { b.onclick = () => { chatInput.value += b.dataset.e; chatInput.focus(); }; });
+</script>
+</body>
+</html>

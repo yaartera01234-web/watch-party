@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🎬 Watch Party</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ===== JOIN SCREEN ===== -->
+<div id="join-screen">
+  <div class="join-card">
+    <div class="logo">🎬</div>
+    <h1>Watch Party</h1>
+    <div class="test-badge">Feel Special With Me 🥰 💗</div>
+    <p class="tagline">Doston ke sath YouTube & MP4 dekho + live chatting karo!</p>
+    <div class="avatar-pick">
+      <div id="avatar-preview"></div>
+      <div class="avatar-btns">
+        <button id="avatar-upload-btn" type="button">📷 Photo</button>
+        <button id="avatar-shuffle-btn" type="button">🎲 Cartoon</button>
+      </div>
+      <input id="avatar-file" type="file" accept="image/*" class="hidden" />
+    </div>
+    <input id="name-input" type="text" placeholder="Apna name likho..." maxlength="20" autocomplete="off" />
+    <button id="join-btn">🥳 Party Me Enter Ho</button>
+    <div class="features">
+      <span>▶️ YouTube</span><span>🎞️ MP4/MP3</span><span>📋 Playlist</span><span>🖼️ DP</span><span>↩️ Reply</span><span>🔄 Sync</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN APP ===== -->
+<div id="app" class="hidden">
+  <header>
+    <div class="brand">🎬 <span>Watch Party</span></div>
+    <div class="header-right">
+      <div id="online-count">🟢 0 online</div>
+      <div id="my-name-badge"></div>
+    </div>
+  </header>
+
+  <main>
+    <!-- VIDEO SIDE -->
+    <section class="video-side">
+      <div class="url-bar">
+        <input id="url-input" type="text" placeholder="YouTube / MP4 / MP3 link paste karo..." autocomplete="off" />
+        <button id="load-btn">▶ Play Sab Ke Liye</button>
+        <button id="queue-btn">➕ Queue</button>
+      </div>
+      <div class="player-wrap">
+        <div id="yt-player"></div>
+        <video id="mp4-player" class="hidden" controls playsinline></video>
+        <div id="no-video">
+          <div class="big-emoji">🍿</div>
+          <p>Uper link paste karo aur <b>Play</b> dabao —<br/>sab ke pas ek sath chalega!</p>
+        </div>
+      </div>
+      <div id="now-playing">Koi video play nahi ho rahi — pehle link lagao 👆</div>
+      <div class="sync-row">
+        <button id="sync-btn">🔄 Sab Ko Sync Karo</button>
+        <span class="sync-hint">kisi ka video agay-peeche ho to dabao</span>
+      </div>
+      <div class="playlist-box">
+        <div class="pl-head">📋 Playlist (<span id="pl-count">0</span>)<button id="pl-clear">🗑 Saaf Karo</button></div>
+        <div id="pl-list"><div class="pl-empty">Koi song queue me nahi — link paste kar ke ➕ Queue dabao 🎶</div></div>
+      </div>
+    </section>
+
+    <!-- CHAT SIDE -->
+    <aside class="chat-side">
+      <div class="users-box">
+        <div class="users-title">👥 Party Members (<span id="user-count">0</span>)</div>
+        <div id="user-list"></div>
+      </div>
+
+      <div class="chat-title">💬 Live Chat</div>
+      <div class="reply-hint">↩️ Reply: kisi msg ko <b>swipe right</b> ya <b>double-tap</b> karo</div>
+      <div id="chat-messages"></div>
+      <div id="typing-indicator" class="hidden"></div>
+      <button id="new-msg-btn" class="hidden">⬇ Naye messages</button>
+
+      <div class="chat-input-bar">
+        <div id="reply-bar">
+          <div class="rb-line"></div>
+          <div class="rb-text"><div id="rb-name"></div><div id="rb-msg"></div></div>
+          <button id="rb-cancel">✕</button>
+        </div>
+        <div class="emoji-row">
+          <button class="emoji" data-e="😂">😂</button>
+          <button class="emoji" data-e="❤️">❤️</button>
+          <button class="emoji" data-e="🔥">🔥</button>
+          <button class="emoji" data-e="😭">😭</button>
+          <button class="emoji" data-e="👏">👏</button>
+          <button class="emoji" data-e="🥳">🥳</button>
+          <button class="emoji" data-e="😮">😮</button>
+          <button class="emoji" data-e="👍">👍</button>
+        </div>
+        <div class="input-row">
+          <input id="chat-input" type="text" placeholder="Message likho..." maxlength="500" autocomplete="off" />
+          <button id="send-btn">➤</button>
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script src="client.js"></script>
+</body>
+</html>
