@@ -423,7 +423,7 @@ setInterval(() => {
   Object.keys(membersCache).forEach((id) => {
     const u = membersCache[id];
     if (u && u.ts && now - u.ts > 90000 && id !== myId) {
-      addSysMsg((u.name || 'Koi') + ' chala gaya \uD83D\uDC4B');
+      addSysMsg((u.name || 'Koi') + ' chala gaya \uD83D\uDC4B'); tuneLeave();
       try { client.publish(ROOM + '/members/' + id, '', { qos: 1, retain: true }); } catch (e) {}
       delete membersCache[id];
       changed = true;
@@ -462,7 +462,7 @@ function onMsg(topic, buf) {
   } else if (topic === TP.events) {
     let ev; try { ev = JSON.parse(str); } catch (e) { return; }
     if (!ev || dup(ev.mid)) return;
-    if (ev.t === 'join' && ev.from !== myId) addSysMsg(ev.name + ' party me join ho gaya 🎉');
+    if (ev.t === 'join' && ev.from !== myId) { addSysMsg(ev.name + ' party me join ho gaya 🎉'); tuneJoin(); }
   } else if (topic.indexOf(ROOM + '/members/') === 0) {
     const id = topic.slice((ROOM + '/members/').length);
     if (!str) {
@@ -470,7 +470,7 @@ function onMsg(topic, buf) {
         const nm = membersCache[id].name || 'Koi';
         delete membersCache[id];
         renderMembers();
-        if (id !== myId) addSysMsg(nm + ' chala gaya 👋');
+        if (id !== myId) { addSysMsg(nm + ' chala gaya 👋'); tuneLeave(); }
       }
     } else {
       try {
@@ -924,6 +924,31 @@ function attachReplyGestures(el, msg) {
   });
 }
 
+/* ---------- TUNES (Web Audio, koi file nahi) ---------- */
+let actx = null;
+function tonePlay(f0, f1, dur, delay) {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    actx = actx || new AC();
+    if (actx.state === 'suspended') actx.resume();
+    const t = actx.currentTime + (delay || 0);
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(Math.max(f0, 1), t);
+    o.frequency.exponentialRampToValueAtTime(Math.max(f1, 1), t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.4, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(actx.destination);
+    o.start(t); o.stop(t + dur + 0.05);
+  } catch (e) {}
+}
+function tuneMsg() { tonePlay(880, 880, 0.13, 0); tonePlay(1318, 1318, 0.2, 0.16); }
+function tuneJoin() { tonePlay(523, 523, 0.12, 0); tonePlay(659, 659, 0.12, 0.12); tonePlay(784, 784, 0.12, 0.24); tonePlay(1047, 1047, 0.3, 0.36); }
+function tuneLeave() { tonePlay(1047, 1047, 0.12, 0); tonePlay(784, 784, 0.12, 0.12); tonePlay(659, 659, 0.12, 0.24); tonePlay(523, 523, 0.3, 0.36); }
+document.addEventListener('pointerdown', function unlockAudio() { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) {} document.removeEventListener('pointerdown', unlockAudio); });
+
 /* ---------- CHAT ---------- */
 function addMsg(m) {
   const name = m.name, color = m.color, text = m.text, reply = m.reply, time = m.time;
@@ -961,6 +986,7 @@ function addMsg(m) {
   attachReplyGestures(row, { name: name, text: text, own: own });
   if (wasBottom || own) scrollChatDown();
   else newMsgBtn.classList.remove('hidden');
+  if (!own) tuneMsg();
 }
 function sendChat() {
   const text = chatInput.value.trim();
