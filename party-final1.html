@@ -303,9 +303,6 @@ let stateLocal = null;
 let queueLocal = { items: [], index: -1, lastAdvance: 0 };
 let seenMid = {}, seenCount = 0;
 let typingMap = {};
-let peerTimes = {};
-let curVKey = '';
-let lastAutoSync = 0;
 
 const $ = (id) => document.getElementById(id);
 const joinScreen = $('join-screen'), app = $('app');
@@ -638,7 +635,6 @@ function applyCmd(c) {
   } else if (c.action === 'play') remotePlay(t);
   else if (c.action === 'pause') remotePause(t);
   else if (c.action === 'seek') remoteSeek(t);
-  else if (c.action === 'tick') { if (c.from !== myId) peerTimes[c.from] = { t: c.time || 0, ts: Date.now(), name: c.by || 'Someone', v: c.v || '' }; }
   else if (c.action === 'sync') { remoteSeek(t); if (c.playing) remotePlay(t); else remotePause(t); addSysMsg('🔄 ' + c.by + ' ne sab ko sync kiya'); }
 }
 function applyState(s) {
@@ -695,33 +691,6 @@ function remoteSeek(t) {
   }
 }
 
-/* ---------- AUTO SYNC (Syncplay style 🐢) ---------- */
-function myPlayTime() {
-  try {
-    if (currentType === 'mp4' && mp4 && !mp4.paused) return mp4.currentTime;
-    if (currentType === 'youtube' && ytReady && ytPlayer && ytPlayer.getCurrentTime && ytPlayer.getPlayerState && typeof YT !== 'undefined' && ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) return ytPlayer.getCurrentTime();
-  } catch (e) {}
-  return -1;
-}
-setInterval(() => {
-  if (!joined || !mqttUp) return;
-  const me = myPlayTime();
-  if (me >= 0) pubCmd('tick', { time: Math.floor(me), v: curVKey });
-  if (me < 0) return;
-  const now = Date.now();
-  let slowT = me, slowName = '', slowId = '';
-  Object.keys(peerTimes).forEach((id) => {
-    const p = peerTimes[id];
-    if (!p || now - p.ts > 12000 || p.v !== curVKey) return;
-    if (p.t < slowT) { slowT = p.t; slowName = p.name; slowId = id; }
-  });
-  if (slowId && me - slowT > 5 && now - lastAutoSync > 15000) {
-    lastAutoSync = now;
-    remoteSeek(Math.max(Math.floor(slowT), 0));
-    pushSys('🔄 ' + myName + ' Auto Sync With ' + slowName + ' 🐢');
-  }
-}, 5000);
-
 /* ---------- URL PARSING + LOAD ---------- */
 function parseURL(url) {
   url = url.trim();
@@ -768,7 +737,6 @@ $('sync-btn').onclick = () => {
 
 function loadVideoLocal(data, autoplay) {
   currentType = data.type;
-  curVKey = data.type + ':' + (data.videoId || data.url || '');
   noVideo.classList.add('hidden');
   if (data.type === 'youtube') {
     mp4.pause();
@@ -1059,5 +1027,5 @@ function renderMembers() {
   });
 }
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a39ee9624eb3ce4b',t:'MTc4OTIxNjEwMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3add2c838f0aa1e',t:'MTc4OTM3MjQ2Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a39ee9624eb3ce4b',t:'MTc4OTIxNjEwMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
