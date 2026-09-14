@@ -100,6 +100,8 @@ main { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 8px; m
 .premium-video-fill { position: absolute; inset: 0 auto 0 0; width: 0%; border-radius: inherit; background: linear-gradient(90deg, #ff5ebc, #8b72ff, #54e8ff); box-shadow: 0 0 12px rgba(255,94,188,.58); }
 .premium-video-dot { position: absolute; top: 50%; left: 0%; width: 11px; height: 11px; border: 2px solid #fff; border-radius: 50%; background: #ff5ebc; transform: translate(-50%,-50%); box-shadow: 0 0 10px rgba(255,94,188,.7); }
 .premium-video-controls { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
+#premium-video-quality { height: 27px; max-width: 68px; padding: 0 5px; border: 1px solid rgba(255,255,255,.16); border-radius: 9px; outline: 0; color: #f1efff; background: rgba(14,12,31,.78); font-size: 9px; font-weight: 800; pointer-events: auto; }
+#premium-video-quality option { color: #17132f; background: #fff; font-size: 12px; }
 .premium-video-control { display: grid; place-items: center; width: 27px; height: 27px; padding: 0; border: 0; border-radius: 50%; color: #f1efff; background: rgba(14,12,31,.64); font-size: 12px; pointer-events: auto; }
 .premium-video-control:hover, .premium-video-menu:hover { background: rgba(255,255,255,.18); }
 #premium-video-play { color: #fff; background: linear-gradient(135deg, #ff5ebc, #8b72ff); }
@@ -403,7 +405,7 @@ main { gap: 11px; }
         <div id="premium-video-ui" class="hidden">
           <div class="premium-video-top"><span id="premium-video-badge" class="premium-video-badge">▶ VIDEO</span><span id="premium-video-title">Watch Party Premium</span><button id="premium-video-menu" class="premium-video-menu">•••</button></div>
           <div class="premium-video-center"><button id="premium-video-big-play">▶</button></div>
-          <div class="premium-video-bottom"><div id="premium-video-progress" class="premium-video-progress"><div id="premium-video-fill" class="premium-video-fill"></div><div id="premium-video-dot" class="premium-video-dot"></div></div><div class="premium-video-controls"><button id="premium-video-play" class="premium-video-control">▶</button><button id="premium-video-back" class="premium-video-control">↶</button><button id="premium-video-forward" class="premium-video-control">↷</button><span id="premium-video-time">00:00 / 00:00</span><span class="premium-video-spacer"></span><button id="premium-video-mute" class="premium-video-control">🔊</button><button id="premium-video-fullscreen" class="premium-video-control">⛶</button></div></div>
+          <div class="premium-video-bottom"><div id="premium-video-progress" class="premium-video-progress"><div id="premium-video-fill" class="premium-video-fill"></div><div id="premium-video-dot" class="premium-video-dot"></div></div><div class="premium-video-controls"><button id="premium-video-play" class="premium-video-control">▶</button><button id="premium-video-back" class="premium-video-control">↶</button><button id="premium-video-forward" class="premium-video-control">↷</button><span id="premium-video-time">00:00 / 00:00</span><span class="premium-video-spacer"></span><select id="premium-video-quality" class="hidden" title="YouTube quality"><option value="default">⚙ Auto</option></select><button id="premium-video-mute" class="premium-video-control">🔊</button><button id="premium-video-fullscreen" class="premium-video-control">⛶</button></div></div>
         </div>
         <div id="no-video">
           <div class="big-emoji">🍿</div>
@@ -527,7 +529,8 @@ function loadPrefs() {
 const urlInput = $('url-input'), loadBtn = $('load-btn');
 const ytDiv = $('yt-player'), mp4 = $('mp4-player'), mp3Player = $('mp3-player'), premiumVideoUI = $('premium-video-ui'), noVideo = $('no-video');
 const mp3Title = $('mp3-title'), mp3Artist = $('mp3-artist'), mp3Play = $('mp3-play'), mp3Back = $('mp3-back'), mp3Forward = $('mp3-forward'), mp3Progress = $('mp3-progress'), mp3Fill = $('mp3-fill'), mp3Dot = $('mp3-dot'), mp3Current = $('mp3-current'), mp3Total = $('mp3-total');
-const premiumVideoBadge = $('premium-video-badge'), premiumVideoTitle = $('premium-video-title'), premiumVideoPlay = $('premium-video-play'), premiumVideoBigPlay = $('premium-video-big-play'), premiumVideoBack = $('premium-video-back'), premiumVideoForward = $('premium-video-forward'), premiumVideoMute = $('premium-video-mute'), premiumVideoFullscreen = $('premium-video-fullscreen'), premiumVideoProgress = $('premium-video-progress'), premiumVideoFill = $('premium-video-fill'), premiumVideoDot = $('premium-video-dot'), premiumVideoTime = $('premium-video-time');
+const premiumVideoBadge = $('premium-video-badge'), premiumVideoTitle = $('premium-video-title'), premiumVideoPlay = $('premium-video-play'), premiumVideoBigPlay = $('premium-video-big-play'), premiumVideoBack = $('premium-video-back'), premiumVideoForward = $('premium-video-forward'), premiumVideoMute = $('premium-video-mute'), premiumVideoFullscreen = $('premium-video-fullscreen'), premiumVideoProgress = $('premium-video-progress'), premiumVideoFill = $('premium-video-fill'), premiumVideoDot = $('premium-video-dot'), premiumVideoTime = $('premium-video-time'), premiumVideoQuality = $('premium-video-quality');
+let lastYTQualityLevels = '';
 const nowPlaying = $('now-playing');
 const chatBox = $('chat-messages'), chatInput = $('chat-input'), sendBtn = $('send-btn');
 const userList = $('user-list'), userCount = $('user-count'), onlineCount = $('online-count');
@@ -993,6 +996,7 @@ function premiumMediaState() {
 }
 function updatePremiumVideoUI() {
   if ((currentType !== 'youtube' && currentType !== 'mp4' && currentType !== 'hls') || (currentType === 'hls' && hlsAudioMode)) return;
+  updateYouTubeQualityOptions();
   const m = premiumMediaState();
   const pct = m.duration > 0 ? Math.min(100, (m.time / m.duration) * 100) : 0;
   premiumVideoFill.style.width = pct + '%';
@@ -1038,6 +1042,33 @@ function setMP3Track(data) {
   mp3Dot.style.left = '0%';
   mp3Current.textContent = '00:00';
   mp3Total.textContent = '00:00';
+}
+const YT_QUALITY_LABELS = { tiny: '144p', small: '240p', medium: '360p', large: '480p', hd720: '720p', hd1080: '1080p', highres: 'High' };
+function updateYouTubeQualityOptions() {
+  if (currentType !== 'youtube' || !ytReady || !ytPlayer || !ytPlayer.getAvailableQualityLevels) {
+    premiumVideoQuality.classList.add('hidden');
+    lastYTQualityLevels = '';
+    return;
+  }
+  let levels = [];
+  try { levels = ytPlayer.getAvailableQualityLevels() || []; } catch (e) {}
+  if (!levels.length) return;
+  const key = levels.join('|');
+  premiumVideoQuality.classList.remove('hidden');
+  if (key !== lastYTQualityLevels) {
+    const old = premiumVideoQuality.value;
+    premiumVideoQuality.innerHTML = '<option value="default">⚙ Auto</option>';
+    levels.forEach((q) => {
+      if (!YT_QUALITY_LABELS[q]) return;
+      const o = document.createElement('option'); o.value = q; o.textContent = YT_QUALITY_LABELS[q]; premiumVideoQuality.appendChild(o);
+    });
+    lastYTQualityLevels = key;
+    if ([...premiumVideoQuality.options].some((o) => o.value === old)) premiumVideoQuality.value = old;
+  }
+  try {
+    const active = ytPlayer.getPlaybackQuality && ytPlayer.getPlaybackQuality();
+    if (active && [...premiumVideoQuality.options].some((o) => o.value === active)) premiumVideoQuality.value = active;
+  } catch (e) {}
 }
 function setPremiumMedia(data) {
   const isYT = data.type === 'youtube';
@@ -1146,6 +1177,7 @@ window.onYouTubeIframeAPIReady = function () {
     events: {
       onReady: () => {
         ytReady = true;
+        updateYouTubeQualityOptions();
         if (pendingYTVideo) {
           suppressYT = true;
           ytPlayer.loadVideoById(pendingYTVideo);
@@ -1155,6 +1187,7 @@ window.onYouTubeIframeAPIReady = function () {
       },
       onStateChange: (e) => {
         ytPlaying = (e.data === YT.PlayerState.PLAYING);
+        updateYouTubeQualityOptions();
         if (e.data === YT.PlayerState.ENDED && currentType === 'youtube') onVideoEnded();
         if (suppressYT || currentType !== 'youtube' || !joined) return;
         if (e.data === YT.PlayerState.PLAYING) pubCmd('play', { time: ytPlayer.getCurrentTime() });
@@ -1190,6 +1223,7 @@ premiumVideoBigPlay.onclick = premiumTogglePlay;
 premiumVideoBack.onclick = () => premiumSeekBy(-10);
 premiumVideoForward.onclick = () => premiumSeekBy(10);
 premiumVideoMute.onclick = premiumToggleMute;
+premiumVideoQuality.onchange = () => { if (currentType === 'youtube' && ytReady && ytPlayer && ytPlayer.setPlaybackQuality) { try { ytPlayer.setPlaybackQuality(premiumVideoQuality.value); } catch (e) {} setTimeout(updateYouTubeQualityOptions, 250); } };
 premiumVideoProgress.onclick = premiumSeekClick;
 premiumVideoFullscreen.onclick = () => { const wrap = document.querySelector('.player-wrap'); if (document.fullscreenElement) document.exitFullscreen(); else if (wrap.requestFullscreen) wrap.requestFullscreen(); else if (wrap.webkitRequestFullscreen) wrap.webkitRequestFullscreen(); };
 $('premium-video-menu').onclick = () => addSysMsg('⚙️ Premium player controls ready');
@@ -1418,5 +1452,5 @@ function renderMembers() {
   });
 }
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a39ee9624eb3ce4b',t:'MTc4OTIxNjEwMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3b095d01ac60d23',t:'MTc4OTQwMTQyMw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a39ee9624eb3ce4b',t:'MTc4OTIxNjEwMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3b0adcccd28ce2b',t:'MTc4OTQwMjQwNQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
