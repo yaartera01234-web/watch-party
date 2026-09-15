@@ -93,11 +93,16 @@ main { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 8px; m
 #premium-video-ui.youtube-native { background: linear-gradient(180deg, rgba(4,4,14,.72), transparent 34%); }
 #premium-video-ui.youtube-native .premium-video-center, #premium-video-ui.youtube-native .premium-video-bottom { display: none; }
 #premium-video-ui.youtube-native .premium-video-top { pointer-events: none; }
+#premium-video-ui.controls-hidden { background: transparent; }
+#premium-video-ui.controls-hidden .premium-video-top, #premium-video-ui.controls-hidden .premium-video-center, #premium-video-ui.controls-hidden .premium-video-bottom { opacity: 0; pointer-events: none; }
 #premium-video-quality { display: none !important; }
 .premium-video-top { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .premium-video-badge { padding: 5px 9px; border: 1px solid rgba(255,255,255,.18); border-radius: 20px; color: #d9d4ff; background: rgba(16,13,38,.68); font-size: 9px; font-weight: 900; letter-spacing: 1.2px; white-space: nowrap; }
 #premium-video-title { min-width: 0; overflow: hidden; color: rgba(255,255,255,.84); font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .premium-video-menu { margin-left: auto; width: 28px; height: 28px; padding: 0; border: 1px solid rgba(255,255,255,.18); border-radius: 9px; color: #fff; background: rgba(16,13,38,.68); font-size: 11px; pointer-events: auto; }
+#premium-player-menu { position: absolute; top: 48px; right: 12px; z-index: 20; min-width: 178px; padding: 6px; border: 1px solid rgba(255,255,255,.16); border-radius: 13px; background: rgba(19,16,45,.96); box-shadow: 0 15px 32px rgba(0,0,0,.45); pointer-events: auto; }
+#premium-player-menu button { display: block; width: 100%; padding: 10px 11px; border: 0; border-radius: 9px; color: #fff; background: transparent; text-align: left; font-size: 12px; font-weight: 700; cursor: pointer; }
+#premium-player-menu button:hover { background: rgba(255,255,255,.12); }
 .premium-video-center { display: grid; place-items: center; flex: 1; transition: opacity .2s ease; }
 #premium-video-big-play { display: grid; place-items: center; width: 58px; height: 58px; padding-left: 3px; border: 1px solid rgba(255,255,255,.32); border-radius: 50%; color: #fff; background: linear-gradient(135deg, rgba(255,94,188,.95), rgba(125,91,255,.95)); box-shadow: 0 0 0 9px rgba(255,255,255,.07), 0 13px 28px rgba(0,0,0,.4); font-size: 22px; pointer-events: auto; }
 .premium-video-bottom { width: 100%; pointer-events: auto; }
@@ -410,6 +415,7 @@ main { gap: 11px; }
         </div>
         <div id="premium-video-ui" class="hidden">
           <div class="premium-video-top"><span id="premium-video-badge" class="premium-video-badge">▶ VIDEO</span><span id="premium-video-title">Watch Party Premium</span><button id="premium-video-menu" class="premium-video-menu">•••</button></div>
+          <div id="premium-player-menu" class="hidden"><button id="premium-pip-btn">🖼️ Picture-in-Picture</button></div>
           <div class="premium-video-center"><button id="premium-video-big-play">▶</button></div>
           <div class="premium-video-bottom"><div id="premium-video-progress" class="premium-video-progress"><div id="premium-video-fill" class="premium-video-fill"></div><div id="premium-video-dot" class="premium-video-dot"></div></div><div class="premium-video-controls"><button id="premium-video-play" class="premium-video-control">▶</button><button id="premium-video-back" class="premium-video-control">↶</button><button id="premium-video-forward" class="premium-video-control">↷</button><span id="premium-video-time">00:00 / 00:00</span><span class="premium-video-spacer"></span><select id="premium-video-quality" class="hidden" title="YouTube quality"><option value="default">⚙ Auto</option></select><button id="premium-video-mute" class="premium-video-control">🔊</button><button id="premium-video-fullscreen" class="premium-video-control">⛶</button></div></div>
         </div>
@@ -536,7 +542,9 @@ const urlInput = $('url-input'), loadBtn = $('load-btn');
 const ytDiv = $('yt-player'), mp4 = $('mp4-player'), mp3Player = $('mp3-player'), premiumVideoUI = $('premium-video-ui'), noVideo = $('no-video');
 const mp3Title = $('mp3-title'), mp3Artist = $('mp3-artist'), mp3Play = $('mp3-play'), mp3Back = $('mp3-back'), mp3Forward = $('mp3-forward'), mp3Progress = $('mp3-progress'), mp3Fill = $('mp3-fill'), mp3Dot = $('mp3-dot'), mp3Current = $('mp3-current'), mp3Total = $('mp3-total');
 const premiumVideoBadge = $('premium-video-badge'), premiumVideoTitle = $('premium-video-title'), premiumVideoPlay = $('premium-video-play'), premiumVideoBigPlay = $('premium-video-big-play'), premiumVideoBack = $('premium-video-back'), premiumVideoForward = $('premium-video-forward'), premiumVideoMute = $('premium-video-mute'), premiumVideoFullscreen = $('premium-video-fullscreen'), premiumVideoProgress = $('premium-video-progress'), premiumVideoFill = $('premium-video-fill'), premiumVideoDot = $('premium-video-dot'), premiumVideoTime = $('premium-video-time'), premiumVideoQuality = $('premium-video-quality');
+const playerWrap = document.querySelector('.player-wrap'), premiumPlayerMenu = $('premium-player-menu'), premiumPipBtn = $('premium-pip-btn');
 let lastYTQualityLevels = '';
+let premiumHideTimer = null;
 const nowPlaying = $('now-playing');
 const chatBox = $('chat-messages'), chatInput = $('chat-input'), sendBtn = $('send-btn');
 const userList = $('user-list'), userCount = $('user-count'), onlineCount = $('online-count');
@@ -1008,6 +1016,19 @@ function premiumMediaState() {
   }
   return { time: time, duration: duration, playing: playing, muted: muted };
 }
+function isCustomVideoMode() {
+  return currentType === 'mp4' || (currentType === 'hls' && !hlsAudioMode);
+}
+function armPremiumHide() {
+  clearTimeout(premiumHideTimer);
+  if (!isCustomVideoMode() || !premiumMediaState().playing) return;
+  premiumHideTimer = setTimeout(() => premiumVideoUI.classList.add('controls-hidden'), 2400);
+}
+function showPremiumControls() {
+  if (!isCustomVideoMode()) return;
+  premiumVideoUI.classList.remove('controls-hidden');
+  armPremiumHide();
+}
 function updatePremiumVideoUI() {
   if ((currentType !== 'youtube' && currentType !== 'mp4' && currentType !== 'hls') || (currentType === 'hls' && hlsAudioMode)) return;
   updateYouTubeQualityOptions();
@@ -1020,6 +1041,7 @@ function updatePremiumVideoUI() {
   premiumVideoBigPlay.textContent = m.playing ? '❚❚' : '▶';
   premiumVideoMute.textContent = m.muted ? '🔇' : '🔊';
   premiumVideoUI.classList.toggle('is-playing', m.playing);
+  if (!m.playing) { clearTimeout(premiumHideTimer); premiumVideoUI.classList.remove('controls-hidden'); }
 }
 function premiumTogglePlay() {
   if (currentType === 'youtube' && ytReady && ytPlayer) {
@@ -1096,12 +1118,14 @@ function loadVideoLocal(data, autoplay) {
   noVideo.classList.add('hidden');
   mp3Player.classList.add('hidden');
   premiumVideoUI.classList.add('hidden');
-  premiumVideoUI.classList.remove('youtube-native');
+  premiumVideoUI.classList.remove('youtube-native', 'controls-hidden');
+  premiumPlayerMenu.classList.add('hidden');
+  clearTimeout(premiumHideTimer);
   if (data.type === 'youtube') {
     mp4.pause();
     mp4.classList.add('hidden');
     ytDiv.classList.remove('hidden');
-    premiumVideoUI.classList.remove('hidden');
+    premiumVideoUI.classList.add('hidden');
     premiumVideoUI.classList.add('youtube-native');
     setPremiumMedia(data);
     if (ytReady && ytPlayer && ytPlayer.loadVideoById) {
@@ -1226,14 +1250,15 @@ setInterval(() => {
 /* ---------- MP4 + PREMIUM MP3 SYNC EVENTS ---------- */
 mp4.addEventListener('timeupdate', updateMP3UI);
 mp4.addEventListener('loadedmetadata', updateMP3UI);
-mp4.addEventListener('play', () => { updateMP3UI(); updatePremiumVideoUI(); if (!suppressMP4 && (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) pubCmd('play', { time: mp4.currentTime }); });
-mp4.addEventListener('pause', () => { updateMP3UI(); updatePremiumVideoUI(); if (!suppressMP4 && (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) pubCmd('pause', { time: mp4.currentTime }); });
-mp4.addEventListener('seeked', () => { updateMP3UI(); updatePremiumVideoUI(); if (!suppressMP4 && (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) pubCmd('seek', { time: mp4.currentTime }); });
+mp4.addEventListener('play', () => { updateMP3UI(); updatePremiumVideoUI(); armPremiumHide(); if (!suppressMP4 && (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) pubCmd('play', { time: mp4.currentTime }); });
+mp4.addEventListener('pause', () => { updateMP3UI(); updatePremiumVideoUI(); showPremiumControls(); if (!suppressMP4 && (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) pubCmd('pause', { time: mp4.currentTime }); });
+mp4.addEventListener('seeked', () => { updateMP3UI(); updatePremiumVideoUI(); showPremiumControls(); if (!suppressMP4 && (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) pubCmd('seek', { time: mp4.currentTime }); });
 mp4.addEventListener('ended', () => { if ((currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) onVideoEnded(); });
 mp3Play.onclick = () => { if (!isAudioMode()) return; if (mp4.paused) mp4.play().catch(() => {}); else mp4.pause(); };
 mp3Back.onclick = () => { if (isAudioMode()) mp4.currentTime = Math.max(0, (mp4.currentTime || 0) - 10); };
 mp3Forward.onclick = () => { if (isAudioMode()) mp4.currentTime = Math.min(mp4.duration || Infinity, (mp4.currentTime || 0) + 10); };
 mp3Progress.onclick = (e) => { if (!isAudioMode() || !mp4.duration) return; const r = mp3Progress.getBoundingClientRect(); mp4.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * mp4.duration; };
+playerWrap.addEventListener('click', (e) => { showPremiumControls(); if (!premiumPlayerMenu.contains(e.target) && e.target !== $('premium-video-menu')) premiumPlayerMenu.classList.add('hidden'); });
 premiumVideoPlay.onclick = premiumTogglePlay;
 premiumVideoBigPlay.onclick = premiumTogglePlay;
 premiumVideoBack.onclick = () => premiumSeekBy(-10);
@@ -1242,7 +1267,18 @@ premiumVideoMute.onclick = premiumToggleMute;
 premiumVideoQuality.onchange = () => { if (currentType === 'youtube' && ytReady && ytPlayer && ytPlayer.setPlaybackQuality) { try { ytPlayer.setPlaybackQuality(premiumVideoQuality.value); } catch (e) {} setTimeout(updateYouTubeQualityOptions, 250); } };
 premiumVideoProgress.onclick = premiumSeekClick;
 premiumVideoFullscreen.onclick = () => { const wrap = document.querySelector('.player-wrap'); if (document.fullscreenElement) document.exitFullscreen(); else if (wrap.requestFullscreen) wrap.requestFullscreen(); else if (wrap.webkitRequestFullscreen) wrap.webkitRequestFullscreen(); };
-$('premium-video-menu').onclick = () => addSysMsg('⚙️ Premium player controls ready');
+$('premium-video-menu').onclick = (e) => { e.stopPropagation(); if (isCustomVideoMode()) { premiumPlayerMenu.classList.toggle('hidden'); showPremiumControls(); } else addSysMsg('YouTube ka PiP official player controls se use karo'); };
+premiumPipBtn.onclick = async (e) => {
+  e.stopPropagation();
+  premiumPlayerMenu.classList.add('hidden');
+  if (!isCustomVideoMode()) { addSysMsg('YouTube ka PiP official player controls se use karo'); return; }
+  try {
+    if (document.pictureInPictureElement) await document.exitPictureInPicture();
+    else if (document.pictureInPictureEnabled && mp4.requestPictureInPicture) await mp4.requestPictureInPicture();
+    else if (mp4.webkitSetPresentationMode) mp4.webkitSetPresentationMode('picture-in-picture');
+    else addSysMsg('Is browser mein Picture-in-Picture support nahi hai');
+  } catch (e) { addSysMsg('Picture-in-Picture start nahi ho saka'); }
+};
 setInterval(updatePremiumVideoUI, 300);
 
 /* ---------- 📋 PLAYLIST / QUEUE ---------- */
@@ -1468,5 +1504,5 @@ function renderMembers() {
   });
 }
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a39ee9624eb3ce4b',t:'MTc4OTIxNjEwMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a39ee9624eb3ce4b',t:'MTc4OTIxNjEwMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3b4defcafca34e9',t:'MTc4OTQ0NjM2Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
