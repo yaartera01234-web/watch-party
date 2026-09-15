@@ -55,6 +55,69 @@ main { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 8px; m
 #yt-player, #mp4-player { width: 100%; height: 100%; position: absolute; inset: 0; }
 #mp4-player { object-fit: contain; background: #000; }
 #no-video { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #a5b4fc; gap: 10px; padding: 20px; }
+/* ---------- PREMIUM MP3 PLAYER ---------- */
+#mp3-player { position: absolute; inset: 0; display: flex; align-items: center; overflow: hidden; padding: 18px 22px; background: radial-gradient(circle at 78% 10%, rgba(255,94,188,0.30), transparent 34%), radial-gradient(circle at 8% 100%, rgba(84,232,255,0.18), transparent 38%), linear-gradient(135deg, #15112e 0%, #251743 48%, #0b1228 100%); }
+#mp3-player::before, #mp3-player::after { content: ''; position: absolute; border-radius: 50%; pointer-events: none; filter: blur(1px); }
+#mp3-player::before { width: 230px; height: 230px; right: -78px; top: -118px; border: 1px solid rgba(255,255,255,0.13); box-shadow: 0 0 0 28px rgba(255,255,255,0.025), 0 0 0 56px rgba(255,255,255,0.025), 0 0 0 84px rgba(255,255,255,0.025); }
+#mp3-player::after { width: 150px; height: 150px; left: -80px; bottom: -106px; background: rgba(139,92,246,0.22); filter: blur(30px); }
+.mp3-glass { position: absolute; inset: 10px; border: 1px solid rgba(255,255,255,0.10); border-radius: 14px; pointer-events: none; }
+.mp3-content { position: relative; z-index: 1; display: flex; align-items: center; gap: 20px; width: 100%; min-width: 0; }
+.mp3-art { position: relative; flex: 0 0 145px; width: 145px; height: 145px; display: grid; place-items: center; overflow: hidden; border-radius: 22px; background: linear-gradient(145deg, #ff66bd, #8b5cf6 54%, #26318d); box-shadow: 0 15px 30px rgba(0,0,0,0.35), inset 0 0 28px rgba(255,255,255,0.15); }
+.mp3-art::before { content: ''; position: absolute; width: 94px; height: 94px; border: 1px solid rgba(255,255,255,0.42); border-radius: 50%; box-shadow: 0 0 0 14px rgba(255,255,255,0.05), 0 0 0 28px rgba(255,255,255,0.05), 0 0 0 42px rgba(255,255,255,0.045); }
+.mp3-art::after { content: '♫'; position: absolute; display: grid; place-items: center; width: 35px; height: 35px; border-radius: 50%; color: #29133d; background: #ffd8f0; font-size: 21px; font-weight: 900; box-shadow: 0 0 18px rgba(255,216,240,0.75); }
+.mp3-art-note { position: absolute; z-index: 1; margin: -66px 0 0 -72px; color: rgba(255,255,255,0.88); font-size: 26px; transform: rotate(-16deg); }
+.mp3-art-note.two { margin: 61px 0 0 70px; font-size: 18px; transform: rotate(15deg); }
+.mp3-details { min-width: 0; flex: 1; }
+.mp3-kicker { display: inline-flex; align-items: center; gap: 6px; color: #a9f5ff; font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; }
+.mp3-title { margin-top: 8px; overflow: hidden; color: #fff; font-size: clamp(20px, 3vw, 30px); font-weight: 800; letter-spacing: -0.7px; text-overflow: ellipsis; white-space: nowrap; }
+.mp3-artist { margin-top: 4px; overflow: hidden; color: #b4afd1; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.mp3-bars { display: flex; align-items: center; gap: 3px; height: 29px; margin: 13px 0 9px; }
+.mp3-bar { width: 4px; min-height: 5px; border-radius: 6px; background: linear-gradient(180deg, #54e8ff, #ff5ebc); animation: mp3Bounce 0.9s ease-in-out infinite alternate; animation-play-state: paused; }
+.mp3-playing .mp3-bar { animation-play-state: running; }
+.mp3-bar:nth-child(1){height:12px;animation-delay:-.2s}.mp3-bar:nth-child(2){height:23px;animation-delay:-.6s}.mp3-bar:nth-child(3){height:16px;animation-delay:-.35s}.mp3-bar:nth-child(4){height:28px;animation-delay:-.75s}.mp3-bar:nth-child(5){height:19px;animation-delay:-.1s}.mp3-bar:nth-child(6){height:25px;animation-delay:-.5s}.mp3-bar:nth-child(7){height:13px;animation-delay:-.3s}.mp3-bar:nth-child(8){height:22px;animation-delay:-.7s}.mp3-bar:nth-child(9){height:27px;animation-delay:-.2s}.mp3-bar:nth-child(10){height:15px;animation-delay:-.55s}.mp3-bar:nth-child(11){height:24px;animation-delay:-.4s}.mp3-bar:nth-child(12){height:11px;animation-delay:-.8s}.mp3-bar:nth-child(13){height:20px;animation-delay:-.25s}.mp3-bar:nth-child(14){height:26px;animation-delay:-.65s}.mp3-bar:nth-child(15){height:14px;animation-delay:-.15s}.mp3-bar:nth-child(16){height:22px;animation-delay:-.45s}.mp3-bar:nth-child(17){height:10px;animation-delay:-.7s}.mp3-bar:nth-child(18){height:18px;animation-delay:-.35s}
+@keyframes mp3Bounce { to { transform: scaleY(.28); opacity: .62; } }
+.mp3-progress-row { display: flex; align-items: center; gap: 8px; color: #c2bed8; font-size: 9px; font-variant-numeric: tabular-nums; }
+.mp3-progress { position: relative; flex: 1; height: 5px; border-radius: 8px; background: rgba(255,255,255,0.16); cursor: pointer; }
+.mp3-fill { position: absolute; inset: 0 auto 0 0; width: 0%; border-radius: inherit; background: linear-gradient(90deg, #ff5ebc, #8b72ff, #54e8ff); box-shadow: 0 0 12px rgba(255,94,188,0.55); }
+.mp3-dot { position: absolute; top: 50%; left: 0%; width: 11px; height: 11px; border: 2px solid #fff; border-radius: 50%; background: #ff5ebc; transform: translate(-50%, -50%); box-shadow: 0 0 10px rgba(255,94,188,0.7); }
+.mp3-controls { display: flex; align-items: center; gap: 9px; margin-top: 12px; }
+.mp3-control { display: grid; place-items: center; width: 29px; height: 29px; padding: 0; border: 0; border-radius: 50%; color: #dfdced; background: rgba(255,255,255,0.08); font-size: 12px; cursor: pointer; }
+.mp3-control:hover { background: rgba(255,255,255,0.17); }
+#mp3-play { width: 39px; height: 39px; color: #fff; background: linear-gradient(135deg, #ff5ebc, #8b72ff); box-shadow: 0 7px 18px rgba(255,94,188,0.32); font-size: 16px; }
+.mp3-hint { margin-left: auto; color: #938eaf; font-size: 10px; white-space: nowrap; }
+@media (max-width: 500px) { #mp3-player { padding: 14px; } .mp3-content { gap: 13px; } .mp3-art { flex-basis: 104px; width: 104px; height: 104px; border-radius: 17px; } .mp3-art::before { width: 66px; height: 66px; box-shadow: 0 0 0 10px rgba(255,255,255,0.05), 0 0 0 20px rgba(255,255,255,0.05), 0 0 0 30px rgba(255,255,255,0.045); } .mp3-art::after { width: 28px; height: 28px; font-size: 17px; } .mp3-art-note { margin: -48px 0 0 -50px; font-size: 20px; } .mp3-art-note.two { margin: 44px 0 0 49px; font-size: 15px; } .mp3-bars { gap: 2px; } .mp3-bar { width: 3px; } .mp3-hint { display: none; } }
+/* ---------- PREMIUM VIDEO PLAYER ---------- */
+#premium-video-ui { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; justify-content: space-between; padding: 12px 14px 10px; color: #fff; pointer-events: none; background: linear-gradient(180deg, rgba(4,4,14,.72), transparent 28%, transparent 59%, rgba(4,4,14,.86)); transition: opacity .2s ease; }
+#premium-video-ui.is-playing .premium-video-center { opacity: 0; pointer-events: none; }
+/* YouTube's own controls contain the real, working quality menu. */
+#premium-video-ui.youtube-native { background: linear-gradient(180deg, rgba(4,4,14,.72), transparent 34%); }
+#premium-video-ui.youtube-native .premium-video-center, #premium-video-ui.youtube-native .premium-video-bottom { display: none; }
+#premium-video-ui.youtube-native .premium-video-top { pointer-events: none; }
+#premium-video-ui.controls-hidden { background: transparent; }
+#premium-video-ui.controls-hidden .premium-video-top, #premium-video-ui.controls-hidden .premium-video-center, #premium-video-ui.controls-hidden .premium-video-bottom { opacity: 0; pointer-events: none; }
+#premium-video-quality { display: none !important; }
+.premium-video-top { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.premium-video-badge { padding: 5px 9px; border: 1px solid rgba(255,255,255,.18); border-radius: 20px; color: #d9d4ff; background: rgba(16,13,38,.68); font-size: 9px; font-weight: 900; letter-spacing: 1.2px; white-space: nowrap; }
+#premium-video-title { min-width: 0; overflow: hidden; color: rgba(255,255,255,.84); font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.premium-video-menu { margin-left: auto; width: 28px; height: 28px; padding: 0; border: 1px solid rgba(255,255,255,.18); border-radius: 9px; color: #fff; background: rgba(16,13,38,.68); font-size: 11px; pointer-events: auto; }
+#premium-player-menu { position: absolute; top: 48px; right: 12px; z-index: 20; min-width: 178px; padding: 6px; border: 1px solid rgba(255,255,255,.16); border-radius: 13px; background: rgba(19,16,45,.96); box-shadow: 0 15px 32px rgba(0,0,0,.45); pointer-events: auto; }
+#premium-player-menu button { display: block; width: 100%; padding: 10px 11px; border: 0; border-radius: 9px; color: #fff; background: transparent; text-align: left; font-size: 12px; font-weight: 700; cursor: pointer; }
+#premium-player-menu button:hover { background: rgba(255,255,255,.12); }
+.premium-video-center { display: grid; place-items: center; flex: 1; transition: opacity .2s ease; }
+#premium-video-big-play { display: grid; place-items: center; width: 58px; height: 58px; padding-left: 3px; border: 1px solid rgba(255,255,255,.32); border-radius: 50%; color: #fff; background: linear-gradient(135deg, rgba(255,94,188,.95), rgba(125,91,255,.95)); box-shadow: 0 0 0 9px rgba(255,255,255,.07), 0 13px 28px rgba(0,0,0,.4); font-size: 22px; pointer-events: auto; }
+.premium-video-bottom { width: 100%; pointer-events: auto; }
+.premium-video-progress { position: relative; height: 5px; border-radius: 10px; background: rgba(255,255,255,.25); cursor: pointer; }
+.premium-video-fill { position: absolute; inset: 0 auto 0 0; width: 0%; border-radius: inherit; background: linear-gradient(90deg, #ff5ebc, #8b72ff, #54e8ff); box-shadow: 0 0 12px rgba(255,94,188,.58); }
+.premium-video-dot { position: absolute; top: 50%; left: 0%; width: 11px; height: 11px; border: 2px solid #fff; border-radius: 50%; background: #ff5ebc; transform: translate(-50%,-50%); box-shadow: 0 0 10px rgba(255,94,188,.7); }
+.premium-video-controls { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
+#premium-video-quality { height: 27px; max-width: 68px; padding: 0 5px; border: 1px solid rgba(255,255,255,.16); border-radius: 9px; outline: 0; color: #f1efff; background: rgba(14,12,31,.78); font-size: 9px; font-weight: 800; pointer-events: auto; }
+#premium-video-quality option { color: #17132f; background: #fff; font-size: 12px; }
+.premium-video-control { display: grid; place-items: center; width: 27px; height: 27px; padding: 0; border: 0; border-radius: 50%; color: #f1efff; background: rgba(14,12,31,.64); font-size: 12px; pointer-events: auto; }
+.premium-video-control:hover, .premium-video-menu:hover { background: rgba(255,255,255,.18); }
+#premium-video-play { color: #fff; background: linear-gradient(135deg, #ff5ebc, #8b72ff); }
+#premium-video-time { color: #ddd9ed; font-size: 10px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.premium-video-spacer { flex: 1; }
+@media (max-width: 500px) { #premium-video-ui { padding: 9px 10px 8px; } .premium-video-badge { padding: 4px 7px; font-size: 8px; } #premium-video-title { font-size: 10px; } #premium-video-big-play { width: 50px; height: 50px; font-size: 19px; } .premium-video-control { width: 25px; height: 25px; font-size: 11px; } }
 .big-emoji { font-size: 60px; }
 #now-playing { flex-shrink: 0; font-size: 13px; color: #c4b5fd; background: rgba(0,0,0,0.3); padding: 9px 14px; border-radius: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sync-row { display: none; }
@@ -149,6 +212,139 @@ main { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 8px; m
   .join-card .logo { font-size: 38px; }
   .features { display: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   ✦ AESTHETIC THEME POLISH — Midnight Aurora
+   Visual-only refinement; party logic remains unchanged.
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  --aurora-pink: #ff6fc3;
+  --aurora-purple: #8b72ff;
+  --aurora-blue: #5bdcff;
+  --glass: rgba(19, 16, 45, 0.78);
+  --glass-soft: rgba(255,255,255,0.055);
+  --hairline: rgba(255,255,255,0.13);
+}
+html, body {
+  background:
+    radial-gradient(circle at 8% -10%, rgba(255,100,195,0.24), transparent 32%),
+    radial-gradient(circle at 100% 0%, rgba(91,126,255,0.24), transparent 31%),
+    radial-gradient(circle at 50% 115%, rgba(111,73,217,0.18), transparent 36%),
+    linear-gradient(145deg, #080812 0%, #17132f 52%, #0a1127 100%);
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.28;
+  background-image: radial-gradient(rgba(255,255,255,0.18) .6px, transparent .6px);
+  background-size: 5px 5px;
+  mask-image: linear-gradient(to bottom, black, transparent 85%);
+}
+#join-screen { padding: 20px 16px 70px; }
+.join-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(145deg, rgba(33,27,68,0.84), rgba(12,13,31,0.82));
+  border-color: rgba(255,255,255,0.18);
+  box-shadow: 0 26px 80px rgba(0,0,0,0.52), 0 0 0 1px rgba(255,112,195,0.05) inset;
+}
+.join-card::before {
+  content: '';
+  position: absolute;
+  width: 210px;
+  height: 210px;
+  top: -135px;
+  right: -40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 0 0 22px rgba(255,255,255,0.025), 0 0 0 44px rgba(255,255,255,0.025), 0 0 0 66px rgba(255,255,255,0.025);
+  pointer-events: none;
+}
+.join-card .logo { position: relative; filter: drop-shadow(0 10px 18px rgba(255,91,185,0.28)); }
+.join-card h1 { position: relative; letter-spacing: -1px; }
+.test-badge { position: relative; background: linear-gradient(90deg, rgba(255,99,190,0.18), rgba(139,114,255,0.18)); }
+#name-input, #room-input, #tower-input {
+  border-color: rgba(255,255,255,0.15);
+  background: rgba(4,5,17,0.30);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.12) inset;
+}
+#join-btn, #load-btn, #queue-btn, #send-btn {
+  box-shadow: 0 9px 22px rgba(99,73,255,0.20);
+}
+#join-btn { background: linear-gradient(110deg, #ff66bd 0%, #a477ff 55%, #55baff 100%); }
+header {
+  position: relative;
+  z-index: 10;
+  padding: 11px 18px;
+  background: rgba(6,7,19,0.58);
+  border-bottom-color: rgba(255,255,255,0.13);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.12);
+  backdrop-filter: blur(18px);
+}
+.brand { min-width: 0; white-space: nowrap; letter-spacing: -0.3px; }
+.brand span { white-space: nowrap; }
+.header-right { min-width: 0; flex-shrink: 0; }
+#online-count, #my-name-badge { border: 1px solid rgba(255,255,255,0.10); box-shadow: 0 7px 18px rgba(0,0,0,0.13); }
+#online-count { background: rgba(74,222,128,0.13); }
+#my-name-badge { background: linear-gradient(100deg, rgba(255,103,190,0.92), rgba(146,111,255,0.94)); }
+main { gap: 11px; }
+.url-bar { gap: 9px; }
+#url-input {
+  border-color: rgba(255,255,255,0.14);
+  background: rgba(8,8,24,0.47);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.13) inset;
+}
+#url-input:focus { border-color: rgba(168,139,250,0.82); box-shadow: 0 0 0 3px rgba(139,114,255,0.13); }
+#load-btn { background: linear-gradient(110deg, #20d86d, #16a85a); }
+#queue-btn { background: linear-gradient(110deg, #956bff, #5d67e9); }
+.player-wrap {
+  border-radius: 21px;
+  border-color: rgba(255,255,255,0.16);
+  box-shadow: 0 18px 36px rgba(0,0,0,0.26), 0 0 0 1px rgba(255,255,255,0.025) inset;
+}
+#now-playing, .playlist-box, .chat-side {
+  background: linear-gradient(145deg, rgba(28,24,59,0.72), rgba(8,9,24,0.55));
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: 0 12px 26px rgba(0,0,0,0.12);
+}
+#now-playing { color: #d5caff; }
+.playlist-box { padding: 7px 9px; }
+.pl-head, .users-title { color: #d4caff; }
+.pl-item { border: 1px solid transparent; background: rgba(255,255,255,0.055); }
+.pl-item:hover { border-color: rgba(167,139,250,0.32); background: rgba(255,255,255,0.10); }
+.pl-item.active { background: linear-gradient(90deg, rgba(74,222,128,0.17), rgba(84,232,255,0.07)); }
+.chat-side { border-radius: 19px; }
+.users-box { background: rgba(255,255,255,0.018); }
+.user-chip { border-left-width: 3px; background: rgba(255,255,255,0.075); }
+#chat-messages { padding: 10px; }
+.msg.other .bubble { background: linear-gradient(135deg, #51c9c2 0%, #7182e9 52%, #aa7ced 100%); border: 1px solid rgba(255,255,255,0.26); box-shadow: 0 9px 23px rgba(82,145,220,0.23), inset 0 1px 0 rgba(255,255,255,0.27); } /* Ahmed/other bubble only */
+.msg.own .bubble { background: linear-gradient(135deg, #f472b6, #a78bfa); box-shadow: none; } /* original Babu/You bubble preserved */
+.chat-input-bar { background: rgba(5,6,18,0.24); }
+#chat-input { background: rgba(3,4,15,0.34); border-color: rgba(255,255,255,0.14); }
+#chat-input:focus { border-color: rgba(255,94,188,0.75); box-shadow: 0 0 0 3px rgba(255,94,188,0.10); }
+.emoji { filter: saturate(1.08); }
+@media (max-width: 600px) {
+  header { padding: 10px 12px; gap: 7px; }
+  .brand { font-size: 19px; }
+  .header-right { gap: 6px; }
+  #online-count { padding: 5px 9px; font-size: 12px; }
+  #my-name-badge { max-width: 142px; overflow: hidden; padding: 5px 9px; text-overflow: ellipsis; white-space: nowrap; }
+  /* Keep link, Play and Queue on one row like the original layout. */
+  .url-bar { display: flex; flex-wrap: nowrap; gap: 7px; }
+  #url-input { flex: 1 1 auto; width: auto; min-width: 0; }
+  #load-btn, #queue-btn { width: auto; flex: 0 0 auto; padding: 11px 9px; font-size: 13px; }
+  .player-wrap { border-radius: 19px; }
+}
+@media (max-width: 380px) {
+  .brand { font-size: 17px; }
+  .brand-icon { display: none; }
+  #online-count { font-size: 11px; padding-inline: 7px; }
+  #my-name-badge { max-width: 116px; font-size: 12px; }
+}
+
 </style>
 </head>
 <body>
@@ -203,6 +399,26 @@ main { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 8px; m
       <div class="player-wrap">
         <div id="yt-player"></div>
         <video id="mp4-player" class="hidden" controls playsinline></video>
+        <div id="mp3-player" class="hidden">
+          <div class="mp3-glass"></div>
+          <div class="mp3-content">
+            <div class="mp3-art"><span class="mp3-art-note">♪</span><span class="mp3-art-note two">♫</span></div>
+            <div class="mp3-details">
+              <div class="mp3-kicker">✦ MP3 AUDIO</div>
+              <div id="mp3-title" class="mp3-title">Premium Music</div>
+              <div id="mp3-artist" class="mp3-artist">Watch Party · Now Playing</div>
+              <div id="mp3-bars" class="mp3-bars"><i class="mp3-bar"></i><i class="mp3-bar"></i><i class="mp3-bar"></i><i class="mp3-bar"></i><i class="mp3-bar"></i><i class="mp3-bar"></i><i class="mp3-bar"></i><i class="mp3-bar"></i><i class="mp3-bar"></i><i class="mp3-bar"></i><i class="mp3-bar"></i><i class="mp3-bar"></i><i class="mp3-bar"></i><i class="mp3-bar"></i><i class="mp3-bar"></i><i class="mp3-bar"></i><i class="mp3-bar"></i><i class="mp3-bar"></i></div>
+              <div class="mp3-progress-row"><span id="mp3-current">00:00</span><div id="mp3-progress" class="mp3-progress"><div id="mp3-fill" class="mp3-fill"></div><div id="mp3-dot" class="mp3-dot"></div></div><span id="mp3-total">00:00</span></div>
+              <div class="mp3-controls"><button id="mp3-back" class="mp3-control" title="10 seconds back">↶</button><button id="mp3-play" class="mp3-control" title="Play/Pause">▶</button><button id="mp3-forward" class="mp3-control" title="10 seconds forward">↷</button><span class="mp3-hint">Premium Audio</span></div>
+            </div>
+          </div>
+        </div>
+        <div id="premium-video-ui" class="hidden">
+          <div class="premium-video-top"><span id="premium-video-badge" class="premium-video-badge">▶ VIDEO</span><span id="premium-video-title">Watch Party Premium</span><button id="premium-video-menu" class="premium-video-menu">•••</button></div>
+          <div id="premium-player-menu" class="hidden"><button id="premium-pip-btn">🖼️ Picture-in-Picture</button></div>
+          <div class="premium-video-center"><button id="premium-video-big-play">▶</button></div>
+          <div class="premium-video-bottom"><div id="premium-video-progress" class="premium-video-progress"><div id="premium-video-fill" class="premium-video-fill"></div><div id="premium-video-dot" class="premium-video-dot"></div></div><div class="premium-video-controls"><button id="premium-video-play" class="premium-video-control">▶</button><button id="premium-video-back" class="premium-video-control">↶</button><button id="premium-video-forward" class="premium-video-control">↷</button><span id="premium-video-time">00:00 / 00:00</span><span class="premium-video-spacer"></span><select id="premium-video-quality" class="hidden" title="YouTube quality"><option value="default">⚙ Auto</option></select><button id="premium-video-mute" class="premium-video-control">🔊</button><button id="premium-video-fullscreen" class="premium-video-control">⛶</button></div></div>
+        </div>
         <div id="no-video">
           <div class="big-emoji">🍿</div>
           <p>Uper link paste karo aur <b>Play</b> dabao —<br/>sab ke pas ek sath chalega!</p>
@@ -258,6 +474,7 @@ main { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 8px; m
 </div>
 
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════
@@ -297,6 +514,7 @@ let joined = false;
 let replyTo = null;
 let currentType = 'none';
 let ytPlayer = null, ytReady = false, ytPlaying = false;
+let hls = null, hlsAudioMode = false;
 let suppressYT = false, suppressMP4 = false;
 let pendingYTVideo = null;
 let stateLocal = null;
@@ -321,7 +539,12 @@ function loadPrefs() {
   } catch (e) {}
 }
 const urlInput = $('url-input'), loadBtn = $('load-btn');
-const ytDiv = $('yt-player'), mp4 = $('mp4-player'), noVideo = $('no-video');
+const ytDiv = $('yt-player'), mp4 = $('mp4-player'), mp3Player = $('mp3-player'), premiumVideoUI = $('premium-video-ui'), noVideo = $('no-video');
+const mp3Title = $('mp3-title'), mp3Artist = $('mp3-artist'), mp3Play = $('mp3-play'), mp3Back = $('mp3-back'), mp3Forward = $('mp3-forward'), mp3Progress = $('mp3-progress'), mp3Fill = $('mp3-fill'), mp3Dot = $('mp3-dot'), mp3Current = $('mp3-current'), mp3Total = $('mp3-total');
+const premiumVideoBadge = $('premium-video-badge'), premiumVideoTitle = $('premium-video-title'), premiumVideoPlay = $('premium-video-play'), premiumVideoBigPlay = $('premium-video-big-play'), premiumVideoBack = $('premium-video-back'), premiumVideoForward = $('premium-video-forward'), premiumVideoMute = $('premium-video-mute'), premiumVideoFullscreen = $('premium-video-fullscreen'), premiumVideoProgress = $('premium-video-progress'), premiumVideoFill = $('premium-video-fill'), premiumVideoDot = $('premium-video-dot'), premiumVideoTime = $('premium-video-time'), premiumVideoQuality = $('premium-video-quality');
+const playerWrap = document.querySelector('.player-wrap'), premiumPlayerMenu = $('premium-player-menu'), premiumPipBtn = $('premium-pip-btn');
+let lastYTQualityLevels = '';
+let premiumHideTimer = null;
 const nowPlaying = $('now-playing');
 const chatBox = $('chat-messages'), chatInput = $('chat-input'), sendBtn = $('send-btn');
 const userList = $('user-list'), userCount = $('user-count'), onlineCount = $('online-count');
@@ -645,7 +868,7 @@ function applyState(s) {
       ytPlayer.seekTo(s.time || 0, true);
       if (s.playing) ytPlayer.playVideo(); else ytPlayer.pauseVideo();
       setTimeout(() => suppressYT = false, 1200);
-    } else if (s.type === 'mp4') {
+    } else if (s.type === 'mp4' || s.type === 'mp3' || s.type === 'hls') {
       suppressMP4 = true;
       mp4.currentTime = s.time || 0;
       if (s.playing) mp4.play().catch(() => {}); else mp4.pause();
@@ -659,7 +882,7 @@ function remotePlay(t) {
     try { if (Math.abs(ytPlayer.getCurrentTime() - t) > 2) ytPlayer.seekTo(t, true); } catch (e) {}
     ytPlayer.playVideo();
     setTimeout(() => suppressYT = false, 1200);
-  } else if (currentType === 'mp4') {
+  } else if (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') {
     suppressMP4 = true;
     if (Math.abs(mp4.currentTime - t) > 2) mp4.currentTime = t;
     mp4.play().catch(() => {});
@@ -672,7 +895,7 @@ function remotePause(t) {
     try { if (Math.abs(ytPlayer.getCurrentTime() - t) > 2) ytPlayer.seekTo(t, true); } catch (e) {}
     ytPlayer.pauseVideo();
     setTimeout(() => suppressYT = false, 1200);
-  } else if (currentType === 'mp4') {
+  } else if (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') {
     suppressMP4 = true;
     if (Math.abs(mp4.currentTime - t) > 2) mp4.currentTime = t;
     mp4.pause();
@@ -684,7 +907,7 @@ function remoteSeek(t) {
     suppressYT = true;
     try { ytPlayer.seekTo(t, true); } catch (e) {}
     setTimeout(() => suppressYT = false, 1200);
-  } else if (currentType === 'mp4') {
+  } else if (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') {
     suppressMP4 = true;
     mp4.currentTime = t;
     setTimeout(() => suppressMP4 = false, 1000);
@@ -694,22 +917,33 @@ function remoteSeek(t) {
 /* ---------- URL PARSING + LOAD ---------- */
 function parseURL(url) {
   url = url.trim();
-  const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  let yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  /* YouTube Music links use music.youtube.com; support v= links even when extra query parameters are present. */
+  if (!yt) {
+    try {
+      const u = new URL(url);
+      const id = u.searchParams.get('v');
+      if (id && /(^|\.)youtube\.com$/i.test(u.hostname)) yt = [null, id];
+    } catch (e) {}
+  }
   if (yt) return { type: 'youtube', videoId: yt[1], url: url };
+  if (/\.m3u8(?:[?#]|$)/i.test(url)) return { type: 'hls', url: url };
+  if (/\.(mp3|wav|ogg|m4a|aac|flac)(?:[?#]|$)/i.test(url)) return { type: 'mp3', url: url };
   return { type: 'mp4', url: url };
 }
 function makeLabel(d) {
   if (d.type === 'youtube') return 'YT: ' + (d.videoId || '');
+  if (d.type === 'hls') return '📡 ' + (String(d.url || '').split('?')[0].split('/').pop() || 'HLS stream').slice(0, 28);
   try {
     const u = String(d.url || '').split('?')[0].split('/').pop() || '';
     const name = decodeURIComponent(u);
-    if (/\.(mp3|wav|ogg|m4a)$/i.test(name)) return '🎵 ' + (name.slice(0, 28) || 'MP3 song');
+    if (/\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(name)) return '🎵 ' + (name.slice(0, 28) || 'MP3 song');
     return '🎞 ' + (name.slice(0, 28) || 'MP4 video');
   } catch (e) { return '🎞 video'; }
 }
 loadBtn.onclick = () => {
   const val = urlInput.value.trim();
-  if (!val) { alert('Pehle YouTube ya MP4 link paste karo! 🔗'); return; }
+  if (!val) { alert('Pehle YouTube, MP4 ya MP3 link paste karo! 🔗'); return; }
   const data = parseURL(val);
   loadVideoLocal(data, true);
   const item = { type: data.type, url: data.url || '', videoId: data.videoId || '', label: makeLabel(data), by: myName };
@@ -722,12 +956,12 @@ loadBtn.onclick = () => {
 
 /* ---------- 🔄 SYNC BUTTON ---------- */
 $('sync-btn').onclick = () => {
-  if (currentType === 'none') { alert('Pehle koi video lagao! 🎬'); return; }
+  if (currentType === 'none') { alert('Pehle koi video ya MP3 lagao! 🎬'); return; }
   let t = 0, playing = false;
   if (currentType === 'youtube' && ytReady && ytPlayer && ytPlayer.getCurrentTime) {
     try { t = ytPlayer.getCurrentTime(); } catch (e) {}
     playing = ytPlaying;
-  } else if (currentType === 'mp4') {
+  } else if (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') {
     t = mp4.currentTime || 0;
     playing = !mp4.paused;
   }
@@ -735,13 +969,165 @@ $('sync-btn').onclick = () => {
   addSysMsg('🔄 ' + myName + ' ne sab ko sync kiya');
 };
 
+function formatMediaTime(sec) {
+  sec = Number(sec) || 0;
+  const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+function mp3Name(data) {
+  try {
+    const raw = String(data.url || '').split('?')[0].split('/').pop() || 'Premium Music';
+    return decodeURIComponent(raw).replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').slice(0, 36) || 'Premium Music';
+  } catch (e) { return 'Premium Music'; }
+}
+function isAudioMode() {
+  return currentType === 'mp3' || (currentType === 'hls' && hlsAudioMode);
+}
+function destroyHLS() {
+  if (hls) { try { hls.destroy(); } catch (e) {} hls = null; }
+}
+function inspectHLSStream(data, showAudio) {
+  try {
+    fetch(data.url, { cache: 'no-store' }).then((r) => r.ok ? r.text() : '').then((text) => {
+      const codecs = (text.match(/CODECS=\"([^\"]+)\"/i) || [])[1] || '';
+      const hasVideo = /(?:avc1|avc3|hvc1|hev1|vp9|av01)/i.test(codecs) || /#EXT-X-MEDIA:[^\n]*TYPE=VIDEO/i.test(text);
+      if (!hasVideo && /mp4a|audio/i.test(text)) showAudio();
+    }).catch(() => {});
+  } catch (e) {}
+}
+function updateMP3UI() {
+  if (!isAudioMode()) return;
+  const duration = Number.isFinite(mp4.duration) ? mp4.duration : 0;
+  const current = mp4.currentTime || 0;
+  const pct = duration > 0 ? Math.min(100, (current / duration) * 100) : 0;
+  mp3Fill.style.width = pct + '%';
+  mp3Dot.style.left = pct + '%';
+  mp3Current.textContent = formatMediaTime(current);
+  mp3Total.textContent = formatMediaTime(duration);
+  mp3Play.textContent = mp4.paused ? '▶' : '❚❚';
+  mp3Player.classList.toggle('mp3-playing', !mp4.paused);
+}
+function premiumMediaState() {
+  let time = 0, duration = 0, playing = false, muted = false;
+  if (currentType === 'youtube' && ytReady && ytPlayer) {
+    try { time = ytPlayer.getCurrentTime() || 0; duration = ytPlayer.getDuration() || 0; playing = ytPlayer.getPlayerState() === YT.PlayerState.PLAYING || ytPlaying; muted = ytPlayer.isMuted(); } catch (e) { playing = ytPlaying; }
+  } else if (currentType === 'mp4' || currentType === 'hls') {
+    time = mp4.currentTime || 0; duration = Number.isFinite(mp4.duration) ? mp4.duration : 0; playing = !mp4.paused; muted = mp4.muted;
+  }
+  return { time: time, duration: duration, playing: playing, muted: muted };
+}
+function isCustomVideoMode() {
+  return currentType === 'mp4' || (currentType === 'hls' && !hlsAudioMode);
+}
+function armPremiumHide() {
+  clearTimeout(premiumHideTimer);
+  if (!isCustomVideoMode() || !premiumMediaState().playing) return;
+  premiumHideTimer = setTimeout(() => premiumVideoUI.classList.add('controls-hidden'), 2400);
+}
+function showPremiumControls() {
+  if (!isCustomVideoMode()) return;
+  premiumVideoUI.classList.remove('controls-hidden');
+  armPremiumHide();
+}
+function updatePremiumVideoUI() {
+  if ((currentType !== 'youtube' && currentType !== 'mp4' && currentType !== 'hls') || (currentType === 'hls' && hlsAudioMode)) return;
+  updateYouTubeQualityOptions();
+  const m = premiumMediaState();
+  const pct = m.duration > 0 ? Math.min(100, (m.time / m.duration) * 100) : 0;
+  premiumVideoFill.style.width = pct + '%';
+  premiumVideoDot.style.left = pct + '%';
+  premiumVideoTime.textContent = formatMediaTime(m.time) + ' / ' + formatMediaTime(m.duration);
+  premiumVideoPlay.textContent = m.playing ? '❚❚' : '▶';
+  premiumVideoBigPlay.textContent = m.playing ? '❚❚' : '▶';
+  premiumVideoMute.textContent = m.muted ? '🔇' : '🔊';
+  premiumVideoUI.classList.toggle('is-playing', m.playing);
+  if (!m.playing) { clearTimeout(premiumHideTimer); premiumVideoUI.classList.remove('controls-hidden'); }
+}
+function premiumTogglePlay() {
+  if (currentType === 'youtube' && ytReady && ytPlayer) {
+    const m = premiumMediaState();
+    if (m.playing) ytPlayer.pauseVideo(); else ytPlayer.playVideo();
+  } else if (currentType === 'mp4' || currentType === 'hls') {
+    if (mp4.paused) mp4.play().catch(() => {}); else mp4.pause();
+  }
+}
+function premiumSeekBy(delta) {
+  const m = premiumMediaState();
+  const next = Math.max(0, Math.min(m.duration || Infinity, m.time + delta));
+  if (currentType === 'youtube' && ytReady && ytPlayer) ytPlayer.seekTo(next, true);
+  else if (currentType === 'mp4' || currentType === 'hls') mp4.currentTime = next;
+}
+function premiumToggleMute() {
+  if (currentType === 'youtube' && ytReady && ytPlayer) { if (ytPlayer.isMuted()) ytPlayer.unMute(); else ytPlayer.mute(); }
+  else if (currentType === 'mp4' || currentType === 'hls') mp4.muted = !mp4.muted;
+  setTimeout(updatePremiumVideoUI, 40);
+}
+function premiumSeekClick(e) {
+  if ((currentType !== 'youtube' && currentType !== 'mp4' && currentType !== 'hls') || (currentType === 'hls' && hlsAudioMode)) return;
+  const m = premiumMediaState();
+  if (!m.duration) return;
+  const r = premiumVideoProgress.getBoundingClientRect();
+  const next = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * m.duration;
+  if (currentType === 'youtube' && ytReady && ytPlayer) ytPlayer.seekTo(next, true);
+  else mp4.currentTime = next;
+}
+function setMP3Track(data) {
+  mp3Title.textContent = mp3Name(data);
+  mp3Artist.textContent = 'Watch Party · Premium Audio';
+  mp3Fill.style.width = '0%';
+  mp3Dot.style.left = '0%';
+  mp3Current.textContent = '00:00';
+  mp3Total.textContent = '00:00';
+}
+const YT_QUALITY_LABELS = { tiny: '144p', small: '240p', medium: '360p', large: '480p', hd720: '720p', hd1080: '1080p', highres: 'High' };
+function updateYouTubeQualityOptions() {
+  if (currentType !== 'youtube' || !ytReady || !ytPlayer || !ytPlayer.getAvailableQualityLevels) {
+    premiumVideoQuality.classList.add('hidden');
+    lastYTQualityLevels = '';
+    return;
+  }
+  let levels = [];
+  try { levels = ytPlayer.getAvailableQualityLevels() || []; } catch (e) {}
+  if (!levels.length) return;
+  const key = levels.join('|');
+  premiumVideoQuality.classList.remove('hidden');
+  if (key !== lastYTQualityLevels) {
+    const old = premiumVideoQuality.value;
+    premiumVideoQuality.innerHTML = '<option value="default">⚙ Auto</option>';
+    levels.forEach((q) => {
+      if (!YT_QUALITY_LABELS[q]) return;
+      const o = document.createElement('option'); o.value = q; o.textContent = YT_QUALITY_LABELS[q]; premiumVideoQuality.appendChild(o);
+    });
+    lastYTQualityLevels = key;
+    if ([...premiumVideoQuality.options].some((o) => o.value === old)) premiumVideoQuality.value = old;
+  }
+  try {
+    const active = ytPlayer.getPlaybackQuality && ytPlayer.getPlaybackQuality();
+    if (active && [...premiumVideoQuality.options].some((o) => o.value === active)) premiumVideoQuality.value = active;
+  } catch (e) {}
+}
+function setPremiumMedia(data) {
+  const isYT = data.type === 'youtube';
+  premiumVideoBadge.textContent = isYT ? '▶ YOUTUBE' : (data.type === 'hls' ? '📡 HLS STREAM' : '🎞 MP4 VIDEO');
+  premiumVideoTitle.textContent = isYT ? 'YouTube · ' + (data.videoId || 'Video') : makeLabel(data).replace(/^(🎞|📡)\s*/, '');
+}
 function loadVideoLocal(data, autoplay) {
+  destroyHLS();
+  hlsAudioMode = false;
   currentType = data.type;
   noVideo.classList.add('hidden');
+  mp3Player.classList.add('hidden');
+  premiumVideoUI.classList.add('hidden');
+  premiumVideoUI.classList.remove('youtube-native', 'controls-hidden');
+  premiumPlayerMenu.classList.add('hidden');
+  clearTimeout(premiumHideTimer);
   if (data.type === 'youtube') {
     mp4.pause();
     mp4.classList.add('hidden');
     ytDiv.classList.remove('hidden');
+    premiumVideoUI.classList.add('hidden');
+    premiumVideoUI.classList.add('youtube-native');
+    setPremiumMedia(data);
     if (ytReady && ytPlayer && ytPlayer.loadVideoById) {
       suppressYT = true;
       ytPlayer.loadVideoById(data.videoId);
@@ -750,10 +1136,71 @@ function loadVideoLocal(data, autoplay) {
       pendingYTVideo = data.videoId;
     }
     nowPlaying.textContent = '▶ YouTube chal raha hai: ' + data.videoId;
+  } else if (data.type === 'mp3') {
+    if (ytPlayer && ytPlayer.pauseVideo) { suppressYT = true; ytPlayer.pauseVideo(); setTimeout(() => suppressYT = false, 800); }
+    ytDiv.classList.add('hidden');
+    mp4.classList.add('hidden');
+    mp4.controls = false;
+    mp3Player.classList.remove('hidden');
+    setMP3Track(data);
+    suppressMP4 = true;
+    mp4.src = data.url;
+    mp4.load();
+    if (autoplay) mp4.play().catch(() => {});
+    setTimeout(() => { suppressMP4 = false; updateMP3UI(); }, 1000);
+    nowPlaying.textContent = '🎵 MP3 chal raha hai: ' + mp3Name(data);
+  } else if (data.type === 'hls') {
+    if (ytPlayer && ytPlayer.pauseVideo) { suppressYT = true; ytPlayer.pauseVideo(); setTimeout(() => suppressYT = false, 800); }
+    ytDiv.classList.add('hidden');
+    mp4.classList.remove('hidden');
+    mp4.controls = false;
+    premiumVideoUI.classList.remove('hidden');
+    setPremiumMedia(data);
+    nowPlaying.textContent = '📡 HLS stream load ho rahi hai...';
+    const showHLSAudio = () => {
+      if (hlsAudioMode) return;
+      hlsAudioMode = true;
+      premiumVideoUI.classList.add('hidden');
+      mp4.classList.add('hidden');
+      mp3Player.classList.remove('hidden');
+      setMP3Track(data);
+      mp3Artist.textContent = 'Watch Party · HLS Audio';
+      nowPlaying.textContent = '🎵 HLS audio chal raha hai: ' + mp3Name(data);
+      updateMP3UI();
+    };
+    /* Gaana-style .mp4.master.m3u8 links are often audio-only HLS.
+       Show the music canvas immediately; manifest inspection remains as a fallback. */
+    if (/\.mp4\.master\.m3u8/i.test(data.url) || /(?:audio|mp3)/i.test(data.url)) showHLSAudio();
+    mp4.removeAttribute('src');
+    mp4.load();
+    inspectHLSStream(data, showHLSAudio);
+    if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+      hls = new Hls({ enableWorker: true });
+      hls.loadSource(data.url);
+      hls.attachMedia(mp4);
+      hls.on(Hls.Events.MANIFEST_PARSED, (_, manifest) => {
+        const levels = (manifest && manifest.levels) || [];
+        if (levels.length && levels.every(level => !level.videoCodec)) showHLSAudio();
+        nowPlaying.textContent = '📡 HLS stream chal rahi hai';
+        if (autoplay) mp4.play().catch(() => {});
+      });
+      hls.on(Hls.Events.ERROR, (_, detail) => {
+        if (detail && detail.fatal) nowPlaying.textContent = '⚠️ HLS stream load nahi hui — link/CORS check karo';
+      });
+    } else if (mp4.canPlayType('application/vnd.apple.mpegurl')) {
+      mp4.src = data.url;
+      if (autoplay) mp4.play().catch(() => {});
+      nowPlaying.textContent = '📡 HLS stream chal rahi hai';
+    } else {
+      nowPlaying.textContent = '⚠️ Is browser mein HLS support nahi hai';
+    }
   } else {
     if (ytPlayer && ytPlayer.pauseVideo) { suppressYT = true; ytPlayer.pauseVideo(); setTimeout(() => suppressYT = false, 800); }
     ytDiv.classList.add('hidden');
     mp4.classList.remove('hidden');
+    mp4.controls = false;
+    premiumVideoUI.classList.remove('hidden');
+    setPremiumMedia(data);
     suppressMP4 = true;
     mp4.src = data.url;
     if (autoplay) mp4.play().catch(() => {});
@@ -766,10 +1213,11 @@ function loadVideoLocal(data, autoplay) {
 window.onYouTubeIframeAPIReady = function () {
   ytPlayer = new YT.Player('yt-player', {
     height: '100%', width: '100%',
-    playerVars: { autoplay: 1, rel: 0 },
+    playerVars: { autoplay: 1, rel: 0, controls: 1, modestbranding: 1, playsinline: 1 },
     events: {
       onReady: () => {
         ytReady = true;
+        updateYouTubeQualityOptions();
         if (pendingYTVideo) {
           suppressYT = true;
           ytPlayer.loadVideoById(pendingYTVideo);
@@ -779,6 +1227,7 @@ window.onYouTubeIframeAPIReady = function () {
       },
       onStateChange: (e) => {
         ytPlaying = (e.data === YT.PlayerState.PLAYING);
+        updateYouTubeQualityOptions();
         if (e.data === YT.PlayerState.ENDED && currentType === 'youtube') onVideoEnded();
         if (suppressYT || currentType !== 'youtube' || !joined) return;
         if (e.data === YT.PlayerState.PLAYING) pubCmd('play', { time: ytPlayer.getCurrentTime() });
@@ -798,11 +1247,39 @@ setInterval(() => {
   }
 }, 1500);
 
-/* ---------- MP4 SYNC EVENTS ---------- */
-mp4.addEventListener('play', () => { if (!suppressMP4 && currentType === 'mp4' && joined) pubCmd('play', { time: mp4.currentTime }); });
-mp4.addEventListener('pause', () => { if (!suppressMP4 && currentType === 'mp4' && joined) pubCmd('pause', { time: mp4.currentTime }); });
-mp4.addEventListener('seeked', () => { if (!suppressMP4 && currentType === 'mp4' && joined) pubCmd('seek', { time: mp4.currentTime }); });
-mp4.addEventListener('ended', () => { if (currentType === 'mp4' && joined) onVideoEnded(); });
+/* ---------- MP4 + PREMIUM MP3 SYNC EVENTS ---------- */
+mp4.addEventListener('timeupdate', updateMP3UI);
+mp4.addEventListener('loadedmetadata', updateMP3UI);
+mp4.addEventListener('play', () => { updateMP3UI(); updatePremiumVideoUI(); armPremiumHide(); if (!suppressMP4 && (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) pubCmd('play', { time: mp4.currentTime }); });
+mp4.addEventListener('pause', () => { updateMP3UI(); updatePremiumVideoUI(); showPremiumControls(); if (!suppressMP4 && (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) pubCmd('pause', { time: mp4.currentTime }); });
+mp4.addEventListener('seeked', () => { updateMP3UI(); updatePremiumVideoUI(); showPremiumControls(); if (!suppressMP4 && (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) pubCmd('seek', { time: mp4.currentTime }); });
+mp4.addEventListener('ended', () => { if ((currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) onVideoEnded(); });
+mp3Play.onclick = () => { if (!isAudioMode()) return; if (mp4.paused) mp4.play().catch(() => {}); else mp4.pause(); };
+mp3Back.onclick = () => { if (isAudioMode()) mp4.currentTime = Math.max(0, (mp4.currentTime || 0) - 10); };
+mp3Forward.onclick = () => { if (isAudioMode()) mp4.currentTime = Math.min(mp4.duration || Infinity, (mp4.currentTime || 0) + 10); };
+mp3Progress.onclick = (e) => { if (!isAudioMode() || !mp4.duration) return; const r = mp3Progress.getBoundingClientRect(); mp4.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * mp4.duration; };
+playerWrap.addEventListener('click', (e) => { showPremiumControls(); if (!premiumPlayerMenu.contains(e.target) && e.target !== $('premium-video-menu')) premiumPlayerMenu.classList.add('hidden'); });
+premiumVideoPlay.onclick = premiumTogglePlay;
+premiumVideoBigPlay.onclick = premiumTogglePlay;
+premiumVideoBack.onclick = () => premiumSeekBy(-10);
+premiumVideoForward.onclick = () => premiumSeekBy(10);
+premiumVideoMute.onclick = premiumToggleMute;
+premiumVideoQuality.onchange = () => { if (currentType === 'youtube' && ytReady && ytPlayer && ytPlayer.setPlaybackQuality) { try { ytPlayer.setPlaybackQuality(premiumVideoQuality.value); } catch (e) {} setTimeout(updateYouTubeQualityOptions, 250); } };
+premiumVideoProgress.onclick = premiumSeekClick;
+premiumVideoFullscreen.onclick = () => { const wrap = document.querySelector('.player-wrap'); if (document.fullscreenElement) document.exitFullscreen(); else if (wrap.requestFullscreen) wrap.requestFullscreen(); else if (wrap.webkitRequestFullscreen) wrap.webkitRequestFullscreen(); };
+$('premium-video-menu').onclick = (e) => { e.stopPropagation(); if (isCustomVideoMode()) { premiumPlayerMenu.classList.toggle('hidden'); showPremiumControls(); } else addSysMsg('YouTube ka PiP official player controls se use karo'); };
+premiumPipBtn.onclick = async (e) => {
+  e.stopPropagation();
+  premiumPlayerMenu.classList.add('hidden');
+  if (!isCustomVideoMode()) { addSysMsg('YouTube ka PiP official player controls se use karo'); return; }
+  try {
+    if (document.pictureInPictureElement) await document.exitPictureInPicture();
+    else if (document.pictureInPictureEnabled && mp4.requestPictureInPicture) await mp4.requestPictureInPicture();
+    else if (mp4.webkitSetPresentationMode) mp4.webkitSetPresentationMode('picture-in-picture');
+    else addSysMsg('Is browser mein Picture-in-Picture support nahi hai');
+  } catch (e) { addSysMsg('Picture-in-Picture start nahi ho saka'); }
+};
+setInterval(updatePremiumVideoUI, 300);
 
 /* ---------- 📋 PLAYLIST / QUEUE ---------- */
 $('queue-btn').onclick = () => {
