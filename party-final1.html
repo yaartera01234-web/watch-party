@@ -1937,10 +1937,11 @@ $('react-emoji-input').addEventListener('keydown', (e) => {
 $('react-emoji-cancel').onclick = closeEmojiInput;
 
 /* GIF tap -> page ke andar viewer (page chhup jane wala masla khatam) */
-function openGifView(url) {
+function openGifView(url, noOpen) {
   if (!url) return;
   $('gif-view-img').src = url;
   $('gif-view-open').href = url;
+  $('gif-view-open').style.display = noOpen ? 'none' : '';   /* encrypted photo: bahar kholne ka koi faida nahi */
   $('gif-view').classList.add('show');
 }
 function closeGifView() {
@@ -2217,7 +2218,7 @@ function showPhoto(holder, url) {
   holder.innerHTML = '';
   const im = document.createElement('img');
   im.src = url; im.alt = 'photo'; im.loading = 'lazy';
-  im.onclick = (ev) => { ev.stopPropagation(); openGifView(url); };
+  im.onclick = (ev) => { ev.stopPropagation(); openGifView(url, true); };
   holder.appendChild(im);
 }
 async function loadPhoto(holder, m) {
