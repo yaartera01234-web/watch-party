@@ -710,7 +710,7 @@ main { gap: 11px; }
   <img id="gif-view-img" src="" alt="GIF" />
   <div class="gv-row">
     <a id="gif-view-open" href="#" target="_blank" rel="noopener">↗ Original</a>
-    <button id="gif-view-hide" type="button">Band karo</button>
+    <button id="gif-view-hide" type="button">Close</button>
   </div>
 </div>
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
@@ -2242,7 +2242,7 @@ async function sendPhotoFile(file) {
   if (!mqttUp) { addSysMsg('Tower connect nahi — photo nahi jayegi'); return; }
   photoBusy = true;
   const pb = $('pic-btn'); if (pb) pb.disabled = true;
-  addSysMsg('📤 Photo bhej raha hoon...');
+  addSysMsg('📤 Photo is Uploading...');
   try {
     const raw = await fileToDataURL(file);
     const small = await imgDownscale(raw, 1280, 0.8);
