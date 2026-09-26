@@ -369,6 +369,21 @@ main { gap: 11px; }
 #gif-grid .gif-none { grid-column:1 / -1; text-align:center; padding:14px 6px; }
 .chat-gif { display:block; max-width:190px; max-height:190px; border-radius:10px; margin:2px 0; }
 .chat-input-bar { position:relative; }
+
+/* ===== NADYA2: gif viewer + apni marzi ka emoji ===== */
+#gif-view { position:fixed; inset:0; z-index:90; display:none; align-items:center; justify-content:center; flex-direction:column; gap:12px; background:rgba(0,0,0,.93); padding:18px; }
+#gif-view.show { display:flex; }
+#gif-view img { max-width:92vw; max-height:74vh; border-radius:12px; }
+#gif-view .gv-row { display:flex; gap:10px; }
+#gif-view .gv-row a, #gif-view .gv-row button { padding:8px 16px; border-radius:20px; border:1px solid rgba(255,255,255,.3); background:rgba(255,255,255,.12); color:#fff; font-size:13px; font-weight:700; text-decoration:none; }
+#gif-view-close { position:absolute; top:14px; right:16px; width:42px; height:42px; border-radius:50%; border:1px solid rgba(255,255,255,.3); background:rgba(255,255,255,.12); color:#fff; font-size:17px; }
+#react-tray button.more { font-size:16px; border:1px dashed rgba(255,255,255,.5); }
+#react-emoji-box { position:absolute; left:0; right:0; bottom:100%; z-index:45; display:none; gap:8px; padding:8px; background:rgba(13,10,32,.98); border:1px solid rgba(255,255,255,.16); border-radius:14px; box-shadow:0 -10px 26px rgba(0,0,0,.5); }
+#react-emoji-box.show { display:flex; }
+#react-emoji-input { flex:1; min-width:0; padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.08); color:#fff; font-size:16px; outline:none; }
+#react-emoji-input:focus { border-color:#f472b6; }
+#react-emoji-cancel { width:42px; border:0; border-radius:10px; background:rgba(255,255,255,.12); color:#fff; font-size:15px; }
+.chat-gif { -webkit-touch-callout:none; }
 </style>
 </head>
 <body>
@@ -489,6 +504,10 @@ main { gap: 11px; }
           </div>
           <div id="gif-grid"></div>
         </div>
+        <div id="react-emoji-box">
+          <input id="react-emoji-input" type="text" maxlength="8" placeholder="Keyboard se apni marzi ka emoji chuno..." autocomplete="off" />
+          <button id="react-emoji-cancel" type="button">✕</button>
+        </div>
         <div class="emoji-row">
           <button class="emoji" data-e="😂">😂</button>
           <button class="emoji" data-e="❤️">❤️</button>
@@ -510,6 +529,14 @@ main { gap: 11px; }
 </div>
 
 <div id="react-tray"></div>
+<div id="gif-view">
+  <button id="gif-view-close" type="button">✕</button>
+  <img id="gif-view-img" src="" alt="GIF" />
+  <div class="gv-row">
+    <a id="gif-view-open" href="#" target="_blank" rel="noopener">↗ Original</a>
+    <button id="gif-view-hide" type="button">Band karo</button>
+  </div>
+</div>
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
 <script src="https://www.youtube.com/iframe_api"></script>
@@ -1460,19 +1487,81 @@ function openReactTray(row, target) {
   tray.style.left = left + 'px'; tray.style.top = top + 'px';
 }
 function closeReactTray() { const t = $('react-tray'); if (t) t.classList.remove('show'); }
-(function buildReactTray() {
+const REACT_RECENT_KEY = 'wp_react_recent';
+function reactRecents() { try { return JSON.parse(localStorage.getItem(REACT_RECENT_KEY) || '[]'); } catch (e) { return []; } }
+function reactSaveRecent(em) {
+  let list = reactRecents().filter((x) => x !== em);
+  list.unshift(em);
+  if (list.length > 6) list = list.slice(0, 6);
+  try { localStorage.setItem(REACT_RECENT_KEY, JSON.stringify(list)); } catch (e) {}
+}
+function buildReactTray() {
   const tray = $('react-tray'); if (!tray) return;
-  REACTIONS.forEach((em) => {
+  tray.innerHTML = '';
+  const quick = REACTIONS.concat(reactRecents().filter((e) => REACTIONS.indexOf(e) < 0));
+  quick.forEach((em) => {
     const b = document.createElement('button'); b.type = 'button'; b.textContent = em;
     b.onclick = () => { const t = tray.dataset.mid; closeReactTray(); if (t) sendReact(t, em); };
     tray.appendChild(b);
   });
-})();
+  const more = document.createElement('button');
+  more.type = 'button'; more.className = 'more'; more.textContent = '➕';
+  more.title = 'Apna emoji (keyboard se)';
+  more.onclick = () => { const t = tray.dataset.mid; closeReactTray(); if (t) openEmojiInput(t); };
+  tray.appendChild(more);
+}
+buildReactTray();
 document.addEventListener('pointerdown', (ev) => {
   const t = $('react-tray');
   if (t && t.classList.contains('show') && !t.contains(ev.target)) closeReactTray();
 }, true);
 $('chat-messages').addEventListener('scroll', closeReactTray, { passive: true });
+/* apni marzi ka emoji react (system keyboard / Gboard emoji picker) */
+function openEmojiInput(target) {
+  const box = $('react-emoji-box'), inp = $('react-emoji-input');
+  box.dataset.mid = target;
+  box.classList.add('show');
+  inp.value = '';
+  inp.focus();
+}
+function closeEmojiInput() {
+  const box = $('react-emoji-box');
+  if (box) { box.classList.remove('show'); box.dataset.mid = ''; }
+  const inp = $('react-emoji-input');
+  if (inp) inp.blur();
+}
+function reactCustom(target, em) {
+  if (!target || !em) return;
+  sendReact(target, em);
+  reactSaveRecent(em);
+  buildReactTray();
+  closeEmojiInput();
+}
+let emojiTimer = null;
+$('react-emoji-input').addEventListener('input', () => {
+  clearTimeout(emojiTimer);
+  const v = $('react-emoji-input').value.replace(/\s+/g, '').slice(0, 8);
+  if (!v) return;
+  emojiTimer = setTimeout(() => reactCustom($('react-emoji-box').dataset.mid, v), 400);
+});
+$('react-emoji-cancel').onclick = closeEmojiInput;
+
+/* GIF tap -> page ke andar viewer (page chhup jane wala masla khatam) */
+function openGifView(url) {
+  if (!url) return;
+  $('gif-view-img').src = url;
+  $('gif-view-open').href = url;
+  $('gif-view').classList.add('show');
+}
+function closeGifView() {
+  const v = $('gif-view');
+  v.classList.remove('show');
+  $('gif-view-img').src = '';
+}
+$('gif-view-close').onclick = closeGifView;
+$('gif-view-hide').onclick = closeGifView;
+$('gif-view').addEventListener('click', (e) => { if (e.target === $('gif-view')) closeGifView(); });
+
 let lpTimer = null, lpFired = false;
 
 /* ---------- ↩️ SWIPE REPLY ---------- */
@@ -1572,7 +1661,7 @@ function addMsg(m) {
   if (m.gif) {
     const gi = document.createElement('img');
     gi.className = 'chat-gif'; gi.src = m.gif; gi.alt = 'GIF'; gi.loading = 'lazy';
-    gi.onclick = () => { try { window.open(m.gif, '_blank'); } catch (e) {} };
+    gi.onclick = (ev) => { ev.stopPropagation(); openGifView(m.gif); };
     bubble.appendChild(gi);
   } else {
     bubble.appendChild(document.createTextNode(text));
