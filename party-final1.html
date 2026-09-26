@@ -358,6 +358,11 @@ main { gap: 11px; }
 #react-tray button:hover { transform:scale(1.2); background:rgba(255,255,255,.12); }
 #gif-btn { background:none; border:1px solid rgba(255,255,255,.25); border-radius:14px; color:#f9a8d4; font-size:11px; font-weight:900; letter-spacing:.5px; padding:2px 10px; margin-left:4px; cursor:pointer; }
 #gif-btn:hover { background:rgba(244,114,182,.18); }
+#pic-btn { background:none; border:1px solid rgba(84,232,255,.45); border-radius:14px; color:#a9ecff; font-size:15px; font-weight:900; padding:2px 9px; margin-left:4px; cursor:pointer; line-height:1; }
+#pic-btn:hover { background:rgba(84,232,255,.16); }
+#pic-btn:disabled { opacity:.45; cursor:default; }
+.chat-photo img { max-width:220px; max-height:300px; border-radius:12px; display:block; cursor:pointer; }
+.chat-photo .ph-load { font-size:12px; opacity:.85; padding:4px 2px; }
 #gif-panel { position:absolute; left:0; right:0; bottom:100%; z-index:60; height:300px; max-height:none; display:flex; flex-direction:column; background:var(--wp-menu-bg, rgba(13,10,32,.98)); border:1px solid rgba(255,255,255,.16); border-radius:16px 16px 0 0; box-shadow:0 -12px 30px rgba(0,0,0,.5); overflow:hidden; }
 .gif-head { display:flex; gap:8px; padding:8px 8px 6px; }
 #gif-q { flex:1; padding:9px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.08); color:#fff; font-size:13px; outline:none; min-width:0; }
@@ -687,7 +692,9 @@ main { gap: 11px; }
           <button class="emoji" data-e="😮">😮</button>
           <button class="emoji" data-e="👍">👍</button>
           <button id="gif-btn" type="button" title="GIF bhejo">GIF</button>
+          <button id="pic-btn" type="button" title="Gallery se photo bhejo">🖼️</button>
         </div>
+        <input id="pic-file" type="file" accept="image/*" style="display:none" />
         <div class="input-row">
           <input id="chat-input" type="text" placeholder="Message likho..." maxlength="500" autocomplete="off" />
           <button id="send-btn">➤</button>
@@ -791,6 +798,50 @@ function dup(id) {
   seenMid[id] = 1; seenCount++;
   if (seenCount > 500) { seenMid = {}; seenCount = 0; }
   return false;
+}
+
+/* ---------- 🔒 E2E: chaabi ROOM NAME se banti hai (koi alag password nahi) ---------- */
+const E2E_SALT = 'YaarParty786-e2e-v1';
+let e2eKey = null;
+function b64e(buf) {
+  const b = new Uint8Array(buf); let s = '';
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function b64d(str) {
+  const s = atob(str), b = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
+  return b;
+}
+async function e2eSetRoom(roomName) {
+  try {
+    const te = new TextEncoder();
+    const km = await crypto.subtle.importKey('raw', te.encode('wp|' + String(roomName || 'main').toLowerCase().trim()),
+      'PBKDF2', false, ['deriveKey']);
+    e2eKey = await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt: te.encode(E2E_SALT), iterations: 150000, hash: 'SHA-256' },
+      km, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    addSysMsg('🔒 E2E chalu — chat aur photo ab locked hain');
+  } catch (e) { e2eKey = null; }
+}
+async function e2eEnc(obj) {
+  if (!e2eKey) return null;
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, e2eKey,
+    new TextEncoder().encode(JSON.stringify(obj)));
+  return { e2e: 1, iv: b64e(iv), ct: b64e(ct) };
+}
+async function e2eDec(w) {
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(w.iv) }, e2eKey, b64d(w.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+async function e2eEncBytes(buf) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, e2eKey, buf);
+  return { iv: b64e(iv), blob: new Blob([ct], { type: 'application/octet-stream' }) };
+}
+async function e2eDecBytes(buf, ivB64) {
+  return crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(ivB64) }, e2eKey, buf);
 }
 function setStatus(t) { /* silent */ }
 
@@ -915,6 +966,15 @@ function onMsg(topic, buf) {
   } else if (topic === TP.chat) {
     let m; try { m = JSON.parse(str); } catch (e) { return; }
     if (!m || dup(m.mid)) return;
+    if (m.e2e) {                                  /* 🔒 locked message */
+      if (!e2eKey) return;
+      e2eDec(m).then((p) => {
+        if (!p || dup(p.mid)) return;
+        if (p.sys) addSysMsg(p.text);
+        else addMsg(p);
+      }).catch(() => { addSysMsg('🔒 Message nahi khula — room name check karo'); });
+      return;
+    }
     if (m.sys) addSysMsg(m.text);
     else addMsg(m);
   } else if (topic === TP.react) {
@@ -971,7 +1031,9 @@ function addSysMsg(text) {
   chatBox.appendChild(div);
   if (isNearBottom()) scrollChatDown();
 }
-function pushSys(text) { pub(TP.chat, { sys: true, text: text, mid: mid() }, false); }
+function pushSys(text) {
+  e2eEnc({ sys: true, text: text, mid: mid() }).then((w) => { if (w) { pub(TP.chat, w, false); return; } pub(TP.chat, { sys: true, text: text, mid: mid() }, false); });
+}
 
 /* ---------- 🖼️ DP PICKER ---------- */
 function renderJoinAvatar() {
@@ -1039,12 +1101,13 @@ function avatarEl(avatar, name, color, size) {
 }
 
 /* ---------- JOIN ---------- */
-function join() {
+async function join() {
   if (!mqttUp) { alert('Tower se jur raha hai... 3 sec baad dobara dabao! 📻'); return; }
   const name = nameInput.value.trim();
   if (!name) { alert('Pehle apna name likho! 😊'); return; }
   myName = name.slice(0, 20);
   myRoom = cleanRoom(roomInput.value);
+  await e2eSetRoom(myRoom);
   savePrefs();
   const newRoom = ROOM_BASE + myRoom;
   if (newRoom !== ROOM) {
@@ -1985,7 +2048,13 @@ function addMsg(m) {
     const qt = document.createElement('div'); qt.className = 'q-text'; qt.textContent = reply.text || '';
     q.appendChild(qn); q.appendChild(qt); bubble.appendChild(q);
   }
-  if (m.gif) {
+  if (m.img) {
+    const holder = document.createElement('div'); holder.className = 'chat-photo';
+    const ld = document.createElement('div'); ld.className = 'ph-load'; ld.textContent = '🖼️ Photo aa rahi hai...';
+    holder.appendChild(ld);
+    bubble.appendChild(holder);
+    loadPhoto(holder, m);
+  } else if (m.gif) {
     const gi = document.createElement('img');
     gi.className = 'chat-gif'; gi.src = m.gif; gi.alt = 'GIF'; gi.loading = 'lazy';
     gi.onclick = (ev) => { ev.stopPropagation(); openGifView(m.gif); };
@@ -2007,19 +2076,22 @@ function addMsg(m) {
     const keys = Object.keys(msgEls);
     if (keys.length > 400) keys.forEach((k) => { if (!msgEls[k].row.isConnected) delete msgEls[k]; });
   }
-  attachReplyGestures(row, { name: name, text: text || (m.gif ? 'GIF' : ''), own: own });
+  attachReplyGestures(row, { name: name, text: text || (m.img ? '🖼️ Photo' : (m.gif ? 'GIF' : '')), own: own });
   if (wasBottom || own) scrollChatDown();
   else newMsgBtn.classList.remove('hidden');
   if (!own) tuneMsg();
 }
-function sendChat() {
+async function sendChat() {
   const text = chatInput.value.trim();
   if (!text || !mqttUp) return;
+  if (!e2eKey) { addSysMsg('🔒 Chaabi ban rahi hai — 1 second baad dobara bhejo'); return; }
   const d = new Date();
   const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   let reply = null;
   if (replyTo) reply = { name: String(replyTo.name || '').slice(0, 20), text: String(replyTo.text || '').slice(0, 120) };
-  pub(TP.chat, { name: myName, color: myColor, text: text.slice(0, 500), reply: reply, time: time, senderId: myId, mid: mid() }, false);
+  const w = await e2eEnc({ name: myName, color: myColor, text: text.slice(0, 500), reply: reply, time: time, senderId: myId, mid: mid() });
+  if (!w) { addSysMsg('🔒 Lock nahi hua — dobara try karo'); return; }
+  pub(TP.chat, w, false);
   chatInput.value = '';
   cancelReply();
 }
@@ -2093,12 +2165,14 @@ function gifSetTab(tab) {
   if (tab === 'recent') gifShowRecent();
   else gifLoad(gifQ.value.trim());
 }
-function sendGif(small, full) {
+async function sendGif(small, full) {
   if (!full) return;
   if (!mqttUp) { addSysMsg('Tower connect nahi — GIF nahi gaya'); return; }
+  if (!e2eKey) { addSysMsg('🔒 Chaabi ban rahi hai — dobara try karo'); return; }
   gifSaveRecent(small || full, full);
   const d = new Date();
-  pub(TP.chat, { name: myName, color: myColor, text: 'GIF', gif: full, time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), senderId: myId, mid: mid() }, false);
+  const w = await e2eEnc({ name: myName, color: myColor, text: 'GIF', gif: full, time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), senderId: myId, mid: mid() });
+  if (w) pub(TP.chat, w, false);
   gifPanel.classList.add('hidden');
 }
 window.wpSendGif = function (u) { sendGif(u, u); };
@@ -2118,6 +2192,94 @@ $('gif-tab-trend').onclick = () => gifSetTab('trend');
 $('gif-tab-recent').onclick = () => gifSetTab('recent');
 gifQ.addEventListener('input', () => { clearTimeout(gifTimer); gifTimer = setTimeout(() => gifLoad(gifQ.value.trim()), 450); });
 gifQ.addEventListener('keydown', (e) => { if (e.key === 'Enter') { clearTimeout(gifTimer); gifLoad(gifQ.value.trim()); } });
+
+/* ---------- 🖼️ PHOTO: gallery → compress → 🔒 E2E → Litterbox (72h) ---------- */
+const localPhotos = {};      /* apni bheji hui pic foran dikhane ke liye */
+let photoBusy = false;
+function fileToDataURL(f) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(f); });
+}
+function imgDownscale(dataUrl, maxSide, q) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => {
+      const sc = Math.min(1, maxSide / Math.max(im.width, im.height));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(im.width * sc));
+      c.height = Math.max(1, Math.round(im.height * sc));
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      res(c.toDataURL('image/jpeg', q));
+    };
+    im.onerror = rej; im.src = dataUrl;
+  });
+}
+function showPhoto(holder, url) {
+  holder.innerHTML = '';
+  const im = document.createElement('img');
+  im.src = url; im.alt = 'photo'; im.loading = 'lazy';
+  im.onclick = (ev) => { ev.stopPropagation(); openGifView(url); };
+  holder.appendChild(im);
+}
+async function loadPhoto(holder, m) {
+  if (m.mid && localPhotos[m.mid]) { showPhoto(holder, localPhotos[m.mid]); return; }
+  try {
+    const r = await fetch(m.img, { mode: 'cors', cache: 'force-cache' });
+    if (!r.ok) throw new Error('fetch');
+    const pt = await e2eDecBytes(await r.arrayBuffer(), m.iv);
+    showPhoto(holder, URL.createObjectURL(new Blob([pt], { type: 'image/jpeg' })));
+  } catch (e) {
+    holder.innerHTML = '';
+    const d = document.createElement('div'); d.className = 'ph-load';
+    d.textContent = '🔒 Photo nahi khuli (room name same hai? 72h guzar gaye?)';
+    holder.appendChild(d);
+  }
+}
+async function sendPhotoFile(file) {
+  if (!file || photoBusy) return;
+  if (!/^image\//.test(file.type || '')) { addSysMsg('📷 Sirf photo select karo'); return; }
+  if (!e2eKey) { addSysMsg('🔒 Chaabi ban rahi hai — 1 second baad dobara try karo'); return; }
+  if (!mqttUp) { addSysMsg('Tower connect nahi — photo nahi jayegi'); return; }
+  photoBusy = true;
+  const pb = $('pic-btn'); if (pb) pb.disabled = true;
+  addSysMsg('📤 Photo bhej raha hoon...');
+  try {
+    const raw = await fileToDataURL(file);
+    const small = await imgDownscale(raw, 1280, 0.8);
+    const bytes = b64d(small.split(',')[1]).buffer;
+    const enc = await e2eEncBytes(bytes);
+    const fd = new FormData();
+    fd.append('reqtype', 'fileupload');
+    fd.append('time', '72h');
+    fd.append('fileToUpload', enc.blob, 'wp.jpg');
+    const r = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', { method: 'POST', body: fd });
+    const url = (await r.text()).trim();
+    if (!r.ok || !/^https?:\/\//.test(url)) throw new Error('upload fail');
+    const d = new Date();
+    const myMid = mid();
+    localPhotos[myMid] = small;
+    const w = await e2eEnc({ name: myName, color: myColor, text: '', img: url, iv: enc.iv, time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), senderId: myId, mid: myMid });
+    if (!w) throw new Error('enc');
+    pub(TP.chat, w, false);
+    addSysMsg('✅ Photo bhej di — 72 ghante tak dikhegi');
+  } catch (e) {
+    addSysMsg('⚠️ Photo nahi gayi — net/upload check karo');
+  } finally {
+    photoBusy = false;
+    if (pb) pb.disabled = false;
+  }
+}
+const picBtn = $('pic-btn'), picFile = $('pic-file');
+if (picBtn) picBtn.onclick = () => {
+  try { closeEmojiInput(); } catch (e) {}
+  try { closeReactTray(); } catch (e) {}
+  try { gifPanel.classList.add('hidden'); } catch (e) {}
+  picFile.click();
+};
+if (picFile) picFile.addEventListener('change', (e) => {
+  const f = e.target.files && e.target.files[0];
+  picFile.value = '';
+  if (f) sendPhotoFile(f);
+});
 
 
 /* ---------- MEMBERS ---------- */
