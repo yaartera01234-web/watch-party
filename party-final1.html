@@ -467,6 +467,15 @@ main { gap: 11px; }
 @media (max-width: 600px) { .wp-logo { width: 23px; height: 23px; } }
 @media (max-width: 380px) { .wp-logo { width: 21px; height: 21px; } }
 @media (max-height: 640px) { .wp-logo-big { width: 42px; height: 42px; } }
+
+/* ===== header mein room ka chhota colourful chip ===== */
+.wp-room-chip { display: flex; align-items: center; gap: 5px; margin: 0 10px; padding: 4px 11px; border-radius: 20px;
+  font-size: 12px; font-weight: 800; color: #fff; max-width: 36vw; white-space: nowrap; overflow: hidden;
+  background: linear-gradient(100deg, var(--wp-accA, rgba(255,103,190,0.92)), var(--wp-accB, rgba(146,111,255,0.94)));
+  border: 1px solid rgba(255,255,255,0.20); box-shadow: 0 7px 18px rgba(0,0,0,0.20); }
+.wp-room-chip .ic { font-size: 11.5px; line-height: 1; }
+.wp-room-chip span:not(.ic) { overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 380px) { .wp-room-chip { font-size: 11px; padding: 3px 9px; margin: 0 6px; max-width: 34vw; } }
 </style>
 </head>
 <body>
@@ -510,6 +519,9 @@ main { gap: 11px; }
 <div id="app" class="hidden">
   <header>
     <div class="brand"><span class="wp-logo"><svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><rect x="2.4" y="8" width="2.7" height="13" rx="1.35" fill="#54e8ff"/><rect x="6.7" y="5" width="2.7" height="16" rx="1.35" fill="#8b72ff"/><rect x="11" y="2.6" width="2.7" height="18.4" rx="1.35" fill="#ff5ebc"/><rect x="15.3" y="6.4" width="2.7" height="14.6" rx="1.35" fill="#8b72ff"/><rect x="19.6" y="9.6" width="2.7" height="11.4" rx="1.35" fill="#54e8ff"/></svg></span><span>Watch Party</span></div>
+    <div id="wp-room-chip" class="wp-room-chip" title="Is room ka naam">
+      <span class="ic">🚪</span><span id="wp-room-name">main</span>
+    </div>
     <div class="header-right">
       <div id="online-count">🟢 0 online</div>
       <div id="wp-theme-btn" class="wp-hbtn" title="Theme / bubble badlo">🎨</div>
@@ -991,6 +1003,7 @@ function join() {
   const shortRoom = myRoom.length > 12 ? myRoom.slice(0, 12) + '\u2026' : myRoom;
   var nbEl = $('my-name-badge');            /* wp-header-clean: header se hata diya hai */
   if (nbEl) nbEl.textContent = '\uD83D\uDE0E ' + myName + ' \u00B7 \uD83D\uDEAA ' + shortRoom;
+  var rmEl = $('wp-room-name'); if (rmEl) rmEl.textContent = shortRoom;   /* header ka room chip */
   renderMembers();
   renderQueue(queueLocal.items || [], queueLocal.index);
   // late joiner catchup
