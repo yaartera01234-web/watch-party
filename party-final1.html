@@ -918,15 +918,40 @@ try {
 } catch (e) {}
 
 /* ---------- COMMANDS ---------- */
+function cmdTime(c) {
+  const t = Number(c && c.time);
+  return (isFinite(t) && t >= 0) ? t : null;   // missing/NaN -> null (command skip)
+}
+function localNow() {
+  try {
+    if (currentType === 'youtube' && ytReady && ytPlayer && ytPlayer.getCurrentTime) return ytPlayer.getCurrentTime() || 0;
+    return mp4.currentTime || 0;
+  } catch (e) { return 0; }
+}
+function localDur() {
+  try {
+    if (currentType === 'youtube' && ytReady && ytPlayer && ytPlayer.getDuration) return ytPlayer.getDuration() || 0;
+    return mp4.duration || 0;
+  } catch (e) { return 0; }
+}
+/* lambe gaane me 0 ke qareeb peechay wala seek = kisi aur ke ad ka shor, asli seek nahi */
+function saneSeek(t) {
+  if (t === null) return false;
+  const cur = localNow(), dur = localDur();
+  if (dur > 600 && cur > 120 && t < 30) return false;   // ad ka shor
+  return true;
+}
 function applyCmd(c) {
-  const t = c.time || 0;
+  const t = cmdTime(c);
+  if (c.action === 'seek' && !saneSeek(t)) return;
+  if ((c.action === 'play' || c.action === 'pause' || c.action === 'sync') && t === null) return;
   if (c.action === 'load' && c.video) {
     loadVideoLocal(c.video, true);
     addSysMsg('🎬 ' + c.by + ' ne nayi video lagai');
-  } else if (c.action === 'play') remotePlay(t);
-  else if (c.action === 'pause') remotePause(t);
+  } else if (c.action === 'play') remotePlay(t || 0);
+  else if (c.action === 'pause') remotePause(t || 0);
   else if (c.action === 'seek') remoteSeek(t);
-  else if (c.action === 'sync') { remoteSeek(t); if (c.playing) remotePlay(t); else remotePause(t); addSysMsg('🔄 ' + c.by + ' ne sab ko sync kiya'); }
+  else if (c.action === 'sync') { remoteSeek(t); if (c.playing) remotePlay(t || 0); else remotePause(t || 0); addSysMsg('🔄 ' + c.by + ' ne sab ko sync kiya'); }
 }
 function applyState(s) {
   loadVideoLocal(s, false);
@@ -947,9 +972,10 @@ function applyState(s) {
 function remotePlay(t) {
   if (currentType === 'youtube' && ytReady && ytPlayer.playVideo) {
     suppressYT = true;
-    try { if (Math.abs(ytPlayer.getCurrentTime() - t) > 2) ytPlayer.seekTo(t, true); } catch (e) {}
+    syncQuiet = Date.now() + 2500;
+    try { if (isFinite(t) && Math.abs((ytPlayer.getCurrentTime() || 0) - t) > 2) ytPlayer.seekTo(t, true); } catch (e) {}
     ytPlayer.playVideo();
-    setTimeout(() => suppressYT = false, 1200);
+    setTimeout(() => suppressYT = false, 1800);
   } else if (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') {
     suppressMP4 = true;
     if (Math.abs(mp4.currentTime - t) > 2) mp4.currentTime = t;
@@ -960,9 +986,10 @@ function remotePlay(t) {
 function remotePause(t) {
   if (currentType === 'youtube' && ytReady && ytPlayer.pauseVideo) {
     suppressYT = true;
-    try { if (Math.abs(ytPlayer.getCurrentTime() - t) > 2) ytPlayer.seekTo(t, true); } catch (e) {}
+    syncQuiet = Date.now() + 2500;
+    try { if (isFinite(t) && Math.abs((ytPlayer.getCurrentTime() || 0) - t) > 2) ytPlayer.seekTo(t, true); } catch (e) {}
     ytPlayer.pauseVideo();
-    setTimeout(() => suppressYT = false, 1200);
+    setTimeout(() => suppressYT = false, 1800);
   } else if (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') {
     suppressMP4 = true;
     if (Math.abs(mp4.currentTime - t) > 2) mp4.currentTime = t;
@@ -971,14 +998,23 @@ function remotePause(t) {
   }
 }
 function remoteSeek(t) {
+  if (t === null || !isFinite(t) || t < 0) return;
+  syncQuiet = Date.now() + 2500;    // remote seek ke baad hamara poll kuch publish na kare
   if (currentType === 'youtube' && ytReady && ytPlayer.seekTo) {
     suppressYT = true;
-    try { ytPlayer.seekTo(t, true); } catch (e) {}
-    setTimeout(() => suppressYT = false, 1200);
+    try {
+      let target = t;
+      const d = ytPlayer.getDuration && ytPlayer.getDuration();
+      if (isFinite(d) && d > 0) target = Math.min(target, d - 0.5);
+      ytPlayer.seekTo(Math.max(0, target), true);
+    } catch (e) {}
+    setTimeout(() => suppressYT = false, 1800);
   } else if (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') {
     suppressMP4 = true;
-    mp4.currentTime = t;
-    setTimeout(() => suppressMP4 = false, 1000);
+    let target = t;
+    if (isFinite(mp4.duration) && mp4.duration > 0) target = Math.min(target, mp4.duration - 0.5);
+    mp4.currentTime = Math.max(0, target);
+    setTimeout(() => suppressMP4 = false, 1200);
   }
 }
 
@@ -1304,12 +1340,26 @@ window.onYouTubeIframeAPIReady = function () {
     }
   });
 };
-let lastYtTime = 0;
+let lastYtTime = 0, syncQuiet = 0;
+/* 20+ minute ka masla: ad/buffering ke waqt YouTube ka time ~0 ho jata hai. Pehle wo jump
+   ek 'seek' ban kar sab ko chala jata tha -> dusre member ka gaana shuru se (restart).
+   Ab ad-jaisa jump sirf ignore hota hai (+20s quiet); asli seek (aage ya peeche) publish hota hai. */
 setInterval(() => {
   if (ytReady && ytPlayer && ytPlayer.getCurrentTime && currentType === 'youtube' && !suppressYT && joined) {
     try {
       const t = ytPlayer.getCurrentTime();
-      if (Math.abs(t - lastYtTime) > 3) pubCmd('seek', { time: t });
+      if (!isFinite(t) || t < 0) return;
+      const dur = (ytPlayer.getDuration && ytPlayer.getDuration()) || 0;
+      if (lastYtTime <= 0) { lastYtTime = t; return; }                // pehla sample: chup
+      if (dur > 0 && lastYtTime > dur + 30) { lastYtTime = t; return; } // nayi video lag gayi
+      const backJump = lastYtTime - t;
+      if (dur > 600 && ((t < 30 && lastYtTime > 120) || backJump > 90)) {   // ad / reset
+        lastYtTime = t;
+        syncQuiet = Date.now() + 20000;
+        return;
+      }
+      if (Date.now() < syncQuiet) { lastYtTime = t; return; }
+      if (Math.abs(t - lastYtTime) > 6) pubCmd('seek', { time: t });   // asli seek (dono taraf)
       lastYtTime = t;
     } catch (e) {}
   }
