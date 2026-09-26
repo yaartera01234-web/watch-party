@@ -384,6 +384,42 @@ main { gap: 11px; }
 #react-emoji-input:focus { border-color:#f472b6; }
 #react-emoji-cancel { width:42px; border:0; border-radius:10px; background:rgba(255,255,255,.12); color:#fff; font-size:15px; }
 .chat-gif { -webkit-touch-callout:none; }
+
+/* ===== PHONE (sirf portrait, width <= 699px): mini player + poori chat =====
+   Tablet / landscape / desktop pe ye poora block chalta hi nahi — wahan purana layout. */
+@media (max-width: 699px) and (orientation: portrait) {
+  main { gap: 7px; }
+  #now-playing { display: none; }
+  .sync-row button { padding: 8px 12px; font-size: 12px; }
+  .playlist-box { max-height: 78px; overflow-y: auto; }
+  .users-box { max-height: 40px; }
+  #chat-messages { min-height: 110px; }
+  .chat-input-bar { padding: 6px 8px 8px; }
+  .chat-input-bar .emoji-row { margin-bottom: 5px; }
+
+  /* expanded: poori chaurai, sahi 16:9 */
+  .player-wrap.expanded-phone { height: auto; aspect-ratio: 16 / 9; max-height: 46vh; }
+
+  /* collapsed: 66px ki patli mini bar */
+  .player-wrap.mini { height: 66px; border-radius: 13px; }
+  .player-wrap.mini #yt-player, .player-wrap.mini #mp4-player { width: 118px; height: 66px; inset: 0 auto 0 0; }
+  .player-wrap.mini #premium-video-ui, .player-wrap.mini #mp3-player,
+  .player-wrap.mini #no-video, .player-wrap.mini #gif-view { display: none !important; }
+  .player-wrap.mini .mini-info { display: flex; }
+
+  .mini-info { display: none; position: absolute; left: 126px; right: 8px; top: 0; bottom: 0; align-items: center; gap: 7px; z-index: 7; }
+  .mini-info .t { flex: 1; min-width: 0; }
+  .mini-info .t b { display: block; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mini-info .t i { font-style: normal; font-size: 10px; color: #a5b4fc; }
+  .mini-info .mb { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.18); color: #fff; font-size: 14px; display: grid; place-items: center; }
+
+  /* expanded halat mein collapse button */
+  .player-wrap .pc-collapse { display: none; }
+  .player-wrap.expanded-phone .pc-collapse { display: grid; position: absolute; right: 8px; top: 8px; z-index: 8; width: 32px; height: 32px; border-radius: 10px; background: rgba(10,8,25,.72); border: 1px solid rgba(255,255,255,.22); color: #fff; font-size: 14px; place-items: center; }
+
+  /* mini mode mein sync bar chat ki jagah chhod deta hai */
+  body.pc-mini-on .sync-row { display: none; }
+}
 </style>
 </head>
 <body>
@@ -436,6 +472,12 @@ main { gap: 11px; }
         <button id="queue-btn">➕ Queue</button>
       </div>
       <div class="player-wrap">
+        <div class="mini-info">
+          <div class="t"><b id="mini-title">Abhi kuch nahi chal raha</b><i id="mini-sub">tap karo: video kholo</i></div>
+          <button class="mb" id="mini-play" type="button" title="Play/Pause">▶</button>
+          <button class="mb" id="mini-expand" type="button" title="Video kholo">⛶</button>
+        </div>
+        <button class="pc-collapse" id="pc-collapse" type="button" title="Mini kar do">▾</button>
         <div id="yt-player"></div>
         <video id="mp4-player" class="hidden" controls playsinline></video>
         <div id="mp3-player" class="hidden">
@@ -1398,6 +1440,55 @@ premiumPipBtn.onclick = async (e) => {
   } catch (e) { addSysMsg('Picture-in-Picture start nahi ho saka'); }
 };
 setInterval(updatePremiumVideoUI, 300);
+
+/* ---------- PHONE: mini player + poori chat ---------- */
+const PCQ = window.matchMedia('(max-width: 699px) and (orientation: portrait)');
+let pcUserExpanded = false, pcMiniOn = false, pcLastTxt = '';
+function pcFmt(s) { s = Math.max(0, Math.floor(s || 0)); const m = Math.floor(s / 60), x = s % 60; return (m < 10 ? '0' : '') + m + ':' + (x < 10 ? '0' : '') + x; }
+function pcSetMini(on) {
+  if (!PCQ.matches) on = false;
+  pcMiniOn = on;
+  playerWrap.classList.toggle('mini', on);
+  playerWrap.classList.toggle('expanded-phone', PCQ.matches && !on);
+  document.body.classList.toggle('pc-mini-on', on);
+}
+function pcTitle() {
+  try {
+    if (currentType === 'youtube' && ytReady && ytPlayer && ytPlayer.getVideoData) {
+      const d = ytPlayer.getVideoData() || {};
+      if (d.title) return d.title;
+      if (d.video_id) return 'YouTube · ' + d.video_id;
+    }
+    if (currentType === 'mp3') return $('mp3-title').textContent || 'Song';
+    if (currentType === 'mp4' || currentType === 'hls') {
+      const t = $('premium-video-title').textContent || 'Video';
+      return t.replace(/^(YouTube|🎞|📡)\s*·?\s*/, '') || 'Video';
+    }
+  } catch (e) {}
+  return 'Abhi kuch nahi chal raha';
+}
+function updateMiniInfo() {
+  if (!PCQ.matches) return;
+  if (!pcMiniOn && !pcUserExpanded && currentType !== 'none') pcSetMini(true);   // gaana/video chale to khud mini
+  if (!pcMiniOn) return;
+  const m = premiumMediaState() || {};
+  const title = pcTitle(), sub = pcFmt(m.time) + ' / ' + pcFmt(m.duration) + (currentType === 'youtube' ? ' · YouTube' : '');
+  const key = title + '|' + sub;
+  if (key === pcLastTxt) return;
+  pcLastTxt = key;
+  const tb = $('mini-title'), sb = $('mini-sub');
+  if (tb) tb.textContent = title;
+  if (sb) sb.textContent = sub;
+}
+$('mini-expand').onclick = (e) => { e.stopPropagation(); pcUserExpanded = true; pcSetMini(false); };
+$('pc-collapse').onclick = (e) => { e.stopPropagation(); pcUserExpanded = false; pcSetMini(true); };
+$('mini-play').onclick = (e) => { e.stopPropagation(); premiumTogglePlay(); setTimeout(updateMiniInfo, 120); };
+playerWrap.addEventListener('click', () => { if (pcMiniOn) { pcUserExpanded = true; pcSetMini(false); } });
+if (PCQ.addEventListener) PCQ.addEventListener('change', () => { pcUserExpanded = false; pcSetMini(false); updateMiniInfo(); });
+PCQ.onchange = PCQ.onchange || (() => { pcUserExpanded = false; pcSetMini(false); });
+setInterval(updateMiniInfo, 600);
+updateMiniInfo();
+
 
 /* ---------- 📋 PLAYLIST / QUEUE ---------- */
 $('queue-btn').onclick = () => {
