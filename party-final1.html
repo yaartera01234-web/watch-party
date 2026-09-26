@@ -284,7 +284,7 @@ header {
   box-shadow: 0 10px 28px rgba(0,0,0,0.12);
   backdrop-filter: blur(18px);
 }
-.brand { min-width: 0; white-space: nowrap; letter-spacing: -0.3px; }
+.brand { min-width: 0; white-space: nowrap; letter-spacing: -0.3px; display: flex; align-items: center; gap: 7px; }
 .brand span { white-space: nowrap; }
 .header-right { min-width: 0; flex-shrink: 0; }
 #online-count, #my-name-badge { border: 1px solid rgba(255,255,255,0.10); box-shadow: 0 7px 18px rgba(0,0,0,0.13); }
@@ -454,6 +454,19 @@ main { gap: 11px; }
 .wp-bb .w { align-self: flex-end; border-top-right-radius: 3px; }
 .wp-done { width: 100%; padding: 12px; border: 0; border-radius: 13px; font-size: 14.5px; font-weight: 800; color: #fff; background: linear-gradient(90deg, #22c55e, #16a34a); cursor: pointer; }
 .wp-sh-note { font-size: 11px; color: #fcd34d; background: rgba(252,211,77,0.10); border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; line-height: 1.55; }
+
+/* ===== wp logo: music waves (inline SVG, animation ke sath) ===== */
+.wp-logo { display: block; width: 26px; height: 26px; flex: 0 0 auto; }
+.wp-logo-big { display: block; width: 50px; height: 50px; margin: 0 auto; }
+@keyframes wpWave { 0%, 100% { transform: scaleY(0.45); } 50% { transform: scaleY(1); } }
+.wp-logo svg rect, .wp-logo-big svg rect { transform-box: fill-box; transform-origin: 50% 100%; animation: wpWave 0.9s ease-in-out infinite alternate; }
+.wp-logo svg rect:nth-of-type(2), .wp-logo-big svg rect:nth-of-type(2) { animation-delay: 0.15s; }
+.wp-logo svg rect:nth-of-type(3), .wp-logo-big svg rect:nth-of-type(3) { animation-delay: 0.30s; }
+.wp-logo svg rect:nth-of-type(4), .wp-logo-big svg rect:nth-of-type(4) { animation-delay: 0.45s; }
+.wp-logo svg rect:nth-of-type(5), .wp-logo-big svg rect:nth-of-type(5) { animation-delay: 0.60s; }
+@media (max-width: 600px) { .wp-logo { width: 23px; height: 23px; } }
+@media (max-width: 380px) { .wp-logo { width: 21px; height: 21px; } }
+@media (max-height: 640px) { .wp-logo-big { width: 42px; height: 42px; } }
 </style>
 </head>
 <body>
@@ -461,7 +474,7 @@ main { gap: 11px; }
 <!-- ===== JOIN SCREEN ===== -->
 <div id="join-screen">
   <div class="join-card">
-    <div class="logo">🎬</div>
+    <div class="logo"><span class="wp-logo-big"><svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><rect x="2.4" y="8" width="2.7" height="13" rx="1.35" fill="#54e8ff"/><rect x="6.7" y="5" width="2.7" height="16" rx="1.35" fill="#8b72ff"/><rect x="11" y="2.6" width="2.7" height="18.4" rx="1.35" fill="#ff5ebc"/><rect x="15.3" y="6.4" width="2.7" height="14.6" rx="1.35" fill="#8b72ff"/><rect x="19.6" y="9.6" width="2.7" height="11.4" rx="1.35" fill="#54e8ff"/></svg></span></div>
     <h1>Watch Party</h1>
     <div class="test-badge">Feel Special With Me 🥰 💗</div>
     <p class="tagline">Doston ke sath YouTube & MP4 dekho + live chatting karo!</p>
@@ -496,7 +509,7 @@ main { gap: 11px; }
 <!-- ===== MAIN APP ===== -->
 <div id="app" class="hidden">
   <header>
-    <div class="brand">🎬 <span>Watch Party</span></div>
+    <div class="brand"><span class="wp-logo"><svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><rect x="2.4" y="8" width="2.7" height="13" rx="1.35" fill="#54e8ff"/><rect x="6.7" y="5" width="2.7" height="16" rx="1.35" fill="#8b72ff"/><rect x="11" y="2.6" width="2.7" height="18.4" rx="1.35" fill="#ff5ebc"/><rect x="15.3" y="6.4" width="2.7" height="14.6" rx="1.35" fill="#8b72ff"/><rect x="19.6" y="9.6" width="2.7" height="11.4" rx="1.35" fill="#54e8ff"/></svg></span><span>Watch Party</span></div>
     <div class="header-right">
       <div id="online-count">🟢 0 online</div>
       <div id="wp-theme-btn" class="wp-hbtn" title="Theme / bubble badlo">🎨</div>
