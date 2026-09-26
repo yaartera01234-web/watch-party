@@ -329,7 +329,7 @@ main { gap: 11px; }
 @media (max-width: 600px) {
   header { padding: 10px 12px; gap: 7px; }
   .brand { font-size: 19px; }
-  .header-right { gap: 6px; }
+  .header-right { gap: 9px; }
   #online-count { padding: 5px 9px; font-size: 12px; }
   #my-name-badge { max-width: 142px; overflow: hidden; padding: 5px 9px; text-overflow: ellipsis; white-space: nowrap; }
   /* Keep link, Play and Queue on one row like the original layout. */
@@ -433,7 +433,7 @@ main { gap: 11px; }
 .wp-tb-sw { display: flex; gap: 3px; }
 .wp-tb-sw i { width: 13px; height: 13px; border-radius: 50%; display: block; border: 1px solid rgba(255,255,255,0.45); }
 .wp-tb-arw { font-size: 15px; color: #c9c2f0; }
-.wp-hbtn { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 9px; cursor: pointer; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); font-size: 14px; flex: 0 0 auto; }
+.wp-hbtn { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 10px; cursor: pointer; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); font-size: 15px; flex: 0 0 auto; } /* wp-header-clean */
 .wp-ov { position: fixed; inset: 0; z-index: 79; background: rgba(0,0,0,0.55); opacity: 0; pointer-events: none; transition: 0.2s; }
 .wp-ov.on { opacity: 1; pointer-events: auto; }
 .wp-sheet { position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 80; max-width: 520px; margin: 0 auto; max-height: 86vh; overflow-y: auto; padding: 12px 12px calc(14px + env(safe-area-inset-bottom, 0px)); border-radius: 20px; background: var(--wp-menu-bg, rgba(19,16,45,0.985)); border: 1px solid rgba(255,255,255,0.16); box-shadow: 0 -14px 34px rgba(0,0,0,0.6); transform: translateY(130%); transition: transform 0.25s ease; }
@@ -500,7 +500,6 @@ main { gap: 11px; }
     <div class="header-right">
       <div id="online-count">🟢 0 online</div>
       <div id="wp-theme-btn" class="wp-hbtn" title="Theme / bubble badlo">🎨</div>
-      <div id="my-name-badge"></div>
     </div>
   </header>
 
@@ -977,7 +976,8 @@ function join() {
   joinScreen.classList.add('hidden');
   app.classList.remove('hidden');
   const shortRoom = myRoom.length > 12 ? myRoom.slice(0, 12) + '\u2026' : myRoom;
-  $('my-name-badge').textContent = '\uD83D\uDE0E ' + myName + ' \u00B7 \uD83D\uDEAA ' + shortRoom;
+  var nbEl = $('my-name-badge');            /* wp-header-clean: header se hata diya hai */
+  if (nbEl) nbEl.textContent = '\uD83D\uDE0E ' + myName + ' \u00B7 \uD83D\uDEAA ' + shortRoom;
   renderMembers();
   renderQueue(queueLocal.items || [], queueLocal.index);
   // late joiner catchup
