@@ -2261,7 +2261,6 @@ async function sendPhotoFile(file) {
     const w = await e2eEnc({ name: myName, color: myColor, text: '', img: url, iv: enc.iv, time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), senderId: myId, mid: myMid });
     if (!w) throw new Error('enc');
     pub(TP.chat, w, false);
-    addSysMsg('✅ Photo bhej di — 72 ghante tak dikhegi');
   } catch (e) {
     addSysMsg('⚠️ Photo nahi gayi — net/upload check karo');
   } finally {
