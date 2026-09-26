@@ -1017,15 +1017,19 @@ function remotePlay(t) {
     syncQuiet = Date.now() + 2500;
     try { if (isFinite(t) && Math.abs((ytPlayer.getCurrentTime() || 0) - t) > 2) ytPlayer.seekTo(t, true); } catch (e) {}
     ytPlayer.playVideo();
+    markPlayingIntent(1800);
     setTimeout(() => suppressYT = false, 1800);
   } else if (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') {
     suppressMP4 = true;
     if (Math.abs(mp4.currentTime - t) > 2) mp4.currentTime = t;
     mp4.play().catch(() => {});
+    markPlayingIntent(1500);
     setTimeout(() => suppressMP4 = false, 1000);
   }
 }
 function remotePause(t) {
+  // hum ne abhi play kiya tha aur time bhi qareeb hai -> yeh YouTube/buffering ka flap hai, asli pause nahi
+  if (Date.now() < playGraceUntil && Math.abs(localNow() - (isFinite(t) ? t : 0)) < 6) return;
   if (currentType === 'youtube' && ytReady && ytPlayer.pauseVideo) {
     suppressYT = true;
     syncQuiet = Date.now() + 2500;
@@ -1156,7 +1160,7 @@ function updateMP3UI() {
 function premiumMediaState() {
   let time = 0, duration = 0, playing = false, muted = false;
   if (currentType === 'youtube' && ytReady && ytPlayer) {
-    try { time = ytPlayer.getCurrentTime() || 0; duration = ytPlayer.getDuration() || 0; playing = ytPlayer.getPlayerState() === YT.PlayerState.PLAYING || ytPlaying; muted = ytPlayer.isMuted(); } catch (e) { playing = ytPlaying; }
+    try { time = ytPlayer.getCurrentTime() || 0; duration = ytPlayer.getDuration() || 0; playing = ytIsPlayingNow(); muted = ytPlayer.isMuted(); } catch (e) { playing = ytPlaying; }
   } else if (currentType === 'mp4' || currentType === 'hls') {
     time = mp4.currentTime || 0; duration = Number.isFinite(mp4.duration) ? mp4.duration : 0; playing = !mp4.paused; muted = mp4.muted;
   }
@@ -1189,10 +1193,39 @@ function updatePremiumVideoUI() {
   premiumVideoUI.classList.toggle('is-playing', m.playing);
   if (!m.playing) { clearTimeout(premiumHideTimer); premiumVideoUI.classList.remove('controls-hidden'); }
 }
+let playGraceUntil = 0, lastYtPlayingAt = 0;
+function markPlayingIntent(ms) { playGraceUntil = Date.now() + (ms || 1600); }
+/* YouTube ka asli state: BUFFERING ko bhi 'chalu' maano — warna buffer ke waqt tap ULTA ho jata tha */
+function ytIsPlayingNow() {
+  try {
+    const st = ytPlayer.getPlayerState();
+    if (st === 1) return true;                        // PLAYING
+    if (st === 3) {                                   // BUFFERING
+      const t = ytPlayer.getCurrentTime() || 0;
+      return t > 1 && (Date.now() - lastYtPlayingAt < 5000);
+    }
+    return false;                                     // -1 / 0 / 2 / 5
+  } catch (e) { return ytPlaying; }
+}
+/* play/pause publish sirf 800ms STABLE rehne ke baad (transient events khatam) */
+let pendingStateEvt = null, pendingStateTimer = null;
+function pubPlayState(kind, timeFn) {
+  pendingStateEvt = { kind: kind, timeFn: timeFn };
+  clearTimeout(pendingStateTimer);
+  pendingStateTimer = setTimeout(() => {
+    const p = pendingStateEvt; pendingStateEvt = null;
+    if (!p || !joined || !mqttUp) return;
+    if (Date.now() < syncQuiet) return;               // ad / remote op ke doran chup
+    let t = 0;
+    try { t = p.timeFn() || 0; } catch (e) { return; }
+    if (p.kind === 'play') markPlayingIntent(1600);
+    pubCmd(p.kind, { time: t });
+  }, 800);
+}
 function premiumTogglePlay() {
   if (currentType === 'youtube' && ytReady && ytPlayer) {
-    const m = premiumMediaState();
-    if (m.playing) ytPlayer.pauseVideo(); else ytPlayer.playVideo();
+    if (ytIsPlayingNow()) ytPlayer.pauseVideo();
+    else { markPlayingIntent(2000); ytPlayer.playVideo(); }
   } else if (currentType === 'mp4' || currentType === 'hls') {
     if (mp4.paused) mp4.play().catch(() => {}); else mp4.pause();
   }
@@ -1374,10 +1407,11 @@ window.onYouTubeIframeAPIReady = function () {
       onStateChange: (e) => {
         ytPlaying = (e.data === YT.PlayerState.PLAYING);
         updateYouTubeQualityOptions();
+        if (e.data === YT.PlayerState.PLAYING) lastYtPlayingAt = Date.now();
         if (e.data === YT.PlayerState.ENDED && currentType === 'youtube') onVideoEnded();
         if (suppressYT || currentType !== 'youtube' || !joined) return;
-        if (e.data === YT.PlayerState.PLAYING) pubCmd('play', { time: ytPlayer.getCurrentTime() });
-        else if (e.data === YT.PlayerState.PAUSED) pubCmd('pause', { time: ytPlayer.getCurrentTime() });
+        if (e.data === YT.PlayerState.PLAYING) pubPlayState('play', () => ytPlayer.getCurrentTime());
+        else if (e.data === YT.PlayerState.PAUSED) pubPlayState('pause', () => ytPlayer.getCurrentTime());
       }
     }
   });
@@ -1410,8 +1444,8 @@ setInterval(() => {
 /* ---------- MP4 + PREMIUM MP3 SYNC EVENTS ---------- */
 mp4.addEventListener('timeupdate', updateMP3UI);
 mp4.addEventListener('loadedmetadata', updateMP3UI);
-mp4.addEventListener('play', () => { updateMP3UI(); updatePremiumVideoUI(); armPremiumHide(); if (!suppressMP4 && (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) pubCmd('play', { time: mp4.currentTime }); });
-mp4.addEventListener('pause', () => { updateMP3UI(); updatePremiumVideoUI(); showPremiumControls(); if (!suppressMP4 && (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) pubCmd('pause', { time: mp4.currentTime }); });
+mp4.addEventListener('play', () => { updateMP3UI(); updatePremiumVideoUI(); armPremiumHide(); if (!suppressMP4 && (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) pubPlayState('play', () => mp4.currentTime); });
+mp4.addEventListener('pause', () => { updateMP3UI(); updatePremiumVideoUI(); showPremiumControls(); if (!suppressMP4 && (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) pubPlayState('pause', () => mp4.currentTime); });
 mp4.addEventListener('seeked', () => { updateMP3UI(); updatePremiumVideoUI(); showPremiumControls(); if (!suppressMP4 && (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) pubCmd('seek', { time: mp4.currentTime }); });
 mp4.addEventListener('ended', () => { if ((currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) onVideoEnded(); });
 mp3Play.onclick = () => { if (!isAudioMode()) return; if (mp4.paused) mp4.play().catch(() => {}); else mp4.pause(); };
