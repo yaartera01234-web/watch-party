@@ -476,6 +476,67 @@ main { gap: 11px; }
 .wp-room-chip .ic { font-size: 11.5px; line-height: 1; }
 .wp-room-chip span:not(.ic) { overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 380px) { .wp-room-chip { font-size: 11px; padding: 3px 9px; margin: 0 6px; max-width: 34vw; } }
+
+/* ===== 🔍 YouTube search popup (stage-12) ===== */
+#wp-search-btn { padding: 12px 13px; border: none; border-radius: 12px; font-weight: bold; color: #fff;
+  cursor: pointer; font-size: 14px; flex: 0 0 auto; white-space: nowrap;
+  background: linear-gradient(90deg, var(--wp-acc1, #ff6ec4), var(--wp-acc2, #7873f5));
+  box-shadow: 0 9px 22px rgba(99,73,255,0.20); }
+#wp-search-btn:hover { filter: brightness(1.15); }
+#wp-ssheet { display: flex; flex-direction: column; overflow: hidden; max-height: 84vh; z-index: 81; padding: 12px; }
+#wp-ssheet .wss-head { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+#wp-ssheet .wss-head b { font-size: 13.5px; }
+#wp-ssheet .wss-head small { display: block; font-weight: 500; font-size: 10.5px; color: #a9a6c8; margin-top: 1px; }
+#wp-ssheet .wss-x { width: 30px; height: 30px; border-radius: 10px; background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.14); color: #fff; font-size: 15px; cursor: pointer;
+  display: grid; place-items: center; margin-left: auto; flex: 0 0 auto; }
+#wp-ssheet .wss-inrow { display: flex; gap: 7px; }
+#wp-ssheet .wss-q { flex: 1; min-width: 0; padding: 12px 14px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.15);
+  background: var(--wp-input-bg, rgba(8,8,24,0.47)); color: #fff; font-size: 14px; outline: none; }
+#wp-ssheet .wss-q:focus { border-color: var(--wp-focus-bd, rgba(255,94,188,0.75)); }
+#wp-ssheet .wss-go { padding: 12px 15px; border: none; border-radius: 12px; font-weight: bold; color: #fff;
+  cursor: pointer; font-size: 14px; flex: 0 0 auto;
+  background: linear-gradient(90deg, var(--wp-acc1, #ff6ec4), var(--wp-acc2, #7873f5)); }
+.wss-sug { display: flex; gap: 6px; overflow-x: auto; padding: 9px 1px 2px; scrollbar-width: none; }
+.wss-sug::-webkit-scrollbar { display: none; }
+.wss-sug span { flex: 0 0 auto; font-size: 11.5px; padding: 5px 11px; border-radius: 20px; cursor: pointer; color: #ddd9f5;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); }
+.wss-meta { display: flex; align-items: center; gap: 7px; font-size: 10.5px; color: #a9a6c8; padding: 8px 1px 5px; flex-wrap: wrap; }
+.wss-meta i { font-style: normal; padding: 3px 8px; border-radius: 20px;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); }
+.wss-meta i.ok { color: #86efac; border-color: rgba(134,239,172,.32); }
+.wss-meta i.warn { color: #fcd34d; border-color: rgba(252,211,77,.32); }
+#wss-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; padding: 1px; }
+.wss-row { display: flex; gap: 9px; padding: 7px; border-radius: 12px; cursor: pointer; align-items: center;
+  background: var(--wp-soft, rgba(255,255,255,0.055)); border: 1px solid rgba(255,255,255,.10); }
+.wss-row:hover { background: rgba(255,255,255,.10); }
+.wss-th { position: relative; width: 96px; height: 54px; flex: 0 0 auto; border-radius: 9px; overflow: hidden;
+  background: var(--wp-fill2, linear-gradient(135deg, #ff5ebc, #8b72ff)); }
+.wss-th img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.wss-th .d { position: absolute; right: 4px; bottom: 4px; font-size: 10px; font-weight: 800; padding: 1px 5px;
+  border-radius: 5px; background: rgba(0,0,0,.78); color: #fff; z-index: 2; }
+.wss-info { flex: 1; min-width: 0; }
+.wss-info b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  font-size: 12.5px; line-height: 1.34; color: #fff; }
+.wss-info s { display: block; text-decoration: none; font-size: 10.5px; color: #a9a6c8; margin-top: 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wss-play { flex: 0 0 auto; font-size: 11px; font-weight: 800; padding: 8px 11px; border-radius: 10px;
+  background: linear-gradient(90deg, #22c55e, #16a34a); color: #fff; white-space: nowrap; }
+.wss-empty { text-align: center; padding: 26px 10px; color: #a9a6c8; font-size: 12.5px; line-height: 1.6; }
+.wss-empty u { display: block; font-size: 30px; text-decoration: none; margin-bottom: 8px; }
+.wss-hint { font-size: 10.5px; color: #8f8bb3; padding: 8px 2px 0; text-align: center; }
+.wss-sk { display: flex; gap: 9px; padding: 7px; border-radius: 12px;
+  background: var(--wp-soft2, rgba(255,255,255,0.018)); border: 1px solid rgba(255,255,255,.08); }
+.wss-sk span { border-radius: 9px; background: linear-gradient(90deg, rgba(255,255,255,.07), rgba(255,255,255,.16), rgba(255,255,255,.07));
+  background-size: 200% 100%; animation: wssSh 1.1s infinite linear; }
+.wss-sk span.t { width: 96px; height: 54px; flex: 0 0 auto; }
+.wss-sk span.l1, .wss-sk span.l2 { display: block; height: 11px; }
+.wss-sk span.l1 { width: 92%; } .wss-sk span.l2 { width: 55%; margin-top: 7px; }
+@keyframes wssSh { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (max-width: 600px) {
+  #wp-search-btn { padding: 11px 9px; font-size: 13px; }
+  #wp-ssheet { max-height: 86vh; }
+}
 </style>
 </head>
 <body>
@@ -533,8 +594,9 @@ main { gap: 11px; }
     <section class="video-side">
       <div class="url-bar">
         <input id="url-input" type="text" placeholder="YouTube / MP4 / MP3 link paste karo..." autocomplete="off" />
-        <button id="load-btn">▶ Play Sab Ke Liye</button>
+        <button id="load-btn" title="Play — sab ke screen pe sync">▶ Play</button>
         <button id="queue-btn">➕ Queue</button>
+        <button id="wp-search-btn" title="YouTube search (Piped)">🔍</button>
       </div>
       <div class="player-wrap">
         <div class="mini-info">
@@ -1162,12 +1224,16 @@ loadBtn.onclick = () => {
   const val = urlInput.value.trim();
   if (!val) { alert('Pehle YouTube, MP4 ya MP3 link paste karo! 🔗'); return; }
   const data = parseURL(val);
-  loadVideoLocal(data, true);
   const item = { type: data.type, url: data.url || '', videoId: data.videoId || '', label: makeLabel(data), by: myName };
-  queueLocal = { items: [item], index: 0, lastAdvance: Date.now() };
+  /* stage-12: Play ab queue REPLACE nahi karta - item queue ke AAKHIR mein jagah leta hai, phir sab ke liye chalta hai */
+  queueLocal.items = queueLocal.items || [];
+  queueLocal.items.push(item);
+  queueLocal.index = queueLocal.items.length - 1;
+  queueLocal.lastAdvance = Date.now();
   pubQueue();
-  pubState({ type: item.type, url: item.url, videoId: item.videoId, time: 0, playing: true });
-  pubCmd('load', { video: { type: item.type, url: item.url, videoId: item.videoId } });
+  renderQueue(queueLocal.items, queueLocal.index);
+  playItemEverywhere({ type: item.type, url: item.url, videoId: item.videoId });
+  pushSys('▶ ' + myName + ' ne play kiya: ' + item.label.slice(0, 40));
   urlInput.value = '';
 };
 
@@ -2073,6 +2139,14 @@ function renderMembers() {
 </script>
 <script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a39ee9624eb3ce4b',t:'MTc4OTIxNjEwMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
 <!-- ===== THEME + BUBBLE PICKER ===== -->
+<div id="wp-ssheet" class="wp-sheet" role="dialog" aria-label="YouTube search">
+  <div class="wss-head"><b>🔍 YouTube Search<small>Piped se — koi key nahi, koi quota nahi</small></b><span id="wss-x" class="wss-x">✕</span></div>
+  <div class="wss-inrow"><input id="wss-q" class="wss-q" type="text" placeholder="Gaana, movie, video... likho" autocomplete="off" /><button id="wss-go" class="wss-go">🔍</button></div>
+  <div class="wss-sug" id="wss-sug"></div>
+  <div class="wss-meta"><i id="wss-inst">⚡ instance: —</i><i id="wss-count">0 results</i><i id="wss-src">source: —</i></div>
+  <div id="wss-list"></div>
+  <div class="wss-hint">Result pe <b>tap = ▶ Play sab ke liye</b> · item khud <b>queue ke aakhir</b> mein jagah le lega</div>
+</div>
 <div id="wp-ov" class="wp-ov"></div>
 <div id="wp-sheet" class="wp-sheet" role="dialog" aria-label="Theme aur bubble">
   <div class="wp-sh-head"><b>🎨 Theme chuno</b><span>(poora rang badalta hai)</span><span id="wp-sh-x" class="wp-sh-x">✕</span></div>
@@ -2245,6 +2319,194 @@ function renderMembers() {
   document.getElementById('wp-sh-x').onclick = closeSheet;
   document.getElementById('wp-done').onclick = closeSheet;
   window.wpOpenThemeSheet = openSheet;
+})();
+</script>
+
+<script>
+/* ===== 🔍 YouTube search (stage-12): Piped API se, koi key / quota nahi ===== */
+(function () {
+  var btn = document.getElementById('wp-search-btn');
+  var sheet = document.getElementById('wp-ssheet');
+  var ovl = document.getElementById('wp-ov');
+  var qEl = document.getElementById('wss-q');
+  var goEl = document.getElementById('wss-go');
+  var xEl = document.getElementById('wss-x');
+  var listEl = document.getElementById('wss-list');
+  var sugEl = document.getElementById('wss-sug');
+  var instEl = document.getElementById('wss-inst');
+  var cntEl = document.getElementById('wss-count');
+  var srcEl = document.getElementById('wss-src');
+  if (!btn || !sheet || !ovl || !qEl || !listEl) return;
+
+  /* Piped instances: jo pehla jawab de wahi. Fail hone wala 10 min bench pe. */
+  var PIPED = [
+    'https://api.piped.private.coffee',
+    'https://pipedapi.ducks.party',
+    'https://pipedapi.adminforge.de',
+    'https://api.piped.yt'
+  ];
+  var bench = {}, cache = {}, cur = [], tmr = null, runId = 0;
+  var RKEY = 'wp_search_recent';
+  var SUG = ['lofi girl', 'arijit singh songs', 'punjabi songs', 'coke studio', 'old hindi songs', 'english top hits', 'quran recitation', 'live radio'];
+
+  function recent() { try { return JSON.parse(localStorage.getItem(RKEY) || '[]') || []; } catch (e) { return []; } }
+  function addRecent(q) {
+    try { var r = recent().filter(function (x) { return x !== q; }); r.unshift(q); localStorage.setItem(RKEY, JSON.stringify(r.slice(0, 10))); } catch (e) {}
+  }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function fmtDur(s) {
+    s = Number(s) || 0; if (!s) return '';
+    var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = Math.floor(s % 60);
+    return (h ? h + ':' + (m < 10 ? '0' : '') + m : m) + ':' + (x < 10 ? '0' : '') + x;
+  }
+  function inst(t, cls) { if (!instEl) return; instEl.textContent = '⚡ ' + t; instEl.className = cls || ''; }
+  function cnt(n) { if (cntEl) cntEl.textContent = n + ' results'; }
+  function srcT(t) { if (srcEl) srcEl.textContent = 'source: ' + t; }
+
+  /* AbortController purane WebView (Android 7) mein nahi hota - timer fallback bhi hai */
+  function fetchT(url, ms) {
+    return new Promise(function (res, rej) {
+      var done = false, ctl = null;
+      var t = setTimeout(function () { if (done) return; done = true; try { if (ctl) ctl.abort(); } catch (e) {} rej(new Error('timeout')); }, ms);
+      var opt = {};
+      try { if (window.AbortController) { ctl = new AbortController(); opt.signal = ctl.signal; } } catch (e) {}
+      fetch(url, opt).then(function (r) { if (done) return; done = true; clearTimeout(t); res(r); })
+        .catch(function (e) { if (done) return; done = true; clearTimeout(t); rej(e); });
+    });
+  }
+
+  function openSheet() {
+    var ts = document.getElementById('wp-sheet'); if (ts) ts.className = 'wp-sheet';   /* theme sheet band */
+    ovl.className = 'wp-ov on'; sheet.className = 'wp-sheet on';
+    try { qEl.focus(); } catch (e) {}
+    renderSug(); if (!listEl.childElementCount) empty('idle');
+  }
+  function closeSheet() { ovl.className = 'wp-ov'; sheet.className = 'wp-sheet'; }
+  btn.onclick = openSheet;
+  if (xEl) xEl.onclick = closeSheet;
+  ovl.addEventListener('click', closeSheet);
+  /* 🎨 dabane pe search sheet band ho jaye (dono ek saath na khulein) */
+  var tb = document.getElementById('wp-theme-btn');
+  if (tb) tb.addEventListener('click', function () { sheet.className = 'wp-sheet'; });
+
+  function renderSug() {
+    if (!sugEl) return;
+    var q = (qEl.value || '').trim().toLowerCase();
+    var list = recent().concat(SUG);
+    if (q) list = list.filter(function (s) { return s.toLowerCase().indexOf(q) > -1; });
+    list = list.slice(0, 9);
+    sugEl.innerHTML = list.map(function (s) { return '<span data-q="' + esc(s) + '">' + esc(s) + '</span>'; }).join('');
+    sugEl.style.display = list.length ? 'flex' : 'none';
+  }
+
+  function skeleton() {
+    listEl.innerHTML = '<div class="wss-sk"><span class="t"></span><span style="flex:1"><span class="l1"></span><span class="l2"></span></span></div>'
+      .repeat(5);
+    inst('searching…'); cnt(0); srcT('—');
+  }
+  function empty(kind, q) {
+    if (kind === 'idle') {
+      listEl.innerHTML = '<div class="wss-empty"><u>🔍</u>Kuch likho — ya upar wale chip dabao.<br>YouTube ka poora search yahin, link copy karne ki zaroorat nahi.</div>';
+      inst('ready'); cnt(0); srcT('—');
+    } else if (kind === 'none') {
+      listEl.innerHTML = '<div class="wss-empty"><u>🤷</u><b>"' + esc(q) + '"</b> ka kuch nahi mila.<br>Spelling badlo ya doosre lafz try karo.</div>';
+      cnt(0); srcT('Piped');
+    } else if (kind === 'down') {
+      listEl.innerHTML = '<div class="wss-empty"><u>📡</u><b>Abhi search nahi ho raha</b><br>Saare Piped instances jawab nahi de rahe.<br><br>— party chalu hai, kuch nahi rukta —<br>Link paste kar do, video phir bhi chalegi.</div>';
+      inst('sab down', 'warn'); cnt(0); srcT('—');
+    }
+  }
+
+  function render(items, srcName) {
+    cur = items || [];
+    if (!cur.length) return empty('none', qEl.value);
+    listEl.innerHTML = cur.map(function (v, i) {
+      return '<div class="wss-row" data-i="' + i + '">' +
+        '<div class="wss-th"><img src="https://i.ytimg.com/vi/' + encodeURIComponent(v.id) + '/mqdefault.jpg" alt="" onerror="this.remove()">' +
+        (v.d ? '<span class="d">' + esc(v.d) + '</span>' : '') + '</div>' +
+        '<div class="wss-info"><b>' + esc(v.t) + '</b><s>' + esc(v.ch || 'YouTube') + '</s></div>' +
+        '<div class="wss-play">▶ Play</div></div>';
+    }).join('');
+    cnt(cur.length); srcT(srcName);
+  }
+
+  function pipedSearch(q) {
+    var i = 0;
+    function next() {
+      if (i >= PIPED.length) return Promise.resolve(null);
+      var base = PIPED[i++];
+      if (bench[base] && Date.now() - bench[base] < 600000) return next();
+      return fetchT(base + '/search?q=' + encodeURIComponent(q) + '&filter=videos', 3200)
+        .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+        .then(function (d) {
+          var raw = ((d && d.items) || []).filter(function (x) {
+            return x.type === 'stream' && x.url && x.url.indexOf('v=') > -1;
+          }).slice(0, 20);
+          if (!raw.length) throw new Error('empty');
+          inst(base.replace('https://', ''), 'ok');
+          return raw.map(function (x) {
+            return { id: x.url.split('v=')[1].split('&')[0], t: x.title || '', ch: x.uploaderName || '', d: fmtDur(x.duration) };
+          });
+        })
+        .catch(function () { bench[base] = Date.now(); return next(); });
+    }
+    return next();
+  }
+
+  function runSearch(q) {
+    q = (q || '').trim();
+    if (!q) return empty('idle');
+    renderSug();
+    if (cache[q] && Date.now() - cache[q].ts < 600000) { render(cache[q].items, 'cache'); return; }
+    skeleton();
+    var id = ++runId;
+    addRecent(q);
+    pipedSearch(q).then(function (items) {
+      if (id !== runId) return;                       /* purana jawab - phenk do */
+      if (!items) return empty('down');
+      cache[q] = { ts: Date.now(), items: items };
+      render(items, 'Piped');
+    }).catch(function () { if (id === runId) empty('down'); });
+  }
+
+  /* tap = ▶ Play (sab ke liye) + item queue ke AAKHIR mein */
+  function playResult(v) {
+    if (!v) return;
+    var url = 'https://www.youtube.com/watch?v=' + v.id;
+    try {
+      queueLocal.items = queueLocal.items || [];
+      var item = { type: 'youtube', url: url, videoId: v.id, label: makeLabel({ type: 'youtube', videoId: v.id, url: url }), by: myName };
+      queueLocal.items.push(item);
+      queueLocal.index = queueLocal.items.length - 1;
+      queueLocal.lastAdvance = Date.now();
+      pubQueue();
+      renderQueue(queueLocal.items, queueLocal.index);
+      playItemEverywhere({ type: 'youtube', url: url, videoId: v.id });
+      pushSys('▶ ' + myName + ' ne search se lagaya: ' + String(v.t || '').slice(0, 40));
+    } catch (e) {}
+    closeSheet();
+  }
+
+  listEl.addEventListener('click', function (e) {
+    var row = e.target.closest ? e.target.closest('.wss-row') : null;
+    if (!row) return;
+    playResult(cur[+row.getAttribute('data-i')]);
+  });
+
+  if (sugEl) sugEl.addEventListener('click', function (e) {
+    var s = e.target.closest ? e.target.closest('span[data-q]') : null;
+    if (!s) return;
+    qEl.value = s.getAttribute('data-q');
+    runSearch(qEl.value);
+  });
+
+  qEl.addEventListener('input', function () {
+    renderSug();
+    clearTimeout(tmr);
+    tmr = setTimeout(function () { runSearch(qEl.value); }, 350);
+  });
+  qEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') { clearTimeout(tmr); runSearch(qEl.value); } });
+  if (goEl) goEl.onclick = function () { clearTimeout(tmr); runSearch(qEl.value); };
 })();
 </script>
 </body>
