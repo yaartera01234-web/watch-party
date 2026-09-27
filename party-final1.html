@@ -774,6 +774,24 @@ main { gap: 11px; }
 .dm-acts4.on { display: flex; }
 .dm-acts4 button { border: 0; border-radius: 9px; padding: 8px 11px; font-size: 12px; font-weight: 700; cursor: pointer;
   background: rgba(255,255,255,.09); color: #fff; }
+
+/* ===== P43: DM me message reaction =====
+   Long-press (ya dblclick) se khulne wale menu me sab se upar emoji ki patti.
+   Jo emoji dabao wo message pe chip ban kar chipak jati hai. Chip pe dobara tap =
+   apni reaction hata do. Reaction dono taraf pohanchti hai (E2E message ki tarah). */
+.dm-acts4 { flex-direction: column; align-items: center; gap: 6px; }
+.rx4row { display: flex; gap: 1px; padding: 4px 6px; border-radius: 26px; background: rgba(12,9,26,.98);
+  border: 1px solid rgba(255,255,255,.18); box-shadow: 0 10px 26px rgba(0,0,0,.5); }
+.rx4row button { width: 33px !important; height: 33px; padding: 0 !important; border-radius: 50% !important;
+  background: transparent !important; font-size: 19px; line-height: 1; }
+.rx4row button:active { background: rgba(255,255,255,.15) !important; transform: scale(1.18); }
+.rx4acts { display: flex; gap: 5px; }
+.rx4 { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.rx4:empty { display: none; }
+.msg-row.own .rx4 { justify-content: flex-end; }
+.rx4chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 12px; font-size: 12px;
+  line-height: 1.7; color: #fff; background: rgba(8,8,24,.8); border: 1px solid rgba(255,255,255,.24); cursor: pointer; }
+.rx4chip.mine { border-color: #f472b6; background: rgba(244,114,182,.34); }
 .dm-pop4 { display: none; position: absolute; top: 46px; right: 12px; z-index: 30; flex-direction: column;
   min-width: 196px; background: rgba(16,11,32,.97); border: 1px solid rgba(255,255,255,.14);
   border-radius: 13px; overflow: hidden; box-shadow: 0 18px 44px rgba(0,0,0,.6); }
@@ -3502,9 +3520,19 @@ function renderMembers() {
     <div class="dm-v4" id="dm-v4"><div class="big4" id="dm-v4img"></div><button id="dm-v4x" type="button">✕</button></div>
 
     <div class="dm-acts4" id="dm-acts4">
-      <button data-a="reply" type="button">↩ Reply</button>
-      <button data-a="copy" type="button">📋 Copy</button>
-      <button data-a="del" type="button">🗑 Delete</button>
+      <div class="rx4row" id="dm-rx4row">
+        <button type="button" data-rx="❤️">❤️</button>
+        <button type="button" data-rx="😂">😂</button>
+        <button type="button" data-rx="😮">😮</button>
+        <button type="button" data-rx="😢">😢</button>
+        <button type="button" data-rx="👍">👍</button>
+        <button type="button" data-rx="🔥">🔥</button>
+      </div>
+      <div class="rx4acts">
+        <button data-a="reply" type="button">↩ Reply</button>
+        <button data-a="copy" type="button">📋 Copy</button>
+        <button data-a="del" type="button">🗑 Delete</button>
+      </div>
     </div>
 
     <div class="dm-rep4" id="dm-rep4">
@@ -3719,7 +3747,7 @@ function renderMembers() {
     if (!connected()) { toast('📡 Tower se connect nahi — message nahi gaya'); return false; }
     var midv = mid();
     var e;
-    try { e = await encTo(peer, { mid: midv, ts: nowMs(), t: payload.t, x: payload.x, u: payload.u || '', dv: payload.dv || '', dur: payload.dur || 0, rq: payload.rq || null }); }
+    try { e = await encTo(peer, { mid: midv, ts: nowMs(), t: payload.t, x: payload.x, u: payload.u || '', dv: payload.dv || '', dur: payload.dur || 0, rq: payload.rq || null, rx: payload.rx || '' }); }
     catch (err) { toast('🔒 Lock nahi hua — dobara try karo'); return false; }
     var _nm = myLabel();
     if (_nm && _nm !== 'Dost' && S.name !== _nm) { S.name = _nm; }
@@ -3729,7 +3757,7 @@ function renderMembers() {
     try { mc().publish(topic, JSON.stringify(out), { qos: 1, retain: true }); }
     catch (err) { toast('📡 bheja nahi ja saka'); return false; }
     S.seen[midv] = 1;
-    appendMsg(peer, { d: 'out', t: payload.t, x: payload.x, mid: midv, ts: nowMs(), u: payload.u, dv: payload.dv, dur: payload.dur, rq: payload.rq || null });
+    appendMsg(peer, { d: 'out', t: payload.t, x: payload.x, mid: midv, ts: nowMs(), u: payload.u, dv: payload.dv, dur: payload.dur, rq: payload.rq || null, rx: payload.rx || '' });
     save(); renderAll();
     return true;
   }
@@ -3783,6 +3811,16 @@ function renderMembers() {
       try { body = await decFrom(peer, p); } catch (e) { return; }     /* locked nahi khula -> chhod do */
       clearRetained(topic);                                            /* padh liya -> mailbox saaf */
       if (!body) return;
+      /* P43: reaction aayi -> naya bubble nahi, us purane message pe chip lagao */
+      if (body.t === 'react') {
+        if (S.friends[peer] && body.rx && body.rx !== '1') {
+          if (rxApply(peer, body.rx, body.x || '', 'peer')) {
+            save();
+            if (curChat === peer) renderThread();
+          }
+        }
+        return;
+      }
       var known = !!S.friends[peer];
       if (!known && (!body.t || body.t !== 'sys')) {
         /* pehli dafa -> Message Request (Snackchat style) */
@@ -4295,7 +4333,9 @@ function renderMembers() {
       var bub = d4bubbleEl(m);
       var tm = document.createElement('div'); tm.className = 'time';
       tm.textContent = timeShort(m.ts) + (own ? ' ✓✓' : '');
-      wrap.appendChild(sd); wrap.appendChild(bub); wrap.appendChild(tm);
+      var rxb = document.createElement('div'); rxb.className = 'rx4';
+      try { paintRx4(rxb, m); } catch (e) {}
+      wrap.appendChild(sd); wrap.appendChild(bub); wrap.appendChild(rxb); wrap.appendChild(tm);
       if (own) { row.appendChild(wrap); row.appendChild(avEl); } else { row.appendChild(avEl); row.appendChild(wrap); }
       t.appendChild(row);
       if (type === 'voice') { try { bindVoice(bub, m, curChat); } catch (e) {} }
@@ -4388,6 +4428,57 @@ function renderMembers() {
     /* P42: focus({preventScroll}) — warna browser sheet ko hi side me scroll kar deta tha
        aur poori chat kuch pixels bayen khisak jati thi (messages ke kinare kat jate the). */
     var inp = $('dm-input'); if (inp) try { inp.focus({ preventScroll: true }); } catch (e) { try { inp.focus(); } catch (e2) {} }
+  }
+
+  /* ===== P43: DM me message reaction (party wale tarike se) =====
+     Har message pe ek chhoti si patti: { emoji: { me: 1, peer: 1 } }.
+     Apni reaction dobara dabao to hat jati hai. Reaction bhi E2E hi jati hai. */
+  var RX_SET = ['❤️', '😂', '😮', '😢', '👍', '🔥'];
+  function rxMsg(peer, midTarget) {
+    var arr = S.chats[peer] || [];
+    for (var i = 0; i < arr.length; i++) if (arr[i].mid === midTarget) return arr[i];
+    return null;
+  }
+  function rxApply(peer, midTarget, em, side) {
+    var m = rxMsg(peer, midTarget); if (!m) return false;
+    m.rx = m.rx || {};
+    Object.keys(m.rx).forEach(function (k) {
+      if (m.rx[k] && m.rx[k][side]) { delete m.rx[k][side]; if (!Object.keys(m.rx[k]).length) delete m.rx[k]; }
+    });
+    if (em) { m.rx[em] = m.rx[em] || {}; m.rx[em][side] = 1; }
+    return true;
+  }
+  function paintRx4(box, m) {
+    if (!box) return;
+    box.innerHTML = '';
+    var d = m.rx || {};
+    Object.keys(d).forEach(function (em) {
+      var sides = Object.keys(d[em] || {});
+      if (!sides.length) return;
+      var c = document.createElement('button');
+      c.type = 'button';
+      c.className = 'rx4chip' + (d[em].me ? ' mine' : '');
+      c.textContent = em + (sides.length > 1 ? ' ' + sides.length : '');
+      c.onclick = function (ev) { ev.stopPropagation(); dmReact(m.mid, em); };
+      box.appendChild(c);
+    });
+  }
+  async function dmReact(midTarget, em) {
+    var peer = curChat || dmActPeer;
+    if (!peer || !midTarget || !em) return;
+    var m = rxMsg(peer, midTarget); if (!m) return;
+    var myNow = (m.rx && m.rx[em] && m.rx[em].me) ? '' : em;     /* dobara dabaya -> hata do */
+    rxApply(peer, midTarget, myNow, 'me');
+    save();
+    try { renderThread(); } catch (e) {}
+    if (!connected()) { toast('📡 Tower nahi — reaction sirf tumhare paas rahegi'); return; }
+    try {
+      var midv = mid();
+      var e = await encTo(peer, { mid: midv, ts: nowMs(), t: 'react', x: myNow, u: '', dv: '', dur: 0, rq: null, rx: midTarget });
+      var _nm = myLabel();
+      var out = { c: S.code, n: _nm, k: (typeof myColor !== 'undefined' && myColor) ? myColor : S.color, ts: nowMs(), iv: e.iv, ct: e.ct };
+      mc().publish(NSP + 'inbox-' + h36(peer) + '/' + midv, JSON.stringify(out), { qos: 1, retain: true });
+    } catch (err) { toast('📡 Reaction bheji nahi ja saki'); }
   }
 
   /* ---------- photo / gif / menu / reply ---------- */
@@ -4486,7 +4577,7 @@ function renderMembers() {
     var rx = $('dm-rep4x');
     if (rx) rx.onclick = function () { dmReply = null; $('dm-rep4').classList.remove('on'); };
     var acts = $('dm-acts4');
-    if (acts) acts.querySelectorAll('button').forEach(function (b) {
+    if (acts) acts.querySelectorAll('button[data-a]').forEach(function (b) {
       b.onclick = function () {
         var a = b.getAttribute('data-a');
         acts.classList.remove('on');
@@ -4499,6 +4590,16 @@ function renderMembers() {
           save(); renderThread(); renderChats();
           toast('🗑 Message hata diya (sirf tumhare paas se)');
         }
+      };
+    });
+    /* P43: emoji row -> selected message pe reaction */
+    var rxrow = $('dm-rx4row');
+    if (rxrow) rxrow.querySelectorAll('button').forEach(function (b) {
+      b.onclick = function (ev) {
+        ev.stopPropagation();
+        var em = b.getAttribute('data-rx');
+        if (acts) acts.classList.remove('on');
+        if (dmActMsg) dmReact(dmActMsg.mid, em);
       };
     });
     /* send button -> reply ke sath */
@@ -4625,6 +4726,9 @@ function renderMembers() {
       save(); subscribeDm(); renderAll(); return c;
     },
     _send: function (code, text) { return sendMsg(code, { t: 'text', x: text }, false); },
+    _react: function (midTarget, em) { return dmReact(midTarget, em); },
+    _open: function (code) { openChat(code); },
+    _chat: function (code) { return (S.chats[code] || []).slice(); },
     _reqs: function () { return S.reqs; },
     _accept: function (i) { acceptReq(i); },
     _search: function (q) { var el = $('dm-q'); if (el) el.value = q || ''; renderChats(); var w = $('dm-chat-wrap'); return w ? w.children.length : -1; },
