@@ -3617,6 +3617,12 @@ function renderMembers() {
   function ping(name, text) {
     toast('💬 ' + name + ': ' + String(text || '').slice(0, 60));
     beep();
+    /* v26: app peeche ho to system notification (native bridge) */
+    try {
+      if (document.hidden && window.YaarNative && window.YaarNative.notify) {
+        window.YaarNative.notify('💬 ' + (name || 'Messages'), String(text || 'Naya message').slice(0, 120));
+      }
+    } catch (e) {}
   }
   function markRead(peer) { if (S.friends[peer]) { S.friends[peer].un = 0; save(); } }
 
