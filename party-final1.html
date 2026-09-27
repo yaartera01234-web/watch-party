@@ -1142,7 +1142,7 @@ main { gap: 11px; }
     setTimeout(function () { n.style.opacity = '0'; }, 4200);
     setTimeout(function () { try { n.remove(); } catch (e) {} }, 5200);
     var c = document.createElement('div'); c.id = 'appver-chip';
-    c.textContent = 'App v' + (av || '?') + ' \u00b7 Page P34';
+    c.textContent = 'App v' + (av || '?') + ' \u00b7 Page P35';
     c.title = 'App aur page ka version';
     c.style.display = 'block';
     c.onclick = function () { c.style.display = 'none'; };
@@ -4604,26 +4604,58 @@ function renderMembers() {
   }
 
   /* ---------- ASPECT: Fit / Fill(crop) / Zoom(crop) ---------- */
+  /* user ki di hui EXACT crop values (mpv style: w:h:x:y, 1920-wide source ke hisaab se) */
   var ASP = [
-    { n: 'Fit',  fit: 'contain', sc: 1,    tag: 'poora video' },
-    { n: 'Fill', fit: 'cover',   sc: 1,    tag: 'crop 1' },
-    { n: 'Zoom', fit: 'cover',   sc: 1.35, tag: 'crop 2' }
+    { n: 'Fit',    tag: 'poora video',        crop: null },
+    { n: 'Crop 1', tag: '1920:844:0:118',     crop: [1920, 844, 0, 118] },
+    { n: 'Crop 2', tag: '1600:800:160:136',   crop: [1600, 800, 160, 136] }
   ];
   var ai = parseInt(localStorage.getItem('pp_aspect') || '0', 10);
   if (!(ai >= 0 && ai < 3)) ai = 0;
   function applyAsp() {
     var a = ASP[ai];
     try {
-      mp4.style.objectFit = a.fit;
-      mp4.style.transform = a.sc > 1 ? 'scale(' + a.sc + ')' : '';
+      if (!a.crop) {
+        /* Fit: normal (poora video) */
+        mp4.style.position = ''; mp4.style.width = ''; mp4.style.height = '';
+        mp4.style.left = ''; mp4.style.top = ''; mp4.style.right = ''; mp4.style.bottom = '';
+        mp4.style.maxWidth = ''; mp4.style.maxHeight = '';
+        mp4.style.objectFit = 'contain'; mp4.style.transform = '';
+      } else {
+        var W = mp4.videoWidth, H = mp4.videoHeight;
+        if (W && H) {
+          var k = W / 1920;                                   /* values 1920-wide source ke hain -> apne aap scale */
+          var cw = a.crop[0] * k, ch = a.crop[1] * k;
+          var cx = a.crop[2] * k, cy = a.crop[3] * k;
+          var bw = wrap.clientWidth || 360, bh = wrap.clientHeight || 200;
+          var sc = Math.max(bw / cw, bh / ch);                 /* crop area box ko poora bhare (bina stretch) */
+          mp4.style.position = 'absolute';
+          mp4.style.objectFit = 'fill';                        /* size exact hai, is liye distort nahi hota */
+          mp4.style.width = (W * sc) + 'px';
+          mp4.style.height = (H * sc) + 'px';
+          mp4.style.left = (-cx * sc) + 'px';
+          mp4.style.top = (-cy * sc) + 'px';
+          mp4.style.right = 'auto'; mp4.style.bottom = 'auto';
+          mp4.style.maxWidth = 'none'; mp4.style.maxHeight = 'none';
+          mp4.style.transform = '';
+        }
+      }
     } catch (e) {}
     try {
       bAsp.textContent = '⛶ ' + a.n;
+      bAsp.title = a.crop ? ('Crop: ' + a.tag) : 'Poora video';
       bAsp.classList.toggle('pp-on', ai !== 0);
     } catch (e) {}
     try { localStorage.setItem('pp_aspect', String(ai)); } catch (e) {}
   }
-  bAsp.onclick = function () { ai = (ai + 1) % 3; applyAsp(); showHud('⛶', ASP[ai].n + ' · ' + ASP[ai].tag); };
+  bAsp.onclick = function () {
+    ai = (ai + 1) % 3; applyAsp();
+    showHud('⛶', ASP[ai].n + (ASP[ai].crop ? ' · ' + ASP[ai].tag : ''));
+  };
+  /* fullscreen / rotation / box size badalne pe crop dobara lagao */
+  ['resize', 'orientationchange', 'fullscreenchange', 'webkitfullscreenchange'].forEach(function (ev) {
+    window.addEventListener(ev, function () { setTimeout(applyAsp, 120); });
+  });
 
   /* ---------- BRIGHTNESS (left drag) ---------- */
   var br = parseFloat(localStorage.getItem('pp_bright') || '1');
