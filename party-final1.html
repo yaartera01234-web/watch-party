@@ -919,18 +919,6 @@ main { gap: 11px; }
   padding: 4px 9px; border-radius: 20px; font-size: 9.5px; font-weight: 800; letter-spacing: .3px;
   background: rgba(10,8,25,.72); border: 1px solid rgba(255,255,255,.22); color: #cfc8ff; opacity: .78; }
 
-/* ===== v33: APP MODE — premium player ki UI hata do (video native fullscreen me) ===== */
-body.appmode #premium-video-ui { display: none !important; }
-body.appmode #no-video { display: none !important; }
-body.appmode #mp4-player { visibility: hidden !important; }   /* sirf sync ke liye chalta rahe */
-#app-native-card { display: none; }
-body.appmode #app-native-card { display: flex; position: absolute; top:0;right:0;bottom:0;left:0; z-index: 5;
-  flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 9px; padding: 16px;
-  background: radial-gradient(circle at 50% 28%, rgba(139,114,255,.18), rgba(8,6,20,.93)); }
-#app-native-card b { font-size: 12.5px; color: #fff; }
-#app-native-card s { text-decoration: none; font-size: 10.5px; opacity: .82; color: #cfc8ff; }
-#app-native-card button { margin-top: 3px; border: 0; border-radius: 12px; padding: 9px 14px; font-size: 12px;
-  font-weight: 800; color: #150c26; background: linear-gradient(135deg, #ff5ebc, #8b72ff); }
 </style>
 </head>
 <body>
@@ -1098,6 +1086,7 @@ body.appmode #app-native-card { display: flex; position: absolute; top:0;right:0
 /* ---------- NATIVE PLAYER (Media3) — sirf app ke andar ---------- */
 (function () {
   if (!window.YaarNative || !window.YaarNative.openPlayer) return;   /* browser me kuch nahi */
+  return;   /* v34: native player BAND (user: "native ko dafa kro") — premium player hi chalega */
   const wrap = document.querySelector('.player-wrap');
   const mp4 = document.getElementById('mp4-player');
   if (!wrap || !mp4) return;
@@ -1140,40 +1129,6 @@ body.appmode #app-native-card { display: flex; position: absolute; top:0;right:0
   btn.onclick = open;
 })();
 
-<script>
-/* v33: APP MODE — premium (page wala) player hata do; direct link seedha NATIVE fullscreen me.
-   Browser me (app ke bagair) purana premium player hi chalta rahega. */
-(function () {
-  try {
-    if (!window.YaarNative || !window.YaarNative.openPlayer) return;
-    document.body.classList.add('appmode');
-    var wrap = document.querySelector('.player-wrap');
-    if (!wrap) return;
-    var mp4 = document.getElementById('mp4-player');
-    if (mp4) { try { mp4.muted = true; } catch (e) {} }   /* hidden video sirf sync ke liye; aawaz native se */
-    var card = document.createElement('div');
-    card.id = 'app-native-card';
-    card.innerHTML = '<b>\uD83C\uDFAC Video native (fullscreen) player me khul raha hai\u2026</b>' +
-      '<s>brightness/volume drag \u00b7 Fit/Fill/Zoom \u00b7 wapas laane ke liye \u26F6 button</s>' +
-      '<button id="app-page-play" type="button">Page pe hi chalao</button>';
-    wrap.appendChild(card);
-    var bt = document.getElementById('app-page-play');
-    if (bt) bt.onclick = function () {
-      try {
-        document.body.classList.remove('appmode');        /* safety net: premium UI wapas */
-        if (mp4) { mp4.muted = false; try { mp4.play(); } catch (e) {} }
-      } catch (e) {}
-    };
-    /* jab koi mp4 link na laga ho to card bhi na dikhe */
-    setInterval(function () {
-      try {
-        var u = mp4 ? (mp4.currentSrc || mp4.src || '') : '';
-        card.style.visibility = u ? 'visible' : 'hidden';
-      } catch (e) {}
-    }, 1200);
-  } catch (e) {}
-})();
-</script>
 <div id="react-tray"></div>
 <script>
 /* v30: app version + page build chip (diagnostic) */
@@ -1182,12 +1137,12 @@ body.appmode #app-native-card { display: flex; position: absolute; top:0;right:0
     if (!window.YaarNative) return;
     var av = 0; try { av = window.YaarNative.appVersion ? window.YaarNative.appVersion() : 0; } catch (e) {}
     var n = document.createElement('div'); n.id = 'appmode-note';
-    n.textContent = '✅ App mode — Native player ready (v' + (av || '?') + ')';
+    n.textContent = '✅ App mode — Premium player ready (v' + (av || '?') + ')';
     document.body.appendChild(n);
     setTimeout(function () { n.style.opacity = '0'; }, 4200);
     setTimeout(function () { try { n.remove(); } catch (e) {} }, 5200);
     var c = document.createElement('div'); c.id = 'appver-chip';
-    c.textContent = 'App v' + (av || '?') + ' \u00b7 Page P33';
+    c.textContent = 'App v' + (av || '?') + ' \u00b7 Page P34';
     c.title = 'App aur page ka version';
     c.style.display = 'block';
     c.onclick = function () { c.style.display = 'none'; };
@@ -4585,6 +4540,213 @@ function renderMembers() {
   } catch (e) {}
 })();
 
+</script>
+<script>
+/* ===================================================================
+   v34 PREMIUM PLAYER CONTROLS (user ne maanga):
+     • Dual Audio  (🔊 button) — jahan link/browser support kare
+     • Brightness  — VIDEO ke LEFT side se upar/neeche drag
+     • Volume      — VIDEO ke RIGHT side se upar/neeche drag
+     • Aspect      — ⛶ Fit / Fill (crop) / Zoom (crop)  [2 crop wale]
+   =================================================================== */
+(function () {
+  var mp4 = document.getElementById('mp4-player');
+  var wrap = document.querySelector('.player-wrap');
+  if (!mp4 || !wrap) return;
+
+  /* ---------- style ---------- */
+  var st = document.createElement('style');
+  st.textContent =
+    '#pp-hud{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:14;display:flex;align-items:center;gap:8px;'
+    + 'padding:9px 15px;border-radius:14px;background:rgba(8,6,20,.84);border:1px solid rgba(255,255,255,.18);color:#fff;'
+    + 'font:800 13px/1 system-ui,sans-serif;opacity:0;transition:opacity .18s;pointer-events:none}'
+    + '.pp-btn{pointer-events:auto;display:inline-flex;align-items:center;gap:4px;height:27px;padding:0 9px;border:1px solid rgba(255,255,255,.16);'
+    + 'border-radius:9px;background:rgba(14,12,31,.78);color:#f1efff;font:800 10.5px/1 system-ui,sans-serif;white-space:nowrap}'
+    + '.pp-btn.pp-on{background:linear-gradient(135deg,#ff5ebc,#8b72ff);color:#150c26;border-color:transparent}'
+    + '#pp-toast{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:15;padding:8px 13px;border-radius:12px;'
+    + 'background:rgba(10,8,25,.92);border:1px solid rgba(255,255,255,.2);color:#fff;font:700 11.5px/1.3 system-ui,sans-serif;'
+    + 'opacity:0;transition:opacity .2s;pointer-events:none;max-width:88%;text-align:center}'
+    + '@media (max-width:500px){.pp-btn{height:25px;padding:0 7px;font-size:9.5px}}';
+  document.head.appendChild(st);
+
+  var hud = document.createElement('div'); hud.id = 'pp-hud';
+  hud.innerHTML = '<span id="pp-hud-ic">☀️</span><span id="pp-hud-tx">100%</span>';
+  wrap.appendChild(hud);
+  var hudT = 0;
+  function showHud(ic, tx) {
+    try {
+      hud.children[0].textContent = ic; hud.children[1].textContent = tx;
+      hud.style.opacity = '1';
+      clearTimeout(hudT); hudT = setTimeout(function () { hud.style.opacity = '0'; }, 900);
+    } catch (e) {}
+  }
+  var pt = document.createElement('div'); pt.id = 'pp-toast'; wrap.appendChild(pt);
+  var ptT = 0;
+  function say(m) {
+    try {
+      pt.textContent = m; pt.style.opacity = '1';
+      clearTimeout(ptT); ptT = setTimeout(function () { pt.style.opacity = '0'; }, 2600);
+    } catch (e) {}
+  }
+
+  /* ---------- buttons (premium controls me add) ---------- */
+  function mk(t, id) { var b = document.createElement('button'); b.type = 'button'; b.className = 'pp-btn'; b.id = id; b.textContent = t; return b; }
+  var bAsp = mk('⛶ Fit', 'pp-aspect');
+  var bAud = mk('🔊 Audio', 'pp-audio');
+  var bBr  = mk('☀️ 100%', 'pp-bright');
+  var ctr = document.querySelector('.premium-video-controls');
+  if (ctr) {
+    var sp = ctr.querySelector('.premium-video-spacer');
+    [bAud, bAsp, bBr].forEach(function (b) { if (sp) ctr.insertBefore(b, sp); else ctr.appendChild(b); });
+  } else {
+    bAud.style.position = bAsp.style.position = bBr.style.position = 'relative';
+    wrap.appendChild(bAud); wrap.appendChild(bAsp); wrap.appendChild(bBr);
+  }
+
+  /* ---------- ASPECT: Fit / Fill(crop) / Zoom(crop) ---------- */
+  var ASP = [
+    { n: 'Fit',  fit: 'contain', sc: 1,    tag: 'poora video' },
+    { n: 'Fill', fit: 'cover',   sc: 1,    tag: 'crop 1' },
+    { n: 'Zoom', fit: 'cover',   sc: 1.35, tag: 'crop 2' }
+  ];
+  var ai = parseInt(localStorage.getItem('pp_aspect') || '0', 10);
+  if (!(ai >= 0 && ai < 3)) ai = 0;
+  function applyAsp() {
+    var a = ASP[ai];
+    try {
+      mp4.style.objectFit = a.fit;
+      mp4.style.transform = a.sc > 1 ? 'scale(' + a.sc + ')' : '';
+    } catch (e) {}
+    try {
+      bAsp.textContent = '⛶ ' + a.n;
+      bAsp.classList.toggle('pp-on', ai !== 0);
+    } catch (e) {}
+    try { localStorage.setItem('pp_aspect', String(ai)); } catch (e) {}
+  }
+  bAsp.onclick = function () { ai = (ai + 1) % 3; applyAsp(); showHud('⛶', ASP[ai].n + ' · ' + ASP[ai].tag); };
+
+  /* ---------- BRIGHTNESS (left drag) ---------- */
+  var br = parseFloat(localStorage.getItem('pp_bright') || '1');
+  if (!isFinite(br)) br = 1;
+  function applyBr(save) {
+    try { mp4.style.filter = 'brightness(' + br + ')'; } catch (e) {}
+    try {
+      bBr.textContent = '☀️ ' + Math.round(br * 100) + '%';
+      bBr.classList.toggle('pp-on', Math.abs(br - 1) > 0.03);
+    } catch (e) {}
+    if (save !== false) { try { localStorage.setItem('pp_bright', String(br)); } catch (e) {} }
+  }
+  bBr.onclick = function () { br = 1; applyBr(); showHud('☀️', '100%'); };
+
+  /* ---------- VOLUME (right drag) ---------- */
+  function vol(v) {
+    try {
+      mp4.volume = Math.max(0, Math.min(1, v));
+      if (mp4.volume > 0 && mp4.muted) mp4.muted = false;
+    } catch (e) {}
+    try { localStorage.setItem('pp_vol', String(v)); } catch (e) {}
+  }
+
+  /* ---------- gestures on video ---------- */
+  var g = null;
+  wrap.addEventListener('touchstart', function (e) {
+    if (e.touches.length !== 1) { g = null; return; }
+    var t = e.touches[0], r = wrap.getBoundingClientRect();
+    g = { y: t.clientY, x: t.clientX, z: (t.clientX - r.left) < r.width / 2 ? 'br' : 'vo',
+          b0: br, v0: (isFinite(mp4.volume) ? mp4.volume : 1), on: false, h: r.height };
+  }, { passive: true });
+  wrap.addEventListener('touchmove', function (e) {
+    if (!g || e.touches.length !== 1) return;
+    var t = e.touches[0], dy = t.clientY - g.y, dx = t.clientX - g.x;
+    if (!g.on) {
+      if (Math.abs(dy) > 20 && Math.abs(dy) > Math.abs(dx) * 1.4) g.on = true; else return;
+    }
+    var pct = -dy / (g.h * 1.1);
+    if (g.z === 'br') {
+      br = Math.max(0.15, Math.min(2.4, g.b0 + pct * 1.5));
+      applyBr(false); showHud('☀️', Math.round(br * 100) + '%');
+    } else {
+      var v = Math.max(0, Math.min(1, g.v0 + pct * 1.4));
+      vol(v); showHud('🔊', Math.round(v * 100) + '%');
+    }
+    try { e.preventDefault(); } catch (x) {}
+  }, { passive: false });
+  wrap.addEventListener('touchend', function () { if (g && g.on) { try { localStorage.setItem('pp_bright', String(br)); } catch (e) {} } g = null; });
+  wrap.addEventListener('touchcancel', function () { g = null; });
+
+  /* ---------- DUAL AUDIO ---------- */
+  var au = { list: [], cur: 0, mode: 'none' };
+  function audBtn() {
+    try {
+      if (au.list.length > 1) {
+        bAud.textContent = '🔊 ' + (au.cur + 1) + '/' + au.list.length;
+        bAud.classList.add('pp-on');
+        bAud.title = 'Audio: ' + au.list.join(' · ') + ' (tap = switch)';
+      } else {
+        bAud.textContent = '🔊 Audio';
+        bAud.classList.remove('pp-on');
+      }
+    } catch (e) {}
+  }
+  function hlsGet() {
+    try { if (typeof hls !== 'undefined' && hls && hls.audioTracks) return hls; } catch (e) {}
+    return null;
+  }
+  function audioScan() {
+    au.list = []; au.cur = 0; au.mode = 'none';
+    var h = hlsGet();
+    if (h && h.audioTracks && h.audioTracks.length > 1) {
+      au.mode = 'hls';
+      for (var i = 0; i < h.audioTracks.length; i++) {
+        var t = h.audioTracks[i];
+        au.list.push(t.name || t.lang || ('Audio ' + (i + 1)));
+      }
+      au.cur = (h.audioTrack && h.audioTrack >= 0) ? h.audioTrack : 0;
+      audBtn(); return;
+    }
+    try {
+      if (mp4.audioTracks && mp4.audioTracks.length > 1) {
+        au.mode = 'el';
+        for (var j = 0; j < mp4.audioTracks.length; j++) {
+          var a = mp4.audioTracks[j];
+          au.list.push(a.label || a.language || ('Audio ' + (j + 1)));
+          if (a.enabled) au.cur = j;
+        }
+        audBtn(); return;
+      }
+    } catch (e) {}
+    audBtn();
+  }
+  bAud.onclick = function () {
+    if (au.list.length <= 1) {
+      if (au.mode === 'none') say('🌐 Is link me browser sirf 1 audio deta hai (2 audio wale files me switch browser support nahi karta)');
+      else say('Is link me sirf 1 hi audio hai');
+      return;
+    }
+    if (au.mode === 'hls') {
+      var h = hlsGet(); if (!h) return;
+      au.cur = (au.cur + 1) % au.list.length;
+      try { h.audioTrack = au.cur; } catch (e) {}
+      audBtn(); showHud('🔊', 'Audio ' + (au.cur + 1) + '/' + au.list.length); return;
+    }
+    if (au.mode === 'el') {
+      try {
+        for (var i = 0; i < mp4.audioTracks.length; i++) mp4.audioTracks[i].enabled = (i === (au.cur + 1) % mp4.audioTracks.length);
+      } catch (e) {}
+      au.cur = (au.cur + 1) % au.list.length;
+      audBtn(); showHud('🔊', 'Audio ' + (au.cur + 1) + '/' + au.list.length); return;
+    }
+  };
+
+  /* ---------- apply on load ---------- */
+  function refresh() { applyBr(false); applyAsp(); audioScan(); }
+  ['loadedmetadata', 'loadeddata', 'canplay', 'playing'].forEach(function (ev) { mp4.addEventListener(ev, refresh); });
+  mp4.addEventListener('loadedmetadata', function () {
+    var v = parseFloat(localStorage.getItem('pp_vol') || '1');
+    if (isFinite(v)) vol(v);
+  });
+  refresh();
+})();
 </script>
 </body>
 </html>
