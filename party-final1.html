@@ -704,9 +704,12 @@ main { gap: 11px; }
 
 /* ---------- NATIVE PLAYER BUTTON (sirf app mein dikhta hai) ---------- */
 #native-btn { position: absolute; top: 10px; right: 12px; z-index: 30; display: none;
-  padding: 6px 11px; border-radius: 20px; border: 1px solid rgba(255,255,255,.28); cursor: pointer;
-  background: rgba(12,8,26,.78); color: #fff; font-size: 11.5px; font-weight: 800; letter-spacing: .2px;
-  backdrop-filter: blur(6px); }
+  padding: 7px 13px; border-radius: 20px; border: 1px solid rgba(84,232,255,.75); cursor: pointer;
+  background: linear-gradient(135deg, rgba(84,232,255,.92), rgba(139,114,255,.92)); color: #08131f; font-size: 12px; font-weight: 900; letter-spacing: .2px;
+  box-shadow: 0 6px 18px rgba(84,232,255,.35), inset 0 1px 0 rgba(255,255,255,.45);
+  animation: nbPulse 2.4s ease-in-out infinite; }
+@keyframes nbPulse { 0%,100% { box-shadow: 0 6px 18px rgba(84,232,255,.30), inset 0 1px 0 rgba(255,255,255,.45); }
+  50% { box-shadow: 0 6px 26px rgba(84,232,255,.65), inset 0 1px 0 rgba(255,255,255,.55); } }
 #native-btn:active { transform: scale(.96); }
 
 
@@ -1078,20 +1081,36 @@ main { gap: 11px; }
   if (!wrap || !mp4) return;
   const btn = document.createElement('button');
   btn.id = 'native-btn'; btn.type = 'button';
-  btn.textContent = '⛶ Native';
-  btn.title = 'Native player me kholo — background chalta rehta hai';
+  btn.textContent = '⛶ Native Player';
+  btn.title = 'Native player me kholo — brightness/volume + background';
   wrap.appendChild(btn);
   const titleNow = () => { const t = document.getElementById('mini-title'); return (t && t.textContent) || 'Video'; };
-  const show = () => { if (mp4.src && !mp4.classList.contains('hidden')) btn.style.display = ''; };
+  /* v29: button ab zyada dair tak dikhta hai (pehle `hidden` class ki wajah se gayab ho jata tha) */
+  const nativeUrl = () => (mp4.currentSrc || mp4.src || '');
+  const canNative = () => !!nativeUrl() && /^(https?|blob|file):/i.test(nativeUrl());
+  const show = () => { if (canNative()) btn.style.display = ''; };
   const hide = () => { btn.style.display = 'none'; };
-  ['loadedmetadata', 'play', 'playing', 'canplay'].forEach((ev) => mp4.addEventListener(ev, show));
-  mp4.addEventListener('emptied', hide);
-  btn.onclick = () => {
-    const url = mp4.currentSrc || mp4.src || '';
+  const inRoom = () => { try { return typeof joined !== 'undefined' && joined; } catch (e) { return true; } };
+  let autoFor = '';
+  const open = () => {
+    const url = nativeUrl();
     if (!url) return;
     try { mp4.pause(); } catch (e) {}
     try { window.YaarNative.openPlayer(url, titleNow()); } catch (e) {}
   };
+  /* v29: solo (room ke bahar) direct video -> native player KHUD khul jaye.
+     Room ke andar auto nahi kholte warna party sync tut jaye. */
+  const autoOpen = () => {
+    const url = nativeUrl();
+    if (!canNative() || url === autoFor || inRoom()) return;
+    autoFor = url;
+    setTimeout(open, 650);
+  };
+  ['loadedmetadata', 'loadeddata', 'canplay'].forEach((ev) => mp4.addEventListener(ev, () => { show(); autoOpen(); }));
+  mp4.addEventListener('playing', () => { show(); autoOpen(); });
+  mp4.addEventListener('emptied', hide);
+  setInterval(show, 1500);   /* src lagne ke baad bhi button aa jaye */
+  btn.onclick = open;
 })();
 
 <div id="react-tray"></div>
