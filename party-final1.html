@@ -2589,7 +2589,7 @@ function renderMembers() {
       listEl.innerHTML = '<div class="wss-empty"><u>🤷</u><b>"' + esc(q) + '"</b> ka kuch nahi mila.<br>Spelling badlo ya doosre lafz try karo.</div>';
       cnt(0); srcT('Piped');
     } else if (kind === 'down') {
-      listEl.innerHTML = '<div class="wss-empty"><u>📡</u><b>Abhi search nahi ho raha</b><br>Saare Piped instances jawab nahi de rahe.<br><br>— party chalu hai, kuch nahi rukta —<br>Link paste kar do, video phir bhi chalegi.</div>';
+      listEl.innerHTML = '<div class="wss-empty"><u>📡</u><b>Abhi search nahi ho raha</b><br>Piped instances aur YouTube backup — dono jawab nahi de rahe.<br>(YouTube backup ka daily quota khatam ho to ~12:00 baje reset hota hai.)<br><br>— party chalu hai, kuch nahi rukta —<br>Link paste kar do, video phir bhi chalegi.</div>';
       inst('sab down', 'warn'); cnt(0); srcT('—');
     }
   }
@@ -2630,6 +2630,47 @@ function renderMembers() {
     return next();
   }
 
+  /* ===== 🔁 YouTube Data API (backup) =====
+     Piped ke saare instances fail/khali ho jayein -> ye khud chalu ho jata hai.
+     Daily quota: 100 searches (search.list = 100 units, 10,000/din).
+     Key sirf yaartera01234-web.github.io ke liye locked hai. */
+  var YT_KEY = 'AIzaSyD1o9TiriHymDsPvpadIsccQDHf7lJPZFo';
+
+  function isoDur(s) {
+    var m = /^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(s || '');
+    if (!m) return 0;
+    return (+m[1] || 0) * 86400 + (+m[2] || 0) * 3600 + (+m[3] || 0) * 60 + (+m[4] || 0);
+  }
+
+  function ytSearch(q) {
+    var base = 'https://www.googleapis.com/youtube/v3/';
+    return fetchT(base + 'search?part=snippet&type=video&videoEmbeddable=true&maxResults=20&q=' +
+        encodeURIComponent(q) + '&key=' + YT_KEY, 8000)
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d || d.error) throw new Error((d && d.error && d.error.message) || 'yt error');
+        var items = (d.items || []).filter(function (x) { return x && x.id && x.id.videoId; })
+          .slice(0, 20)
+          .map(function (x) {
+            return { id: x.id.videoId, t: (x.snippet && x.snippet.title) || '',
+                     ch: (x.snippet && x.snippet.channelTitle) || 'YouTube', d: '' };
+          });
+        if (!items.length) throw new Error('empty');
+        var ids = items.map(function (x) { return x.id; }).join(',');
+        return fetchT(base + 'videos?part=contentDetails&id=' + ids + '&key=' + YT_KEY, 8000)
+          .then(function (r) { return r.json(); })
+          .then(function (vd) {
+            var map = {};
+            ((vd && vd.items) || []).forEach(function (v) {
+              if (v && v.id) map[v.id] = isoDur(v.contentDetails && v.contentDetails.duration);
+            });
+            items.forEach(function (x) { x.d = fmtDur(map[x.id] || 0); });
+            return items;
+          })
+          .catch(function () { return items; });   /* duration na aayi to bhi results dikhao */
+      });
+  }
+
   function runSearch(q) {
     q = (q || '').trim();
     if (!q) return empty('idle');
@@ -2638,12 +2679,34 @@ function renderMembers() {
     skeleton();
     var id = ++runId;
     addRecent(q);
+    var done = false, ytp = null;
+
+    function useYt() {
+      if (done || id !== runId) return;
+      ytp = ytp || ytSearch(q).catch(function () { return null; });
+      ytp.then(function (items) {
+        if (done || id !== runId) return;
+        done = true;
+        if (!items || !items.length) return empty('down');
+        cache[q] = { ts: Date.now(), items: items };
+        render(items, 'YouTube backup');
+      });
+    }
+
+    /* Piped 6 sec se zyada le raha ho to YouTube bhi saath-saath shuru (jawab tez) */
+    var t = setTimeout(useYt, 6000);
+
     pipedSearch(q).then(function (items) {
-      if (id !== runId) return;                       /* purana jawab - phenk do */
-      if (!items) return empty('down');
-      cache[q] = { ts: Date.now(), items: items };
-      render(items, 'Piped');
-    }).catch(function () { if (id === runId) empty('down'); });
+      clearTimeout(t);
+      if (done || id !== runId) return;                /* purana jawab - phenk do */
+      if (items && items.length) {
+        done = true;
+        cache[q] = { ts: Date.now(), items: items };
+        render(items, 'Piped');
+        return;
+      }
+      useYt();                                         /* Piped khali/fail -> backup */
+    }).catch(function () { clearTimeout(t); useYt(); });
   }
 
   /* tap = ▶ Play (sab ke liye) + item queue ke AAKHIR mein */
