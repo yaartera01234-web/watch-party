@@ -903,7 +903,7 @@ main { gap: 11px; }
 </style>
 </head>
 <body>
-<!-- YP-P38 -->
+<!-- YP-P40 -->
 
 <!-- ===== JOIN SCREEN ===== -->
 <div id="join-screen">
@@ -3631,6 +3631,19 @@ function renderMembers() {
     return true;
   }
 
+  /* v40: notification ke "Reply" se aaya text -> wahi DM bhej do (E2E yahin hota hai) */
+  window.yaarQuickReply = function (codeRaw, text) {
+    try {
+      var code = normCode(codeRaw);
+      var t = String(text || '').trim();
+      if (!code || !t) return false;
+      if (!connected()) return false;
+      if (!S.friends[code]) return false;
+      sendMsg(code, { t: 'text', x: t.slice(0, 500) }, false);
+      return true;
+    } catch (e) { return false; }
+  };
+
   function appendMsg(peer, m) {
     peer = normCode(peer);
     if (!S.chats[peer]) S.chats[peer] = [];
@@ -3684,7 +3697,7 @@ function renderMembers() {
         if (p.a) S.friends[peer].avatar = p.a;
         appendMsg(peer, { d: 'in', t: body.t, x: body.x, u: body.u || '', dv: body.dv || '', dur: body.dur || 0, rq: body.rq || null, mid: body.mid || msgId, ts: body.ts || p.ts || nowMs() });
         if (curChat === peer && sheetOpen()) { markRead(peer); renderThread(); }
-        else { S.friends[peer].un = (S.friends[peer].un || 0) + 1; ping(p.n || peer, body.x || ''); }
+        else { S.friends[peer].un = (S.friends[peer].un || 0) + 1; ping(p.n || peer, body.x || '', peer); }
       }
       save(); renderAll();
     })();
@@ -3708,7 +3721,7 @@ function renderMembers() {
     if (peer === curChat) setChatBar();
   }
 
-  function ping(name, text) {
+  function ping(name, text, code) {
     if (!BGMODE) { toast('💬 ' + name + ': ' + String(text || '').slice(0, 60)); beep(); }
     /* v26/v28: app peeche ya band ho to system notification (native bridge) */
     try {
@@ -3719,8 +3732,13 @@ function renderMembers() {
           var yv = 0; try { yv = parseInt(localStorage.getItem('ypVis') || '0', 10) || 0; } catch (e2) {}
           if (Date.now() - yv < 12000) return;
         }
-        if (window.YaarNative && window.YaarNative.notify) {
-          window.YaarNative.notify('💬 ' + (name || 'Messages'), String(text || 'Naya message').slice(0, 120));
+        var YN = window.YaarNative;
+        var _t = '💬 ' + (name || 'Messages');
+        var _x = String(text || 'Naya message').slice(0, 120);
+        if (YN && typeof YN.notifyFrom === 'function') {
+          YN.notifyFrom(_t, _x, code || '');          /* v40: peer code bhi -> notification me Reply button */
+        } else if (YN && YN.notify) {
+          YN.notify(_t, _x);
         }
       }
     } catch (e) {}
