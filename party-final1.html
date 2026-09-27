@@ -790,12 +790,26 @@ main { gap: 11px; }
 .dm-pop4 button + button { border-top: 1px solid rgba(255,255,255,.08); }
 #dm-view-chat { position: relative; }
 
+
+/* ---------- JOIN SCREEN pe Messages button (room ke bagair) ---------- */
+#dm-join-btn { position: fixed; right: 14px; bottom: 16px; z-index: 60; display: flex; align-items: center; gap: 7px;
+  padding: 10px 15px; border-radius: 24px; cursor: pointer; font-weight: 900; font-size: 12.5px; color: #150c26;
+  background: linear-gradient(135deg, #ff5ebc 0%, #a855f7 55%, #8b72ff 100%);
+  border: 1px solid rgba(255,255,255,.38);
+  box-shadow: 0 6px 20px rgba(255,94,188,.45), inset 0 1px 0 rgba(255,255,255,.30); }
+#dm-join-btn:active { transform: scale(.95); }
+#dm-join-btn .ic { font-size: 15px; }
+#dm-join-btn b { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px;
+  border-radius: 99px; background: linear-gradient(135deg, #ff2e74, #ff5ebc); color: #fff; font-size: 10px;
+  font-weight: 900; display: none; place-items: center; border: 2px solid #1b1030; }
+#dm-join-btn b.on { display: grid; }
 </style>
 </head>
 <body>
 
 <!-- ===== JOIN SCREEN ===== -->
 <div id="join-screen">
+  <div id="dm-join-btn" title="Messages (DM) — room ke bagair bhi"><span class="ic">💬</span><span class="lb">Messages</span><b id="dm-badge-join"></b></div>
   <div class="join-card">
     <div class="logo"><span class="wp-logo-big"><svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><rect x="2.4" y="8" width="2.7" height="13" rx="1.35" fill="#54e8ff"/><rect x="6.7" y="5" width="2.7" height="16" rx="1.35" fill="#8b72ff"/><rect x="11" y="2.6" width="2.7" height="18.4" rx="1.35" fill="#ff5ebc"/><rect x="15.3" y="6.4" width="2.7" height="14.6" rx="1.35" fill="#8b72ff"/><rect x="19.6" y="9.6" width="2.7" height="11.4" rx="1.35" fill="#54e8ff"/></svg></span></div>
     <h1>Watch Party</h1>
@@ -3562,10 +3576,12 @@ function renderMembers() {
     return n;
   }
   function renderBadge() {
-    var b = $('wp-dm-badge'); if (!b) return;
     var n = unreadTotal();
-    b.textContent = n > 9 ? '9+' : String(n);
-    b.classList.toggle('on', n > 0);
+    ['wp-dm-badge', 'dm-badge-join'].forEach(function (id) {
+      var b = $(id); if (!b) return;
+      b.textContent = n > 9 ? '9+' : String(n);
+      b.classList.toggle('on', n > 0);
+    });
   }
   function renderReqs() {
     var w = $('dm-req-wrap'), sec = $('dm-sec-req'); if (!w) return;
@@ -3999,7 +4015,10 @@ function renderMembers() {
 
   /* ---------------- wire up ---------------- */
   function wire() {
-    var btn = $('dm-open-btn') || $('wp-dm-btn');
+    var btn = $('wp-dm-btn');
+    var btn2 = $('dm-join-btn');
+    if (btn2) btn2.onclick = function () { openSheet(); };
+    var btn0 = $('dm-open-btn'); if (btn0) btn0.onclick = function () { openSheet(); };
     if (btn) btn.onclick = function () { openSheet(); };
     var ov = $('dm-ov'); if (ov) ov.onclick = closeSheet;
     var x = $('dm-close-btn'); if (x) x.onclick = closeSheet;
