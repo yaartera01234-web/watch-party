@@ -542,39 +542,6 @@ main { gap: 11px; }
   #wp-search-btn { padding: 11px 9px; font-size: 13px; }
   #wp-ssheet { max-height: 86vh; }
 }
-/* ================= ⛶ FULLSCREEN FIX (app + browser dono) ================= */
-/* Masla: page ka player container fix-height (198px/150px/46vh) hai, aur fullscreen
-   mein wahi size lagu reh jata tha -> chaaron taraf kaale bars. Ab fullscreen mein
-   player aur video dono poori screen bharte hain. */
-.player-wrap:fullscreen, .player-wrap:-webkit-full-screen,
-#mp4-player:fullscreen, #mp4-player:-webkit-full-screen {
-  position: fixed !important; inset: 0 !important;
-  width: 100vw !important; height: 100vh !important;
-  min-width: 0 !important; min-height: 0 !important;
-  max-width: none !important; max-height: none !important;
-  margin: 0 !important; border: 0 !important; border-radius: 0 !important;
-  aspect-ratio: auto !important; overflow: hidden !important;
-  background: #000 !important;
-}
-.player-wrap:fullscreen #mp4-player, .player-wrap:-webkit-full-screen #mp4-player,
-.player-wrap:fullscreen #yt-player, .player-wrap:-webkit-full-screen #yt-player {
-  position: absolute !important; inset: 0 !important;
-  width: 100% !important; height: 100% !important; max-height: none !important;
-}
-.player-wrap:fullscreen #yt-player iframe, .player-wrap:-webkit-full-screen #yt-player iframe {
-  width: 100% !important; height: 100% !important;
-}
-/* Fit (original ratio) = default · Fill (zero bars, thora crop) */
-.wp-fs-fit {
-  position: fixed; right: 12px; top: 12px; z-index: 2147483000;
-  display: none; align-items: center; gap: 6px;
-  padding: 8px 12px; border-radius: 12px; font-size: 11.5px; font-weight: 800;
-  letter-spacing: .3px; color: #fff; cursor: pointer;
-  background: rgba(10, 8, 25, .74); border: 1px solid rgba(255, 255, 255, .24);
-}
-.wp-fs-fit.on { background: linear-gradient(135deg, #54e8ff, #8b72ff); color: #0d0716; border-color: transparent; }
-.player-wrap:fullscreen .wp-fs-fit, .player-wrap:-webkit-full-screen .wp-fs-fit,
-html.wp-fs .wp-fs-fit { display: inline-flex; }
 </style>
 </head>
 <body>
@@ -2702,81 +2669,6 @@ function renderMembers() {
   });
   qEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') { clearTimeout(tmr); runSearch(qEl.value); } });
   if (goEl) goEl.onclick = function () { clearTimeout(tmr); runSearch(qEl.value); };
-})();
-</script>
-<script>
-/* ================= ⛶ FULLSCREEN FIX (JS layer) =================
-   WebView mein fullscreen ka behaviour alag alag hota hai (kabhi container, kabhi
-   video element). Is liye dono surton mein player + video ko poora screen dilaate hain,
-   aur "Fit / Fill" ka option dete hain (Fill = zero bars, thora crop). */
-(function () {
-  var KEY = 'wp_fs_fit';                       /* 'contain' (Fit) ya 'cover' (Fill) */
-  var btn = null;
-
-  function mode() { try { return localStorage.getItem(KEY) === 'cover' ? 'cover' : 'contain'; } catch (e) { return 'contain'; } }
-  function wrapEl() { return document.querySelector('.player-wrap'); }
-  function vidEl() { return document.getElementById('mp4-player'); }
-  function isFs() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
-
-  function paint() {
-    if (!btn) return;
-    var m = mode();
-    btn.textContent = (m === 'cover' ? '⛶ Fill' : '⛶ Fit');
-    btn.title = (m === 'cover')
-      ? 'Fill: poori screen (thora crop) — tap karo: original ratio'
-      : 'Fit: original ratio — tap karo: poori screen (zero bars)';
-    btn.classList.toggle('on', m === 'cover');
-  }
-
-  var FORCE = ['position', 'inset', 'top', 'right', 'bottom', 'left', 'width', 'height',
-               'min-width', 'min-height', 'max-width', 'max-height', 'margin', 'border',
-               'border-radius', 'aspect-ratio', 'background', 'object-fit', 'transform'];
-
-  function apply() {
-    var w = wrapEl(), v = vidEl(), fs = isFs();
-    document.documentElement.classList.toggle('wp-fs', fs);
-    [w, v].forEach(function (el) {
-      if (!el) return;
-      if (fs) {
-        el.style.setProperty('position', 'fixed', 'important');
-        el.style.setProperty('inset', '0', 'important');
-        el.style.setProperty('width', '100%', 'important');
-        el.style.setProperty('height', '100%', 'important');
-        el.style.setProperty('max-width', 'none', 'important');
-        el.style.setProperty('max-height', 'none', 'important');
-        el.style.setProperty('margin', '0', 'important');
-        el.style.setProperty('border', '0', 'important');
-        el.style.setProperty('border-radius', '0', 'important');
-        el.style.setProperty('background', '#000', 'important');
-      } else {
-        FORCE.forEach(function (p) { el.style.removeProperty(p); });
-      }
-    });
-    if (v && fs) v.style.setProperty('object-fit', mode(), 'important');
-    paint();
-  }
-
-  function makeBtn() {
-    if (btn || !wrapEl()) return;
-    btn = document.createElement('button');
-    btn.id = 'wp-fs-fit';
-    btn.type = 'button';
-    btn.className = 'wp-fs-fit';
-    btn.addEventListener('click', function (e) {
-      e.preventDefault(); e.stopPropagation();
-      try { localStorage.setItem(KEY, mode() === 'cover' ? 'contain' : 'cover'); } catch (err) {}
-      apply();
-    });
-    wrapEl().appendChild(btn);
-    paint();
-  }
-
-  document.addEventListener('fullscreenchange', apply);
-  document.addEventListener('webkitfullscreenchange', apply);
-  window.addEventListener('resize', function () { if (isFs()) setTimeout(apply, 80); });
-  document.addEventListener('dblclick', function () { setTimeout(apply, 120); }, true);
-  setInterval(function () { if (!btn) makeBtn(); else if (isFs()) paint(); }, 2500);
-  setTimeout(function () { makeBtn(); apply(); }, 700);
 })();
 </script>
 </body>
