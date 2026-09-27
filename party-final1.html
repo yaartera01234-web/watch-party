@@ -543,11 +543,21 @@ main { gap: 11px; }
   #wp-ssheet { max-height: 86vh; }
 }
 /* ======================= 💬 MESSAGES (DM) — room se alag ======================= */
-#wp-dm-btn { position: relative; }
-#wp-dm-badge { position: absolute; top: -6px; right: -6px; min-width: 17px; height: 17px; padding: 0 4px;
-  border-radius: 99px; background: linear-gradient(135deg, #ff5ebc, #8b72ff); color: #150c26;
-  font-size: 10px; font-weight: 900; display: none; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+#wp-dm-btn { position: relative; width: 32px; height: 32px; border-radius: 50%; font-size: 15px;
+  background: linear-gradient(135deg, #ff5ebc 0%, #a855f7 55%, #8b72ff 100%);
+  border: 1px solid rgba(255,255,255,.38);
+  box-shadow: 0 3px 12px rgba(255,94,188,.38), inset 0 1px 0 rgba(255,255,255,.30);
+  transition: transform .12s; }
+#wp-dm-btn:active { transform: scale(.93); }
+#wp-dm-btn::after { content: ''; position: absolute; inset: -3px; border-radius: 50%;
+  background: radial-gradient(circle at 30% 25%, rgba(255,255,255,.35), transparent 62%); pointer-events: none; }
+#wp-dm-badge { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 4px;
+  border-radius: 99px; background: linear-gradient(135deg, #ff2e74, #ff5ebc); color: #fff;
+  font-size: 10px; font-weight: 900; display: none; place-items: center;
+  border: 2px solid #1b1030; box-shadow: 0 2px 8px rgba(255,46,116,.55); z-index: 2; }
 #wp-dm-badge.on { display: grid; }
+#dm-add-from-search { margin-top: 10px; padding: 9px 14px; border-radius: 12px; border: 1px solid rgba(84,232,255,.45);
+  background: linear-gradient(135deg, #ff5ebc, #8b72ff); color: #150c26; font-weight: 900; font-size: 12px; cursor: pointer; }
 .dm-ov { position: fixed; inset: 0; z-index: 81; background: rgba(0,0,0,.6); opacity: 0; pointer-events: none; transition: .2s; }
 .dm-ov.on { opacity: 1; pointer-events: auto; }
 #dm-sheet { position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 82; max-width: 520px; margin: 0 auto;
@@ -742,9 +752,6 @@ main { gap: 11px; }
 <div id="app" class="hidden">
   <header>
     <div class="brand"><span class="wp-logo"><svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><rect x="2.4" y="8" width="2.7" height="13" rx="1.35" fill="#54e8ff"/><rect x="6.7" y="5" width="2.7" height="16" rx="1.35" fill="#8b72ff"/><rect x="11" y="2.6" width="2.7" height="18.4" rx="1.35" fill="#ff5ebc"/><rect x="15.3" y="6.4" width="2.7" height="14.6" rx="1.35" fill="#8b72ff"/><rect x="19.6" y="9.6" width="2.7" height="11.4" rx="1.35" fill="#54e8ff"/></svg></span><span>Watch Party</span></div>
-    <div id="wp-room-chip" class="wp-room-chip" title="Is room ka naam">
-      <span class="ic">🚪</span><span id="wp-room-name">main</span>
-    </div>
     <div class="header-right">
       <div id="online-count">🟢 0 online</div>
       <div id="wp-dm-btn" class="wp-hbtn" title="Messages (DM) — room ke bagair">💬<span id="wp-dm-badge"></span></div>
@@ -3114,7 +3121,7 @@ function renderMembers() {
 
   <!-- INBOX -->
   <div class="dm-view first on" id="dm-view-inbox">
-    <div class="dm-search"><input id="dm-q" placeholder="Chat ya dost dhoondo..." autocomplete="off"></div>
+    <div class="dm-search"><input id="dm-q" placeholder="Naam ya code se dhoondo..." autocomplete="off"></div>
     <div class="dm-list" id="dm-list">
       <div class="dm-sec" id="dm-sec-req" style="display:none">Message Requests</div>
       <div id="dm-req-wrap"></div>
@@ -3479,9 +3486,14 @@ function renderMembers() {
   function renderChats() {
     var w = $('dm-chat-wrap'); if (!w) return;
     var q = ($('dm-q') && $('dm-q').value || '').toLowerCase().trim();
+    var qcode = normCode(q).toLowerCase();
     var codes = Object.keys(S.friends).filter(function (c) {
+      if (!q) return true;
       var last = (S.chats[c] && S.chats[c].length) ? (S.chats[c][S.chats[c].length - 1].x || '') : '';
-      return !q || peerName(c).toLowerCase().indexOf(q) > -1 || String(last).toLowerCase().indexOf(q) > -1;
+      if (peerName(c).toLowerCase().indexOf(q) > -1) return true;                 /* naam se */
+      if (String(last).toLowerCase().indexOf(q) > -1) return true;               /* aakhri message se */
+      if (qcode.length >= 3 && c.toLowerCase().indexOf(qcode) > -1) return true; /* CODE se */
+      return false;
     });
     codes.sort(function (a, b) {
       var la = (S.chats[a] && S.chats[a].length) ? S.chats[a][S.chats[a].length - 1].ts : (S.friends[a].ts || 0);
@@ -3490,7 +3502,20 @@ function renderMembers() {
     });
     w.innerHTML = '';
     if (!codes.length) {
-      w.innerHTML = '<div class="dm-empty"><u>💬</u>Koi chat nahi.<br>Upar <b>＋</b> se dost add karo — code paste kar ke.<br><br><b style="color:#54e8ff">Apna code:</b> ' + esc(S.code) + '</div>';
+      var qq = normCode(q);
+      if (q && qq.length === 8) {
+        /* pooray code jaisa lagta hai magar list me nahi -> seedha add karne ka rasta */
+        w.innerHTML = '<div class="dm-empty"><u>🔎</u>Ye code abhi dost list me nahi.<br><b style="color:#54e8ff;font-size:13px">' +
+          esc(fmtCode(qq)) + '</b><br><button id="dm-add-from-search" type="button">➕ Is code ko add karo</button></div>';
+        var b2 = $('dm-add-from-search');
+        if (b2) b2.onclick = function () {
+          showView('dm-view-add');
+          var pc2 = $('dm-peer-code'); if (pc2) pc2.value = fmtCode(qq);
+          var fb2 = $('dm-find-btn'); if (fb2) fb2.onclick();
+        };
+      } else {
+        w.innerHTML = '<div class="dm-empty"><u>💬</u>Koi chat nahi.<br>Upar <b>＋</b> se dost add karo — code paste kar ke.<br><br><b style="color:#54e8ff">Apna code:</b> ' + esc(S.code) + '</div>';
+      }
       return;
     }
     codes.forEach(function (c) {
@@ -3720,6 +3745,8 @@ function renderMembers() {
     _send: function (code, text) { return sendMsg(code, { t: 'text', x: text }, false); },
     _reqs: function () { return S.reqs; },
     _accept: function (i) { acceptReq(i); },
+    _search: function (q) { var el = $('dm-q'); if (el) el.value = q || ''; renderChats(); var w = $('dm-chat-wrap'); return w ? w.children.length : -1; },
+    _list: function () { renderChats(); var w = $('dm-chat-wrap'); return w ? w.innerHTML : ''; },
     _unread: function () { return unreadTotal(); }
   };
 
