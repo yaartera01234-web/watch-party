@@ -792,7 +792,7 @@ main { gap: 11px; }
 
 
 /* ---------- JOIN SCREEN pe Messages button (room ke bagair) ---------- */
-#dm-join-btn { position: fixed; right: 14px; bottom: 16px; z-index: 60; display: flex; align-items: center; gap: 7px;
+#dm-join-btn { position: fixed; right: 12px; top: 12px; z-index: 60; display: flex; align-items: center; gap: 7px;
   padding: 10px 15px; border-radius: 24px; cursor: pointer; font-weight: 900; font-size: 12.5px; color: #150c26;
   background: linear-gradient(135deg, #ff5ebc 0%, #a855f7 55%, #8b72ff 100%);
   border: 1px solid rgba(255,255,255,.38);
@@ -3407,7 +3407,14 @@ function renderMembers() {
     if (d.toDateString() === y.toDateString()) return 'Kal';
     return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2);
   }
-  function peerName(code) { var f = S.friends[code]; return (f && f.name) || code; }
+  function isCodeName(nm, code) {
+    if (!nm) return true;
+    var t = String(nm).trim();
+    if (/^WP1/i.test(t)) return true;
+    if (t.toUpperCase().replace(/[^A-Z0-9]/g, '') === normCode(code)) return true;
+    return false;
+  }
+  function peerName(code) { var f = S.friends[code]; return isCodeName(f && f.name, code) ? 'Dost' : f.name; }
   function peerColor(code) { var f = S.friends[code]; return (f && f.color) || '#8b72ff'; }
   function peerAvatar(code) { var f = S.friends[code]; return (f && f.avatar) || { type: 'letter' }; }
   function avatarHTML(code, cls) {
@@ -3417,7 +3424,12 @@ function renderMembers() {
   }
 
   /* ---------------- sending ---------------- */
-  function myLabel() { return (typeof myName !== 'undefined' && myName) ? myName : (S.name || 'Dost'); }
+  function myLabel() {
+    if (typeof myName !== 'undefined' && myName) return myName;
+    var ni = document.getElementById('name-input');
+    if (ni && ni.value && ni.value.trim()) return ni.value.trim().slice(0, 20);
+    return S.name || 'Dost';
+  }
   /* page mein `let client` hai (window.client NAHI) — is liye teen tarikon se dhoondo */
   var clientRef = null;                     /* S ke BAHAR — warna JSON.stringify(S) circular pe fail */
   function mc() {
@@ -3437,7 +3449,9 @@ function renderMembers() {
     var e;
     try { e = await encTo(peer, { mid: midv, ts: nowMs(), t: payload.t, x: payload.x, u: payload.u || '', dv: payload.dv || '', dur: payload.dur || 0, rq: payload.rq || null }); }
     catch (err) { toast('🔒 Lock nahi hua — dobara try karo'); return false; }
-    var out = { c: S.code, n: myLabel(), k: (typeof myColor !== 'undefined' && myColor) ? myColor : S.color, ts: nowMs(), iv: e.iv, ct: e.ct };
+    var _nm = myLabel();
+    if (_nm && _nm !== 'Dost' && S.name !== _nm) { S.name = _nm; }
+    var out = { c: S.code, n: _nm, k: (typeof myColor !== 'undefined' && myColor) ? myColor : S.color, ts: nowMs(), iv: e.iv, ct: e.ct };
     if (withAvatar && typeof myAvatar !== 'undefined') out.a = myAvatar;
     var topic = NSP + 'inbox-' + h36(peer) + '/' + midv;
     try { mc().publish(topic, JSON.stringify(out), { qos: 1, retain: true }); }
@@ -3494,7 +3508,7 @@ function renderMembers() {
         if (!known) {   /* sys message se friend ban gaya */
           S.friends[peer] = S.friends[peer] || { name: p.n || peer, color: p.k || '#8b72ff', avatar: p.a || { type: 'letter' }, ts: nowMs() };
         }
-        S.friends[peer].name = p.n || S.friends[peer].name;
+        if (p.n && !isCodeName(p.n, peer)) S.friends[peer].name = String(p.n).slice(0, 20);
         if (p.k) S.friends[peer].color = p.k;
         if (p.a) S.friends[peer].avatar = p.a;
         appendMsg(peer, { d: 'in', t: body.t, x: body.x, u: body.u || '', dv: body.dv || '', dur: body.dur || 0, rq: body.rq || null, mid: body.mid || msgId, ts: body.ts || p.ts || nowMs() });
@@ -3511,7 +3525,15 @@ function renderMembers() {
     var peer = null;
     Object.keys(S.friends).forEach(function (c) { if (h36(c) === h) peer = c; });
     if (!peer) return;
-    try { var p = JSON.parse(str); S.friends[peer].ts = p.ts || 0; } catch (e) {}
+    try {
+      var p = JSON.parse(str);
+      S.friends[peer].ts = p.ts || 0;
+      var nm = p.n && String(p.n).trim();
+      if (nm && !isCodeName(nm, peer) && isCodeName(S.friends[peer].name, peer)) {
+        S.friends[peer].name = nm.slice(0, 20);
+        save(); renderAll();
+      }
+    } catch (e) {}
   }
 
   function ping(name, text) {
@@ -3565,7 +3587,7 @@ function renderMembers() {
     if (addb) addb.style.display = (v === 'dm-view-add') ? 'none' : 'grid';
     var title = $('dm-bar-title'), sub = $('dm-bar-sub');
     if (v === 'dm-view-add') { title.textContent = '➕ Add Friend'; sub.textContent = 'Code se dost joro — bas ek dafa'; }
-    else if (v === 'dm-view-chat') { title.textContent = peerName(curChat); sub.textContent = '🔒 E2E · room ke bagair'; }
+    else if (v === 'dm-view-chat') { title.textContent = peerName(curChat); sub.textContent = '🔒 E2E · ' + (fmtCode(curChat) || 'room ke bagair'); }
     else { title.textContent = '💬 Messages'; sub.textContent = 'Room ke bagair — seedha dost se baat'; }
   }
 
@@ -3651,7 +3673,7 @@ function renderMembers() {
       var d = document.createElement('div'); d.className = 'dm-row';
       var av = avatarHTML(c, 'av3').replace('</div>', '<i class="' + (online ? 'on' : '') + '"></i></div>');
       d.innerHTML = av +
-        '<div class="in3"><b>' + esc(peerName(c)) + '</b><s>' + esc(last ? ((last.d === 'out' ? '✔ ' : '') + String(last.x || '').slice(0, 60)) : 'Naya chat — salam bhejo 👋') + '</s></div>' +
+        '<div class="in3"><b>' + esc(peerName(c)) + (peerName(c) === 'Dost' ? ' <i style="font-style:normal;font-size:9px;opacity:.55">' + esc(fmtCode(c)) + '</i>' : '') + '</b><s>' + esc(last ? ((last.d === 'out' ? '✔ ' : '') + String(last.x || '').slice(0, 60)) : 'Naya chat — salam bhejo 👋') + '</s></div>' +
         '<div class="meta3"><span>' + (last ? dayLabel(last.ts) : '') + '</span>' +
         ((S.friends[c].un || 0) > 0 ? '<b>' + S.friends[c].un + '</b>' : '<span>🔒</span>') + '</div>';
       d.onclick = function () { openChat(c); };
@@ -3685,34 +3707,62 @@ function renderMembers() {
   }
   function d4bind(row, m) {
     var bub = row.querySelector('.bub4'); if (!bub) return;
-    var sx = 0, dx = 0, drag = false, lp = null;
-    bub.addEventListener('pointerdown', function (e) {
-      sx = e.clientX; dx = 0; drag = true;
-      try { bub.setPointerCapture(e.pointerId); } catch (err) {}
-      lp = setTimeout(function () { lp = null; drag = false; dmActMsg = m; dmActPeer = curChat; if ($('dm-acts4')) $('dm-acts4').classList.add('on'); }, 620);
-    });
-    bub.addEventListener('pointermove', function (e) {
+    var sx = 0, sy = 0, dx = 0, dy = 0, drag = false, lp = null, lastTap = 0, usedTouch = false;
+    function start(x, y) {
+      sx = x; sy = y; dx = 0; dy = 0; drag = true;
+      if (lp) clearTimeout(lp);
+      lp = setTimeout(function () {
+        lp = null;
+        if (!drag) return;
+        drag = false;
+        bub.style.transform = ''; bub.classList.remove('sw4'); bub.classList.remove('arm4');
+        dmActMsg = m; dmActPeer = curChat;
+        if ($('dm-acts4')) $('dm-acts4').classList.add('on');
+      }, 550);
+    }
+    function move(x, y, ev) {
       if (!drag) return;
-      dx = e.clientX - sx;
-      if (Math.abs(dx) > 8 && lp) { clearTimeout(lp); lp = null; }
-      var off = Math.max(-24, Math.min(92, dx));
+      dx = x - sx; dy = y - sy;
+      if (Math.abs(dx) > 6 || Math.abs(dy) > 6) { if (lp) { clearTimeout(lp); lp = null; } }
+      if (Math.abs(dx) > Math.abs(dy) + 3 && ev && ev.cancelable) { try { ev.preventDefault(); } catch (e) {} }
+      var off = Math.max(-96, Math.min(96, dx));
       if (Math.abs(off) > 4) { bub.style.transition = 'none'; bub.style.transform = 'translateX(' + off + 'px)'; }
-      bub.classList.toggle('sw4', off > 8);
-      bub.classList.toggle('arm4', off > 52);
-    });
-    var end = function () {
+      bub.classList.toggle('sw4', Math.abs(off) > 8);
+      bub.classList.toggle('arm4', Math.abs(off) > 38);
+    }
+    function end() {
       if (!drag) return;
       drag = false;
       if (lp) { clearTimeout(lp); lp = null; }
       bub.style.transition = 'transform .18s ease';
-      var armed = dx > 52;
+      var armed = Math.abs(dx) > 38 && Math.abs(dx) > Math.abs(dy);
       bub.style.transform = '';
-      bub.classList.remove('sw4');
-      bub.classList.remove('arm4');
+      bub.classList.remove('sw4'); bub.classList.remove('arm4');
       if (armed) d4setReply(m);
-    };
-    bub.addEventListener('pointerup', end);
-    bub.addEventListener('pointercancel', end);
+    }
+    /* mobile: touch (sab se reliable) */
+    bub.addEventListener('touchstart', function (e) {
+      var t = e.touches && e.touches[0]; if (!t) return;
+      usedTouch = true;
+      var now = Date.now();
+      if (now - lastTap < 300) { lastTap = 0; if (lp) { clearTimeout(lp); lp = null; } drag = false; d4setReply(m); return; }
+      lastTap = now;
+      start(t.clientX, t.clientY);
+    }, { passive: true });
+    bub.addEventListener('touchmove', function (e) {
+      var t = e.touches && e.touches[0]; if (!t) return;
+      move(t.clientX, t.clientY, e);
+    }, { passive: false });
+    bub.addEventListener('touchend', function () { end(); });
+    bub.addEventListener('touchcancel', function () {
+      drag = false; if (lp) { clearTimeout(lp); lp = null; }
+      bub.style.transform = ''; bub.classList.remove('sw4'); bub.classList.remove('arm4');
+    });
+    /* desktop: mouse */
+    bub.addEventListener('mousedown', function (e) { if (usedTouch) return; start(e.clientX, e.clientY); });
+    bub.addEventListener('mousemove', function (e) { if (usedTouch) return; move(e.clientX, e.clientY, e); });
+    bub.addEventListener('mouseup', function () { if (usedTouch) return; end(); });
+    bub.addEventListener('mouseleave', function () { if (usedTouch) return; end(); });
   }
   function d4view(src) {
     var box = $('dm-v4img'); if (!box) return;
