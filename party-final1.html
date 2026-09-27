@@ -703,7 +703,7 @@ main { gap: 11px; }
 
 
 /* ---------- NATIVE PLAYER BUTTON (sirf app mein dikhta hai) ---------- */
-#native-btn { position: absolute; top: 10px; right: 12px; z-index: 30; display: none;
+#native-btn { position: fixed; top: 62px; right: 12px; z-index: 9999; display: none;
   padding: 7px 13px; border-radius: 20px; border: 1px solid rgba(84,232,255,.75); cursor: pointer;
   background: linear-gradient(135deg, rgba(84,232,255,.92), rgba(139,114,255,.92)); color: #08131f; font-size: 12px; font-weight: 900; letter-spacing: .2px;
   box-shadow: 0 6px 18px rgba(84,232,255,.35), inset 0 1px 0 rgba(255,255,255,.45);
@@ -909,6 +909,11 @@ main { gap: 11px; }
 .mb.y .cv i { background: rgba(20,8,33,.45); }
 .mbq { border-left: 2px solid rgba(255,255,255,.85); padding-left: 6px; margin-right: 2px; font-size: 11px; opacity: .92;
   max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* v30: chhota version chip (sirf app me dikhta hai) — tap = hata do */
+#appver-chip { position: fixed; left: 8px; bottom: 8px; z-index: 9998; display: none;
+  padding: 4px 9px; border-radius: 20px; font-size: 9.5px; font-weight: 800; letter-spacing: .3px;
+  background: rgba(10,8,25,.72); border: 1px solid rgba(255,255,255,.22); color: #cfc8ff; opacity: .78; }
 </style>
 </head>
 <body>
@@ -1083,18 +1088,19 @@ main { gap: 11px; }
   btn.id = 'native-btn'; btn.type = 'button';
   btn.textContent = '⛶ Native Player';
   btn.title = 'Native player me kholo — brightness/volume + background';
-  wrap.appendChild(btn);
+  document.body.appendChild(btn);        /* v30: body pe (fixed) — wrap ke andar gayab ho jata tha */
   const titleNow = () => { const t = document.getElementById('mini-title'); return (t && t.textContent) || 'Video'; };
   /* v29: button ab zyada dair tak dikhta hai (pehle `hidden` class ki wajah se gayab ho jata tha) */
   const nativeUrl = () => (mp4.currentSrc || mp4.src || '');
   const canNative = () => !!nativeUrl() && /^(https?|blob|file):/i.test(nativeUrl());
   const show = () => { if (canNative()) btn.style.display = ''; };
   const hide = () => { btn.style.display = 'none'; };
-  const inRoom = () => { try { return typeof joined !== 'undefined' && joined; } catch (e) { return true; } };
   let autoFor = '';
   const open = () => {
     const url = nativeUrl();
     if (!url) return;
+    /* v30: page ka player chup karo taake party sync na toote (native alag screen hai) */
+    try { if (typeof suppressMP4 !== 'undefined') suppressMP4 = true; } catch (e) {}
     try { mp4.pause(); } catch (e) {}
     try { window.YaarNative.openPlayer(url, titleNow()); } catch (e) {}
   };
@@ -1102,9 +1108,9 @@ main { gap: 11px; }
      Room ke andar auto nahi kholte warna party sync tut jaye. */
   const autoOpen = () => {
     const url = nativeUrl();
-    if (!canNative() || url === autoFor || inRoom()) return;
+    if (!canNative() || url === autoFor) return;
     autoFor = url;
-    setTimeout(open, 650);
+    setTimeout(open, 650);      /* v30: har haal me (room me bhi) native khul jaye */
   };
   ['loadedmetadata', 'loadeddata', 'canplay'].forEach((ev) => mp4.addEventListener(ev, () => { show(); autoOpen(); }));
   mp4.addEventListener('playing', () => { show(); autoOpen(); });
@@ -1114,6 +1120,21 @@ main { gap: 11px; }
 })();
 
 <div id="react-tray"></div>
+<script>
+/* v30: app version + page build chip (diagnostic) */
+(function () {
+  try {
+    if (!window.YaarNative) return;
+    var av = 0; try { av = window.YaarNative.appVersion ? window.YaarNative.appVersion() : 0; } catch (e) {}
+    var c = document.createElement('div'); c.id = 'appver-chip';
+    c.textContent = 'App v' + (av || '?') + ' \u00b7 Page P30';
+    c.title = 'App aur page ka version';
+    c.style.display = 'block';
+    c.onclick = function () { c.style.display = 'none'; };
+    document.body.appendChild(c);
+  } catch (e) {}
+})();
+</script>
 <div id="gif-view">
   <button id="gif-view-close" type="button">✕</button>
   <img id="gif-view-img" src="" alt="GIF" />
