@@ -1008,7 +1008,7 @@ function onConnect() {
   mqttUp = true;
   clearTimeout(watchdog);
   subscribeRoom();
-  try { if (window.DM && window.DM.onConnect) window.DM.onConnect(); } catch (e) {}
+  try { if (window.DM && window.DM.onConnect) window.DM.onConnect(client); } catch (e) {}
   if (joined) publishPresence();
   if (everConnected) {
     if (joined) addSysMsg('🔄 Tower se wapis jur gaye! ✅');
@@ -3042,8 +3042,16 @@ function renderMembers() {
 
   /* ---------------- sending ---------------- */
   function myLabel() { return (typeof myName !== 'undefined' && myName) ? myName : (S.name || 'Dost'); }
-  function clearRetained(topic) { try { if (window.client) window.client.publish(topic, '', { qos: 1, retain: true }); } catch (e) {} }
-  function connected() { return (typeof mqttUp !== 'undefined' && mqttUp && window.client); }
+  /* page mein `let client` hai (window.client NAHI) — is liye teen tarikon se dhoondo */
+  var clientRef = null;                     /* S ke BAHAR — warna JSON.stringify(S) circular pe fail */
+  function mc() {
+    if (clientRef) return clientRef;
+    try { if (typeof client !== 'undefined' && client) return client; } catch (e) {}
+    if (window.client) return window.client;
+    return null;
+  }
+  function clearRetained(topic) { try { var c = mc(); if (c) c.publish(topic, '', { qos: 1, retain: true }); } catch (e) {} }
+  function connected() { return (typeof mqttUp !== 'undefined' && mqttUp && !!mc()); }
 
   async function sendMsg(peerRaw, payload, withAvatar) {
     var peer = normCode(peerRaw);
@@ -3056,7 +3064,7 @@ function renderMembers() {
     var out = { c: S.code, n: myLabel(), k: (typeof myColor !== 'undefined' && myColor) ? myColor : S.color, ts: nowMs(), iv: e.iv, ct: e.ct };
     if (withAvatar && typeof myAvatar !== 'undefined') out.a = myAvatar;
     var topic = NSP + 'inbox-' + h36(peer) + '/' + midv;
-    try { window.client.publish(topic, JSON.stringify(out), { qos: 1, retain: true }); }
+    try { mc().publish(topic, JSON.stringify(out), { qos: 1, retain: true }); }
     catch (err) { toast('📡 bheja nahi ja saka'); return false; }
     S.seen[midv] = 1;
     appendMsg(peer, { d: 'out', t: payload.t, x: payload.x, mid: midv, ts: nowMs() });
@@ -3141,13 +3149,13 @@ function renderMembers() {
     if (!connected()) return;
     var topics = [myInboxPrefix() + '#'];
     Object.keys(S.friends).forEach(function (c) { topics.push(NSP + 'presence-' + h36(c)); });
-    try { window.client.subscribe(topics, { qos: 1 }, function () { subscribed = true; }); } catch (e) {}
+    try { mc().subscribe(topics, { qos: 1 }, function () { subscribed = true; }); } catch (e) {}
   }
   function pubPresence() {
     if (!connected()) return;
-    try { window.client.publish(myPresenceTopic(), JSON.stringify({ ts: nowMs(), n: myLabel() }), { qos: 1, retain: true }); } catch (e) {}
+    try { mc().publish(myPresenceTopic(), JSON.stringify({ ts: nowMs(), n: myLabel() }), { qos: 1, retain: true }); } catch (e) {}
   }
-  function onConnect() { subscribeDm(); pubPresence(); }
+  function onConnect(c) { if (c) clientRef = c; subscribed = false; subscribeDm(); pubPresence(); }
   setInterval(function () { if (connected()) { if (!subscribed) subscribeDm(); pubPresence(); } }, 45000);
 
   /* ---------------- views ---------------- */
