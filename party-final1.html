@@ -996,12 +996,30 @@ main { gap: 11px; }
 #dm-view-chat #dm-rep4 { background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.14); }
 #dm-view-chat #dm-rep4 b { color: #d8b4fe; }
 
+/* ================= P45: DM reaction keyboard + naya msg khud dikhe ================= */
+/* '+' se system keyboard ka poora emoji picker (room jaisa) */
+.dm-rx4box { display: none; position: absolute; left: 10px; right: 10px; bottom: 122px; z-index: 33;
+  gap: 8px; padding: 8px; border-radius: 14px; background: var(--wp-menu-bg, rgba(13,10,32,.98));
+  border: 1px solid rgba(255,255,255,.16); box-shadow: 0 -10px 26px rgba(0,0,0,.5); }
+.dm-rx4box.on { display: flex; }
+.dm-rx4box input { flex: 1; min-width: 0; padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.08); color: #fff; font-size: 16px; outline: none; }
+.dm-rx4box input:focus { border-color: #f472b6; }
+.dm-rx4box button { width: 42px; border: 0; border-radius: 10px; background: rgba(255,255,255,.12); color: #fff; font-size: 15px; }
+.rx4row button.rx4more { font-size: 16px; border: 1px dashed rgba(255,255,255,.55) !important; }
+/* '⬇ Naya message' pill (jab tum purane messages padh rahe ho) */
+#dm-peek { position: absolute; left: 50%; transform: translateX(-50%); bottom: 74px; z-index: 32;
+  padding: 7px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.22); cursor: pointer;
+  background: linear-gradient(135deg, #a855f7, #22d3ee); color: #0a0616; font-size: 11.5px; font-weight: 900;
+  box-shadow: 0 8px 20px rgba(0,0,0,.45); }
+
 </style>
 </head>
 <body>
 <!-- YP-P41 -->
 <!-- YP-P42 -->
 <!-- YP-P44 -->
+<!-- YP-P45 -->
 
 <!-- ===== JOIN SCREEN ===== -->
 <div id="join-screen">
@@ -3581,6 +3599,12 @@ function renderMembers() {
 
     <div class="dm-v4" id="dm-v4"><div class="big4" id="dm-v4img"></div><button id="dm-v4x" type="button">✕</button></div>
 
+    <div class="dm-rx4box" id="dm-rx4box">
+      <input id="dm-rx4input" type="text" maxlength="8" placeholder="Keyboard se apni marzi ka emoji chuno..." autocomplete="off">
+      <button id="dm-rx4x" type="button">✕</button>
+    </div>
+    <button id="dm-peek" class="hidden" type="button">⬇ Naya message</button>
+
     <div class="dm-acts4" id="dm-acts4">
       <div class="rx4row" id="dm-rx4row">
         <button type="button" data-rx="❤️">❤️</button>
@@ -3845,6 +3869,7 @@ function renderMembers() {
     var arr = S.chats[peer];
     if (m.mid && arr.some(function (x) { return x.mid === m.mid; })) return;
     arr.push(m);
+    if (m.d === 'out') { d4AtBottom = true; d4JumpBottom = true; }   /* apna msg = foran neeche */
     if (arr.length > MAX_MSGS) S.chats[peer] = arr.slice(arr.length - MAX_MSGS);   /* storage cap */
   }
 
@@ -4264,6 +4289,7 @@ function renderMembers() {
         lpFired = true;
         try { if (navigator.vibrate) navigator.vibrate(18); } catch (err) {}
         dmActMsg = m; dmActPeer = curChat;
+        try { dmBuildRxRow(); } catch (e) {}          /* P45: recents har dafa taaza */
         if ($('dm-acts4')) $('dm-acts4').classList.add('on');
       }, 480);
     }, { passive: true });
@@ -4363,9 +4389,15 @@ function renderMembers() {
   function renderThread() {
     var t = $('dm-thread'); if (!t || !curChat) return;
     var arr = S.chats[curChat] || [];
-    /* P42: agar user purane messages padh raha hai to usay niche na kheencho */
+    /* P45: naya msg hamesha neeche dikhe. Sirf jab tum khud purane messages
+       padh rahe ho (upar scroll kiye hue) tab jagah nahi khoti — aur '⬇ Naya message'
+       pill aa jati hai, tap karo to seedha neeche. */
     var keepTop = t.scrollTop;
-    var wasBottom = (t.scrollHeight - t.scrollTop - t.clientHeight) < 80;
+    var prevCount = d4LastCount[curChat] || 0;
+    var liveBottom = (t.scrollHeight - t.scrollTop - t.clientHeight) < 90;
+    if (!liveBottom && d4AtBottom && (t.scrollHeight - t.scrollTop - t.clientHeight) > 400) liveBottom = false;
+    d4AtBottom = liveBottom;                       /* live naap hamesha sach bole */
+    var wasBottom = liveBottom || d4JumpBottom;
     t.innerHTML = '';
     if (!arr.length) {
       t.innerHTML = '<div class="dm-empty"><u>👋</u>' + esc(peerName(curChat)) + ' ko salam bhejo!<br><small>Message phone pe lock ho kar jayega (E2E)</small></div>';
@@ -4408,8 +4440,14 @@ function renderMembers() {
       if (type === 'photo') { try { d4loadPhoto(bub, m, curChat); } catch (e) {} }
       d4bind(row, m);
     });
-    if (d4JumpBottom || wasBottom) { t.scrollTop = t.scrollHeight; d4JumpBottom = false; }
-    else { t.scrollTop = Math.min(keepTop, Math.max(0, t.scrollHeight - t.clientHeight)); }
+    if (d4JumpBottom || wasBottom) { d4JumpBottom = false; d4Snap(); }
+    else {
+      t.scrollTop = Math.min(keepTop, Math.max(0, t.scrollHeight - t.clientHeight));
+      /* naya message aaya hai to pill dikhao; warna jo haal tha wahi rahe
+         (warna renderAll ka doosra render pill ko foran chhupa deta hai) */
+      if (arr.length > prevCount) d4Peek(true);
+    }
+    d4LastCount[curChat] = arr.length;
   }
 
   function renderAll() {
@@ -4489,7 +4527,8 @@ function renderMembers() {
     curChat = normCode(code);
     if (!S.friends[curChat]) S.friends[curChat] = { name: curChat, color: '#8b72ff', avatar: { type: 'letter' }, ts: 0, un: 0 };
     markRead(curChat);
-    d4JumpBottom = true;                    /* P42: chat khuli to sab se neeche se shuru */
+    d4JumpBottom = true; d4AtBottom = true; d4Peek(false);   /* P45: chat khuli -> sab se neeche */
+    d4LastCount[curChat] = (S.chats[curChat] || []).length;
     renderThread(); showView('dm-view-chat'); setChatBar(); renderAll();
     /* P42: focus({preventScroll}) — warna browser sheet ko hi side me scroll kar deta tha
        aur poori chat kuch pixels bayen khisak jati thi (messages ke kinare kat jate the). */
@@ -4500,6 +4539,58 @@ function renderMembers() {
      Har message pe ek chhoti si patti: { emoji: { me: 1, peer: 1 } }.
      Apni reaction dobara dabao to hat jati hai. Reaction bhi E2E hi jati hai. */
   var RX_SET = ['❤️', '😂', '😮', '😢', '👍', '🔥'];
+  var dmRxTarget = null;                     /* abhi kis message pe emoji dalni hai */
+  function dmFirstEmoji(str) {
+    str = String(str || '');
+    try { var m = str.match(/\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*/u); return m ? m[0] : ''; }
+    catch (e) { var m2 = str.match(/[\u2600-\u27BF\uD83C-\uDBFF][\uDC00-\uDFFF]?/); return m2 ? m2[0] : ''; }
+  }
+  /* P45: row me quick emojis + tumhare recent emojis + '➕' (system keyboard) */
+  function dmBuildRxRow() {
+    var row = $('dm-rx4row'); if (!row) return;
+    var recents = [];
+    try { if (typeof reactRecents === 'function') recents = reactRecents() || []; } catch (e) {}
+    var list = RX_SET.concat(recents.filter(function (e) { return RX_SET.indexOf(e) < 0; })).slice(0, 10);
+    row.innerHTML = '';
+    list.forEach(function (em) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.setAttribute('data-rx', em); b.textContent = em;
+      row.appendChild(b);
+    });
+    var more = document.createElement('button');
+    more.type = 'button'; more.className = 'rx4more'; more.textContent = '➕';
+    more.title = 'Apna emoji (keyboard se)';
+    row.appendChild(more);
+  }
+  function dmOpenEmojiBox() {
+    var box = $('dm-rx4box'), inp = $('dm-rx4input');
+    if (!box || !inp) return;
+    dmRxTarget = dmActMsg;
+    var acts = $('dm-acts4'); if (acts) acts.classList.remove('on');
+    box.classList.add('on');
+    inp.value = '';
+    try { inp.focus({ preventScroll: true }); } catch (e) { try { inp.focus(); } catch (e2) {} }
+  }
+  function dmCloseEmojiBox() {
+    var box = $('dm-rx4box'), inp = $('dm-rx4input');
+    if (box) box.classList.remove('on');
+    if (inp) { inp.value = ''; try { inp.blur(); } catch (e) {} }
+  }
+  /* P45: naya msg khud neeche dikhe; purane padh rahe ho to '⬇ Naya message' pill */
+  var d4AtBottom = true, d4LastCount = {};
+  function d4Snap() {
+    var t = $('dm-thread'); if (!t) return;
+    t.scrollTop = t.scrollHeight;
+    requestAnimationFrame(function () { var x = $('dm-thread'); if (x) x.scrollTop = x.scrollHeight; });
+    setTimeout(function () { var x = $('dm-thread'); if (x && d4AtBottom) x.scrollTop = x.scrollHeight; }, 120);
+    d4AtBottom = true;
+    d4Peek(false);
+  }
+  function d4Peek(on) {
+    var b = $('dm-peek'); if (!b) return;
+    b.classList.toggle('hidden', !on);
+    b.textContent = '⬇ Naya message';
+  }
   function rxMsg(peer, midTarget) {
     var arr = S.chats[peer] || [];
     for (var i = 0; i < arr.length; i++) if (arr[i].mid === midTarget) return arr[i];
@@ -4658,16 +4749,57 @@ function renderMembers() {
         }
       };
     });
-    /* P43: emoji row -> selected message pe reaction */
+    /* P45: emoji row (delegation) -> quick/recent emoji ya '➕' keyboard picker */
     var rxrow = $('dm-rx4row');
-    if (rxrow) rxrow.querySelectorAll('button').forEach(function (b) {
-      b.onclick = function (ev) {
+    if (rxrow && !rxrow._dmBound) {
+      rxrow._dmBound = 1;
+      rxrow.addEventListener('click', function (ev) {
+        var b = ev.target && ev.target.closest ? ev.target.closest('button') : null;
+        if (!b) return;
         ev.stopPropagation();
         var em = b.getAttribute('data-rx');
-        if (acts) acts.classList.remove('on');
+        if (!em) { dmOpenEmojiBox(); return; }              /* ➕ */
+        var acts2 = $('dm-acts4'); if (acts2) acts2.classList.remove('on');
         if (dmActMsg) dmReact(dmActMsg.mid, em);
-      };
-    });
+      });
+    }
+    /* keyboard se emoji: type/pick karte hi reaction lag jaye */
+    var rxi = $('dm-rx4input');
+    if (rxi && !rxi._dmBound) {
+      rxi._dmBound = 1;
+      rxi.addEventListener('input', function () {
+        var em = dmFirstEmoji(rxi.value);
+        if (!em) return;
+        var tgt = dmRxTarget || dmActMsg;
+        try { if (typeof reactSaveRecent === 'function') reactSaveRecent(em); } catch (e) {}
+        dmBuildRxRow();
+        dmCloseEmojiBox();
+        if (tgt) dmReact(tgt.mid, em);
+      });
+    }
+    var rxx = $('dm-rx4x');
+    if (rxx) rxx.onclick = function () { dmCloseEmojiBox(); };
+    var pk = $('dm-peek');
+    if (pk) pk.onclick = function () { d4Peek(false); d4Snap(); };
+    /* keyboard khulne/jhapne, screen ghoomne, app wapas aane — bottom pe thay to bottom pe raho */
+    if (!window._dmSnapBound) {
+      window._dmSnapBound = 1;
+      var snapIfBottom = function () { if (d4AtBottom) setTimeout(function () { if (d4AtBottom) d4Snap(); }, 90); };
+      window.addEventListener('resize', snapIfBottom);
+      try { if (window.visualViewport) window.visualViewport.addEventListener('resize', snapIfBottom); } catch (e) {}
+      document.addEventListener('visibilitychange', function () { if (!document.hidden) snapIfBottom(); });
+      var dp = $('dm-input');
+      if (dp) dp.addEventListener('focus', snapIfBottom);
+    }
+    var th = $('dm-thread');
+    if (th && !th._scrollBound) {
+      th._scrollBound = 1;
+      th.addEventListener('scroll', function () {
+        d4AtBottom = (th.scrollHeight - th.scrollTop - th.clientHeight) < 90;
+        if (d4AtBottom) d4Peek(false);
+      }, { passive: true });
+    }
+    dmBuildRxRow();
     /* send button -> reply ke sath */
     var sb = $('dm-send-btn');
     if (sb) sb.onclick = function () { d4sendText(); };
