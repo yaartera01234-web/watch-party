@@ -542,6 +542,109 @@ main { gap: 11px; }
   #wp-search-btn { padding: 11px 9px; font-size: 13px; }
   #wp-ssheet { max-height: 86vh; }
 }
+/* ======================= 💬 MESSAGES (DM) — room se alag ======================= */
+#wp-dm-btn { position: relative; }
+#wp-dm-badge { position: absolute; top: -6px; right: -6px; min-width: 17px; height: 17px; padding: 0 4px;
+  border-radius: 99px; background: linear-gradient(135deg, #ff5ebc, #8b72ff); color: #150c26;
+  font-size: 10px; font-weight: 900; display: none; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+#wp-dm-badge.on { display: grid; }
+.dm-ov { position: fixed; inset: 0; z-index: 81; background: rgba(0,0,0,.6); opacity: 0; pointer-events: none; transition: .2s; }
+.dm-ov.on { opacity: 1; pointer-events: auto; }
+#dm-sheet { position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 82; max-width: 520px; margin: 0 auto;
+  height: 86vh; display: flex; flex-direction: column; overflow: hidden; padding: 0;
+  border-radius: 20px; background: var(--wp-menu-bg, rgba(19,16,45,.985)); border: 1px solid rgba(255,255,255,.16);
+  box-shadow: 0 -14px 34px rgba(0,0,0,.6); transform: translateY(130%); transition: transform .25s ease; }
+#dm-sheet.on { transform: none; }
+.dm-bar { display: flex; align-items: center; gap: 9px; padding: 11px 12px; flex: 0 0 auto;
+  background: linear-gradient(90deg, rgba(139,114,255,.3), rgba(255,94,188,.2)); border-bottom: 1px solid rgba(255,255,255,.1); }
+.dm-bar .bk { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; font-size: 13px; cursor: pointer;
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16); flex: 0 0 auto; }
+.dm-bar b { font-size: 13.5px; }
+.dm-bar s { font-size: 10px; color: #cfc6ee; text-decoration: none; display: block; }
+.dm-bar .add2 { margin-left: auto; width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center;
+  cursor: pointer; font-size: 15px; font-weight: 900; background: linear-gradient(135deg, #54e8ff, #8b72ff); color: #0d0716; flex: 0 0 auto; }
+.dm-e2e { font-size: 9.5px; padding: 3px 7px; border-radius: 999px; border: 1px solid rgba(52,211,153,.6);
+  background: rgba(52,211,153,.14); color: #9ff5cf; font-weight: 700; margin-left: auto; flex: 0 0 auto; }
+.dm-view { position: absolute; inset: 0; padding-top: 52px; display: flex; flex-direction: column;
+  transform: translateX(102%); transition: transform .26s ease; background: var(--wp-menu-bg, rgba(19,16,45,.99)); }
+.dm-view.on { transform: none; }
+.dm-view.first { transform: none; }
+.dm-search { padding: 9px 12px 6px; flex: 0 0 auto; }
+.dm-search input { width: 100%; height: 34px; border-radius: 11px; padding: 0 12px; font-size: 12.5px; color: #fff;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); outline: none; }
+.dm-list { flex: 1; overflow-y: auto; padding: 2px 10px 14px; }
+.dm-sec { font-size: 10.5px; font-weight: 800; letter-spacing: .4px; color: #a9a6c8; margin: 10px 4px 7px; text-transform: uppercase; }
+.dm-req { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 15px; margin-bottom: 8px;
+  background: rgba(255,94,188,.09); border: 1px solid rgba(255,94,188,.35); }
+.dm-req .av3 { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 15px; color: #160b22; flex: 0 0 auto; overflow: hidden; }
+.dm-req .in3 { flex: 1; min-width: 0; }
+.dm-req .in3 b { font-size: 12.5px; display: block; }
+.dm-req .in3 s { font-size: 10.5px; color: #a9a6c8; text-decoration: none; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dm-req .btns3 { display: flex; gap: 6px; flex: 0 0 auto; }
+.dm-req .btns3 button { padding: 7px 10px; border-radius: 10px; border: 0; font-size: 11px; font-weight: 800; cursor: pointer; }
+.dm-req .btns3 .y { background: linear-gradient(135deg, #54e8ff, #8b72ff); color: #0d0716; }
+.dm-req .btns3 .n { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.16); }
+.dm-row { display: flex; align-items: center; gap: 11px; padding: 10px; border-radius: 15px; margin-bottom: 7px; cursor: pointer;
+  background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.09); }
+.dm-row:active { background: rgba(255,255,255,.08); }
+.dm-row .av3 { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 16px;
+  color: #160b22; flex: 0 0 auto; position: relative; overflow: visible; }
+.dm-row .av3 img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.dm-row .av3 i { position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%; border: 2px solid #140d26; background: #6b7280; }
+.dm-row .av3 i.on { background: #34d399; }
+.dm-row .in3 { flex: 1; min-width: 0; }
+.dm-row .in3 b { font-size: 13px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dm-row .in3 s { font-size: 11px; color: #a9a6c8; text-decoration: none; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dm-row .meta3 { text-align: right; flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.dm-row .meta3 span { font-size: 9.5px; color: #a9a6c8; }
+.dm-row .meta3 b { min-width: 19px; height: 19px; padding: 0 5px; border-radius: 99px; background: linear-gradient(135deg, #ff5ebc, #8b72ff);
+  color: #150c26; font-size: 10.5px; display: grid; place-items: center; }
+.dm-empty { padding: 22px 16px; text-align: center; font-size: 12px; color: #a9a6c8; line-height: 1.7; }
+.dm-empty u { display: block; font-size: 26px; text-decoration: none; margin-bottom: 6px; }
+.dm-codecard { margin: 12px 12px 10px; padding: 14px; border-radius: 17px; text-align: center;
+  background: linear-gradient(150deg, rgba(84,232,255,.14), rgba(255,94,188,.14)); border: 1px solid rgba(255,255,255,.16); }
+.dm-codecard small { font-size: 10.5px; color: #a9a6c8; }
+.dm-code { font-size: 24px; font-weight: 900; letter-spacing: 2.5px; margin: 8px 0 11px;
+  background: linear-gradient(135deg, #54e8ff, #8b72ff, #ff5ebc); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.dm-codebtns { display: flex; gap: 8px; }
+.dm-codebtns button { flex: 1; padding: 10px; border-radius: 12px; border: 0; font-size: 11.5px; font-weight: 800; cursor: pointer; }
+.dm-codebtns .a { background: linear-gradient(135deg, #54e8ff, #8b72ff); color: #0d0716; }
+.dm-codebtns .b { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.16); }
+.dm-addbox { margin: 0 12px; padding: 12px; border-radius: 15px; background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.09); }
+.dm-addbox h4 { margin: 0 0 8px; font-size: 12.5px; }
+.dm-addbox input { width: 100%; height: 38px; border-radius: 11px; padding: 0 12px; font-size: 13px; letter-spacing: 1.5px; font-weight: 700;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); color: #fff; outline: none; text-align: center; text-transform: uppercase; }
+.dm-addbox .go2 { margin-top: 9px; width: 100%; padding: 11px; border-radius: 12px; border: 0; font-weight: 800; font-size: 12.5px; cursor: pointer;
+  background: linear-gradient(135deg, #ff5ebc, #8b72ff); color: #150c26; }
+.dm-found { margin: 10px 12px 0; padding: 11px; border-radius: 15px; background: rgba(52,211,153,.1); border: 1px solid rgba(52,211,153,.4); display: none; }
+.dm-found.on { display: block; }
+.dm-found .l { display: flex; align-items: center; gap: 10px; }
+.dm-found .av3 { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; color: #160b22; background: #54e8ff; }
+.dm-found .in3 b { font-size: 12.5px; display: block; }
+.dm-found .in3 s { font-size: 10.5px; color: #a9a6c8; text-decoration: none; }
+.dm-found button { margin-top: 9px; width: 100%; padding: 10px; border-radius: 11px; border: 0; font-weight: 800; font-size: 12px;
+  background: linear-gradient(135deg, #34d399, #22d3ee); color: #08251a; cursor: pointer; }
+.dm-hint2 { margin: 12px; padding: 11px; border-radius: 14px; font-size: 11px; line-height: 1.6; color: #a9a6c8;
+  background: rgba(0,0,0,.28); border: 1px solid rgba(255,255,255,.08); }
+.dm-thread { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 9px; }
+.dm-m { display: flex; flex-direction: column; max-width: 84%; }
+.dm-m.own { align-self: flex-end; align-items: flex-end; }
+.dm-m .bub4 { padding: 8px 11px; border-radius: 14px; font-size: 12.5px; line-height: 1.4; background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1); word-break: break-word; }
+.dm-m.own .bub4 { background: linear-gradient(135deg, #f472b6, #a78bfa); color: #140821; border-color: transparent; font-weight: 600; }
+.dm-m .t4 { font-size: 9px; color: #a9a6c8; margin-top: 3px; }
+.dm-m .bub4.sys { background: rgba(84,232,255,.12); border-color: rgba(84,232,255,.35); color: #cdefff; font-size: 11.5px; }
+.dm-wa { margin: 0 12px 10px; padding: 9px; border-radius: 12px; text-align: center; font-size: 11.5px; font-weight: 800; cursor: pointer;
+  background: rgba(37,211,102,.14); border: 1px solid rgba(37,211,102,.45); color: #a7f3c4; flex: 0 0 auto; }
+.dm-inbar { display: flex; gap: 7px; padding: 9px 11px; border-top: 1px solid rgba(255,255,255,.09); flex: 0 0 auto; }
+.dm-inbar input { flex: 1; height: 34px; border-radius: 11px; padding: 0 11px; font-size: 12.5px; color: #fff;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); outline: none; }
+.dm-inbar button { width: 38px; border-radius: 11px; border: 0; background: linear-gradient(135deg, #ff5ebc, #8b72ff); color: #150c26; font-weight: 900; cursor: pointer; }
+#dm-toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 12px); opacity: 0; transition: all .2s; z-index: 90;
+  background: rgba(10,8,25,.95); border: 1px solid rgba(255,255,255,.2); color: #fff; font-size: 11.5px; font-weight: 700;
+  padding: 9px 13px; border-radius: 12px; pointer-events: none; max-width: 88%; text-align: center; }
+#dm-toast.on { opacity: 1; transform: translate(-50%, 0); }
+
 </style>
 </head>
 <body>
@@ -590,6 +693,7 @@ main { gap: 11px; }
     </div>
     <div class="header-right">
       <div id="online-count">🟢 0 online</div>
+      <div id="wp-dm-btn" class="wp-hbtn" title="Messages (DM) — room ke bagair">💬<span id="wp-dm-badge"></span></div>
       <div id="wp-theme-btn" class="wp-hbtn" title="Theme / bubble badlo">🎨</div>
     </div>
   </header>
@@ -887,7 +991,10 @@ function connectBroker(i) {
   clearTimeout(watchdog);
   watchdog = setTimeout(() => { if (!mqttUp) { try { client.end(true); } catch (e) {} alert('\u274C ' + BROKERS[i].name + ' nahi mil raha! Dusra tower select karo! 🔄'); } }, 11000);
   client.on('connect', onConnect);
-  client.on('message', onMsg);
+  client.on('message', function (topic, buf) {
+    try { if (window.DM && topic && topic.indexOf('YaarParty786/x7k2/dm/') === 0) { window.DM.onMessage(topic, buf.toString()); return; } } catch (e) {}
+    onMsg(topic, buf);
+  });
   client.on('error', () => {});
   client.on('close', () => {
     if (mqttUp) {
@@ -901,6 +1008,7 @@ function onConnect() {
   mqttUp = true;
   clearTimeout(watchdog);
   subscribeRoom();
+  try { if (window.DM && window.DM.onConnect) window.DM.onConnect(); } catch (e) {}
   if (joined) publishPresence();
   if (everConnected) {
     if (joined) addSysMsg('🔄 Tower se wapis jur gaye! ✅');
@@ -2748,6 +2856,548 @@ function renderMembers() {
   qEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') { clearTimeout(tmr); runSearch(qEl.value); } });
   if (goEl) goEl.onclick = function () { clearTimeout(tmr); runSearch(qEl.value); };
 })();
+</script>
+
+<!-- ======================= 💬 MESSAGES (DM) — room se alag ======================= -->
+<div id="dm-ov" class="dm-ov"></div>
+<div id="dm-sheet" role="dialog" aria-label="Messages">
+  <div class="dm-bar">
+    <div class="bk" id="dm-bar-back" style="display:none">←</div>
+    <div><b id="dm-bar-title">💬 Messages</b><s id="dm-bar-sub">Room ke bagair — seedha dost se baat</s></div>
+    <div class="dm-e2e" id="dm-bar-e2e">🔒 E2E</div>
+    <div class="add2" id="dm-add-btn">＋</div>
+    <div class="add2" id="dm-close-btn" style="background:rgba(255,255,255,.12);color:#fff">✕</div>
+  </div>
+
+  <!-- INBOX -->
+  <div class="dm-view first on" id="dm-view-inbox">
+    <div class="dm-search"><input id="dm-q" placeholder="Chat ya dost dhoondo..." autocomplete="off"></div>
+    <div class="dm-list" id="dm-list">
+      <div class="dm-sec" id="dm-sec-req" style="display:none">Message Requests</div>
+      <div id="dm-req-wrap"></div>
+      <div class="dm-sec">Chats</div>
+      <div id="dm-chat-wrap"></div>
+    </div>
+  </div>
+
+  <!-- ADD FRIEND -->
+  <div class="dm-view" id="dm-view-add">
+    <div class="dm-codecard">
+      <small>Tumhara Friend Code (dost ko bhejo)</small>
+      <div class="dm-code" id="dm-my-code">WP1-XXXX-XXXX</div>
+      <div class="dm-codebtns">
+        <button class="a" id="dm-copy-code">📋 Copy</button>
+        <button class="b" id="dm-share-code">📲 Share</button>
+      </div>
+    </div>
+    <div class="dm-addbox">
+      <h4>Dost ka code likho / paste karo</h4>
+      <input id="dm-peer-code" placeholder="WP1-XXXX-XXXX" maxlength="14" autocomplete="off">
+      <button class="go2" id="dm-find-btn">🔍 Dost dhoondo</button>
+    </div>
+    <div class="dm-found" id="dm-found">
+      <div class="l">
+        <div class="av3" id="dm-f-av">?</div>
+        <div class="in3"><b id="dm-f-name">—</b><s>Code theek hai · request bhejo</s></div>
+      </div>
+      <button id="dm-req-btn">✉️ Message bhejo / request</button>
+    </div>
+    <div class="dm-hint2">
+      🔒 <b>Chaabi kaise banti hai?</b> Dono codes mila kar (sorted) — is liye <b>sirf tum aur wahi</b> padh sakte hain. Broker ko sirf locked data nazar aata hai.<br><br>
+      📥 Jo pehli dafa message kare, wo <b>Request</b> mein aata hai — jab tak accept na karo, chat list mein nahi.
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="dm-view" id="dm-view-chat">
+    <div class="dm-thread" id="dm-thread"></div>
+    <div class="dm-wa" id="dm-wa-btn">📲 WhatsApp pe bhi bhejo</div>
+    <div class="dm-inbar">
+      <input id="dm-input" placeholder="Message likho..." maxlength="500" autocomplete="off">
+      <button id="dm-send-btn">➤</button>
+    </div>
+  </div>
+</div>
+<div id="dm-toast"></div>
+
+<script>
+/* ======================= 💬 MESSAGES (DM) — room se alag =======================
+   Friend code se chaabi banti hai (dono codes sorted) -> AES-256-GCM.
+   Har message apne topic pe retained jata hai (mailbox) -> banda offline ho to
+   bhi message usay milta hai, padhne ke baad topic khud saaf ho jata hai. */
+(function () {
+  'use strict';
+  var NSP = 'YaarParty786/x7k2/dm/';
+  var DKEY = 'wp_dm_v1';
+  var SALT = 'YaarParty786-dm-v1';
+  var MAX_MSGS = 500;
+  var ALPHA = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';   /* confusing chars (0/O/1/I) hata diye */
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function nowMs() { return Date.now(); }
+
+  /* topic-safe chhota hash */
+  function h36(str) {
+    var h = 5381;
+    for (var i = 0; i < str.length; i++) h = (((h << 5) + h) + str.charCodeAt(i)) >>> 0;
+    return h.toString(36) + str.length.toString(36);
+  }
+  function newRaw() {
+    var s = '';
+    for (var i = 0; i < 8; i++) s += ALPHA[Math.floor(Math.random() * ALPHA.length)];
+    return s;
+  }
+  function normCode(c) {
+    c = String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (c.indexOf('WP1') === 0) c = c.slice(3);
+    return c.slice(0, 8);
+  }
+  function fmtCode(raw) { var c = normCode(raw); return c.length === 8 ? ('WP1-' + c.slice(0, 4) + '-' + c.slice(4)) : ''; }
+
+  /* ---------------- state ---------------- */
+  var S = { code: '', name: '', color: '#54e8ff', avatar: { type: 'letter' }, friends: {}, chats: {}, reqs: [], seen: {} };
+  function load() {
+    try {
+      var raw = localStorage.getItem(DKEY);
+      if (raw) { var o = JSON.parse(raw); if (o && typeof o === 'object') { for (var k in o) if (o.hasOwnProperty(k)) S[k] = o[k]; } }
+    } catch (e) {}
+    if (!S.code) { S.code = fmtCode(newRaw()); }
+    if (!S.friends || typeof S.friends !== 'object') S.friends = {};
+    if (!S.chats || typeof S.chats !== 'object') S.chats = {};
+    if (!Array.isArray(S.reqs)) S.reqs = [];
+    if (!S.seen || typeof S.seen !== 'object') S.seen = {};
+    save();
+  }
+  function save() {
+    try {
+      var keys = Object.keys(S.seen);
+      if (keys.length > 400) { var nk = {}; keys.slice(-200).forEach(function (k) { nk[k] = 1; }); S.seen = nk; }
+      localStorage.setItem(DKEY, JSON.stringify(S));
+    } catch (e) {}
+  }
+
+  /* ---------------- crypto ---------------- */
+  var keyCache = {};
+  async function pairKey(peerRaw) {
+    var a = normCode(S.code), b = normCode(peerRaw);
+    if (!a || !b) throw new Error('code');
+    var pair = [a, b].sort().join('|');
+    if (keyCache[pair]) return keyCache[pair];
+    var te = new TextEncoder();
+    var km = await crypto.subtle.importKey('raw', te.encode('dmp|' + pair), 'PBKDF2', false, ['deriveKey']);
+    var k = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: te.encode(SALT), iterations: 150000, hash: 'SHA-256' },
+      km, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    keyCache[pair] = k;
+    return k;
+  }
+  async function encTo(peer, obj) {
+    var k = await pairKey(peer);
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    var ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, k, new TextEncoder().encode(JSON.stringify(obj)));
+    return { iv: b64e(iv), ct: b64e(ct) };
+  }
+  async function decFrom(peer, w) {
+    var k = await pairKey(peer);
+    var pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(w.iv) }, k, b64d(w.ct));
+    return JSON.parse(new TextDecoder().decode(pt));
+  }
+
+  /* ---------------- helpers ---------------- */
+  function toast(t) {
+    var e = $('dm-toast'); if (!e) return;
+    e.textContent = t; e.classList.add('on');
+    clearTimeout(toast._t); toast._t = setTimeout(function () { e.classList.remove('on'); }, 2300);
+  }
+  function beep() {
+    try {
+      var A = window.AudioContext || window.webkitAudioContext; if (!A) return;
+      var c = new A(), o = c.createOscillator(), g = c.createGain();
+      o.type = 'sine'; o.frequency.value = 660;
+      g.gain.setValueAtTime(0, c.currentTime);
+      g.gain.linearRampToValueAtTime(.06, c.currentTime + .02);
+      g.gain.linearRampToValueAtTime(0, c.currentTime + .18);
+      o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + .2);
+    } catch (e) {}
+  }
+  function timeShort(ts) {
+    var d = new Date(ts || nowMs()), h = d.getHours(), m = d.getMinutes();
+    return ((h % 12) || 12) + ':' + (m < 10 ? '0' : '') + m + ' ' + (h < 12 ? 'AM' : 'PM');
+  }
+  function dayLabel(ts) {
+    var d = new Date(ts || nowMs()), n = new Date();
+    if (d.toDateString() === n.toDateString()) return timeShort(ts);
+    var y = new Date(n.getTime() - 864e5);
+    if (d.toDateString() === y.toDateString()) return 'Kal';
+    return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2);
+  }
+  function peerName(code) { var f = S.friends[code]; return (f && f.name) || code; }
+  function peerColor(code) { var f = S.friends[code]; return (f && f.color) || '#8b72ff'; }
+  function peerAvatar(code) { var f = S.friends[code]; return (f && f.avatar) || { type: 'letter' }; }
+  function avatarHTML(code, cls) {
+    var a = peerAvatar(code), nm = peerName(code), bg = peerColor(code);
+    if (a && a.type === 'upload' && a.data) return '<div class="' + cls + '" style="background:' + esc(bg) + '"><img src="' + a.data + '" alt=""></div>';
+    return '<div class="' + cls + '" style="background:' + esc(bg) + '">' + esc((nm[0] || '?').toUpperCase()) + '</div>';
+  }
+
+  /* ---------------- sending ---------------- */
+  function myLabel() { return (typeof myName !== 'undefined' && myName) ? myName : (S.name || 'Dost'); }
+  function clearRetained(topic) { try { if (window.client) window.client.publish(topic, '', { qos: 1, retain: true }); } catch (e) {} }
+  function connected() { return (typeof mqttUp !== 'undefined' && mqttUp && window.client); }
+
+  async function sendMsg(peerRaw, payload, withAvatar) {
+    var peer = normCode(peerRaw);
+    if (!peer) { toast('⚠️ Code theek nahi'); return false; }
+    if (!connected()) { toast('📡 Tower se connect nahi — message nahi gaya'); return false; }
+    var midv = mid();
+    var e;
+    try { e = await encTo(peer, { mid: midv, ts: nowMs(), t: payload.t, x: payload.x }); }
+    catch (err) { toast('🔒 Lock nahi hua — dobara try karo'); return false; }
+    var out = { c: S.code, n: myLabel(), k: (typeof myColor !== 'undefined' && myColor) ? myColor : S.color, ts: nowMs(), iv: e.iv, ct: e.ct };
+    if (withAvatar && typeof myAvatar !== 'undefined') out.a = myAvatar;
+    var topic = NSP + 'inbox-' + h36(peer) + '/' + midv;
+    try { window.client.publish(topic, JSON.stringify(out), { qos: 1, retain: true }); }
+    catch (err) { toast('📡 bheja nahi ja saka'); return false; }
+    S.seen[midv] = 1;
+    appendMsg(peer, { d: 'out', t: payload.t, x: payload.x, mid: midv, ts: nowMs() });
+    save(); renderAll();
+    return true;
+  }
+
+  function appendMsg(peer, m) {
+    peer = normCode(peer);
+    if (!S.chats[peer]) S.chats[peer] = [];
+    var arr = S.chats[peer];
+    if (m.mid && arr.some(function (x) { return x.mid === m.mid; })) return;
+    arr.push(m);
+    if (arr.length > MAX_MSGS) S.chats[peer] = arr.slice(arr.length - MAX_MSGS);   /* storage cap */
+  }
+
+  /* ---------------- incoming ---------------- */
+  function myInboxPrefix() { return NSP + 'inbox-' + h36(normCode(S.code)) + '/'; }
+  function myPresenceTopic() { return NSP + 'presence-' + h36(normCode(S.code)); }
+
+  function onDmMessage(topic, str) {
+    if (topic.indexOf(myInboxPrefix()) !== 0) {
+      if (topic.indexOf(NSP + 'presence-') === 0) onPresence(topic, str);
+      return;
+    }
+    if (!str) return;
+    var p; try { p = JSON.parse(str); } catch (e) { return; }
+    if (!p || !p.c || !p.iv || !p.ct) return;
+    var peer = normCode(p.c);
+    if (peer === normCode(S.code)) { clearRetained(topic); return; }
+    var msgId = topic.split('/').pop();
+    if (S.seen[msgId]) { clearRetained(topic); return; }
+    S.seen[msgId] = 1; save();
+
+    (async function () {
+      var body;
+      try { body = await decFrom(peer, p); } catch (e) { return; }     /* locked nahi khula -> chhod do */
+      clearRetained(topic);                                            /* padh liya -> mailbox saaf */
+      if (!body) return;
+      var known = !!S.friends[peer];
+      if (!known && (!body.t || body.t !== 'sys')) {
+        /* pehli dafa -> Message Request (Snackchat style) */
+        if (!S.reqs.some(function (r) { return r.code === peer; })) {
+          S.reqs.push({ code: peer, name: p.n || peer, color: p.k || '#8b72ff', avatar: p.a || { type: 'letter' },
+                        ts: body.ts || nowMs(), preview: String(body.x || '').slice(0, 80),
+                        x: body.x || '', t: body.t || 'text', mid: body.mid || msgId });
+          ping(p.n || peer, body.x || '');
+        }
+      } else {
+        if (!known) {   /* sys message se friend ban gaya */
+          S.friends[peer] = S.friends[peer] || { name: p.n || peer, color: p.k || '#8b72ff', avatar: p.a || { type: 'letter' }, ts: nowMs() };
+        }
+        S.friends[peer].name = p.n || S.friends[peer].name;
+        if (p.k) S.friends[peer].color = p.k;
+        if (p.a) S.friends[peer].avatar = p.a;
+        appendMsg(peer, { d: 'in', t: body.t, x: body.x, mid: body.mid || msgId, ts: body.ts || p.ts || nowMs() });
+        if (curChat === peer && sheetOpen()) { markRead(peer); renderThread(); }
+        else { S.friends[peer].un = (S.friends[peer].un || 0) + 1; ping(p.n || peer, body.x || ''); }
+      }
+      save(); renderAll();
+    })();
+  }
+
+  function onPresence(topic, str) {
+    if (!str) return;
+    var h = topic.slice((NSP + 'presence-').length);
+    var peer = null;
+    Object.keys(S.friends).forEach(function (c) { if (h36(c) === h) peer = c; });
+    if (!peer) return;
+    try { var p = JSON.parse(str); S.friends[peer].ts = p.ts || 0; } catch (e) {}
+  }
+
+  function ping(name, text) {
+    toast('💬 ' + name + ': ' + String(text || '').slice(0, 60));
+    beep();
+  }
+  function markRead(peer) { if (S.friends[peer]) { S.friends[peer].un = 0; save(); } }
+
+  /* ---------------- subscribe / connect ---------------- */
+  var subscribed = false;
+  function subscribeDm() {
+    if (!connected()) return;
+    var topics = [myInboxPrefix() + '#'];
+    Object.keys(S.friends).forEach(function (c) { topics.push(NSP + 'presence-' + h36(c)); });
+    try { window.client.subscribe(topics, { qos: 1 }, function () { subscribed = true; }); } catch (e) {}
+  }
+  function pubPresence() {
+    if (!connected()) return;
+    try { window.client.publish(myPresenceTopic(), JSON.stringify({ ts: nowMs(), n: myLabel() }), { qos: 1, retain: true }); } catch (e) {}
+  }
+  function onConnect() { subscribeDm(); pubPresence(); }
+  setInterval(function () { if (connected()) { if (!subscribed) subscribeDm(); pubPresence(); } }, 45000);
+
+  /* ---------------- views ---------------- */
+  var curChat = null;
+  function sheetOpen() { var s = $('dm-sheet'); return s && s.classList.contains('on'); }
+  function openSheet() {
+    var ov = $('dm-ov'), sh = $('dm-sheet');
+    if (!sh) return;
+    var ts = document.getElementById('wp-sheet'); if (ts) ts.className = 'wp-sheet';
+    var ss = document.getElementById('wp-ssheet'); if (ss) ss.className = 'wp-sheet';
+    if (ov) ov.classList.add('on');
+    sh.classList.add('on');
+    subscribeDm(); pubPresence(); renderAll();
+  }
+  function closeSheet() {
+    var ov = $('dm-ov'), sh = $('dm-sheet');
+    if (ov) ov.classList.remove('on');
+    if (sh) sh.classList.remove('on');
+    if (curChat) { markRead(curChat); renderAll(); }
+  }
+  function showView(v) {
+    ['dm-view-inbox', 'dm-view-add', 'dm-view-chat'].forEach(function (k) {
+      var e = $(k); if (!e) return;
+      e.classList.remove('on'); e.classList.remove('first');
+    });
+    var t = $(v); if (t) t.classList.add('on');
+    var back = $('dm-bar-back');
+    if (back) back.style.display = (v === 'dm-view-inbox') ? 'none' : 'grid';
+    var addb = $('dm-add-btn');
+    if (addb) addb.style.display = (v === 'dm-view-add') ? 'none' : 'grid';
+    var title = $('dm-bar-title'), sub = $('dm-bar-sub');
+    if (v === 'dm-view-add') { title.textContent = '➕ Add Friend'; sub.textContent = 'Code se dost joro — bas ek dafa'; }
+    else if (v === 'dm-view-chat') { title.textContent = peerName(curChat); sub.textContent = '🔒 E2E · room ke bagair'; }
+    else { title.textContent = '💬 Messages'; sub.textContent = 'Room ke bagair — seedha dost se baat'; }
+  }
+
+  /* ---------------- render ---------------- */
+  function unreadTotal() {
+    var n = S.reqs.length;
+    Object.keys(S.friends).forEach(function (c) { n += (S.friends[c].un || 0); });
+    return n;
+  }
+  function renderBadge() {
+    var b = $('wp-dm-badge'); if (!b) return;
+    var n = unreadTotal();
+    b.textContent = n > 9 ? '9+' : String(n);
+    b.classList.toggle('on', n > 0);
+  }
+  function renderReqs() {
+    var w = $('dm-req-wrap'), sec = $('dm-sec-req'); if (!w) return;
+    w.innerHTML = '';
+    if (sec) sec.style.display = S.reqs.length ? '' : 'none';
+    S.reqs.forEach(function (r, i) {
+      var d = document.createElement('div'); d.className = 'dm-req';
+      d.innerHTML = avatarHTML(r.code, 'av3') +
+        '<div class="in3"><b>' + esc(r.name || r.code) + '</b><s>' + esc(r.preview || '') + '</s></div>' +
+        '<div class="btns3"><button class="y">Accept</button><button class="n">✕</button></div>';
+      var bs = d.querySelectorAll('button');
+      bs[0].onclick = function () { acceptReq(i); };
+      bs[1].onclick = function () { S.reqs.splice(i, 1); save(); renderAll(); toast('Request hata di'); };
+      w.appendChild(d);
+    });
+  }
+  function acceptReq(i) {
+    var r = S.reqs[i]; if (!r) return;
+    S.reqs.splice(i, 1);
+    S.friends[r.code] = { name: r.name || r.code, color: r.color || '#8b72ff', avatar: r.avatar || { type: 'letter' }, ts: nowMs(), un: 0 };
+    /* request wala asli message chat mein daal do — kuch zaya na ho */
+    if (r.x) appendMsg(r.code, { d: 'in', t: r.t || 'text', x: r.x, mid: r.mid || mid(), ts: r.ts || nowMs() });
+    /* peer ko batao ke accept ho gaya */
+    sendMsg(r.code, { t: 'sys', x: '✅ ' + myLabel() + ' ne tumhari request accept kar li — ab baat kar sakte ho!' }, true);
+    save(); subscribeDm(); renderAll();
+    toast('✅ ' + (r.name || r.code) + ' add ho gaya');
+  }
+  function renderChats() {
+    var w = $('dm-chat-wrap'); if (!w) return;
+    var q = ($('dm-q') && $('dm-q').value || '').toLowerCase().trim();
+    var codes = Object.keys(S.friends).filter(function (c) {
+      var last = (S.chats[c] && S.chats[c].length) ? (S.chats[c][S.chats[c].length - 1].x || '') : '';
+      return !q || peerName(c).toLowerCase().indexOf(q) > -1 || String(last).toLowerCase().indexOf(q) > -1;
+    });
+    codes.sort(function (a, b) {
+      var la = (S.chats[a] && S.chats[a].length) ? S.chats[a][S.chats[a].length - 1].ts : (S.friends[a].ts || 0);
+      var lb = (S.chats[b] && S.chats[b].length) ? S.chats[b][S.chats[b].length - 1].ts : (S.friends[b].ts || 0);
+      return lb - la;
+    });
+    w.innerHTML = '';
+    if (!codes.length) {
+      w.innerHTML = '<div class="dm-empty"><u>💬</u>Koi chat nahi.<br>Upar <b>＋</b> se dost add karo — code paste kar ke.<br><br><b style="color:#54e8ff">Apna code:</b> ' + esc(S.code) + '</div>';
+      return;
+    }
+    codes.forEach(function (c) {
+      var arr = S.chats[c] || [];
+      var last = arr.length ? arr[arr.length - 1] : null;
+      var online = S.friends[c].ts && (nowMs() - S.friends[c].ts < 150000);
+      var d = document.createElement('div'); d.className = 'dm-row';
+      var av = avatarHTML(c, 'av3').replace('</div>', '<i class="' + (online ? 'on' : '') + '"></i></div>');
+      d.innerHTML = av +
+        '<div class="in3"><b>' + esc(peerName(c)) + '</b><s>' + esc(last ? ((last.d === 'out' ? '✔ ' : '') + String(last.x || '').slice(0, 60)) : 'Naya chat — salam bhejo 👋') + '</s></div>' +
+        '<div class="meta3"><span>' + (last ? dayLabel(last.ts) : '') + '</span>' +
+        ((S.friends[c].un || 0) > 0 ? '<b>' + S.friends[c].un + '</b>' : '<span>🔒</span>') + '</div>';
+      d.onclick = function () { openChat(c); };
+      w.appendChild(d);
+    });
+  }
+  function renderThread() {
+    var t = $('dm-thread'); if (!t || !curChat) return;
+    var arr = S.chats[curChat] || [];
+    t.innerHTML = '';
+    if (!arr.length) {
+      t.innerHTML = '<div class="dm-empty"><u>👋</u>' + esc(peerName(curChat)) + ' ko salam bhejo!<br><small>Message phone pe lock ho kar jayega (E2E)</small></div>';
+    }
+    arr.forEach(function (m) {
+      var d = document.createElement('div'); d.className = 'dm-m' + (m.d === 'out' ? ' own' : '');
+      var type = m.t || 'text';
+      var inner;
+      if (type === 'gif') inner = '<div class="bub4" style="padding:4px"><img src="' + esc(m.x) + '" alt="GIF" style="max-width:190px;border-radius:11px;display:block"></div>';
+      else if (type === 'sys') inner = '<div class="bub4 sys">' + esc(m.x) + '</div>';
+      else inner = '<div class="bub4">' + esc(m.x) + '</div>';
+      d.innerHTML = inner + '<div class="t4">' + timeShort(m.ts) + (m.d === 'out' ? ' ✓✓' : '') + '</div>';
+      t.appendChild(d);
+    });
+    t.scrollTop = t.scrollHeight;
+  }
+  function renderAll() { renderBadge(); renderReqs(); renderChats(); if (sheetOpen() && curChat) renderThread(); }
+
+  /* ---------------- chat open ---------------- */
+  function openChat(code) {
+    curChat = normCode(code);
+    if (!S.friends[curChat]) S.friends[curChat] = { name: curChat, color: '#8b72ff', avatar: { type: 'letter' }, ts: 0, un: 0 };
+    markRead(curChat);
+    renderThread(); showView('dm-view-chat'); renderAll();
+    var inp = $('dm-input'); if (inp) try { inp.focus(); } catch (e) {}
+  }
+
+  /* ---------------- wire up ---------------- */
+  function wire() {
+    var btn = $('dm-open-btn') || $('wp-dm-btn');
+    if (btn) btn.onclick = function () { openSheet(); };
+    var ov = $('dm-ov'); if (ov) ov.onclick = closeSheet;
+    var x = $('dm-close-btn'); if (x) x.onclick = closeSheet;
+    var addb = $('dm-add-btn'); if (addb) addb.onclick = function () { $('dm-my-code').textContent = S.code; showView('dm-view-add'); };
+    var back = $('dm-bar-back'); if (back) back.onclick = function () { curChat = null; showView('dm-view-inbox'); renderAll(); };
+    var q = $('dm-q'); if (q) q.addEventListener('input', renderChats);
+
+    var cp = $('dm-copy-code');
+    if (cp) cp.onclick = function () {
+      var c = S.code;
+      try { navigator.clipboard.writeText(c); toast('📋 Code copy ho gaya'); }
+      catch (e) { toast('Code: ' + c); }
+    };
+    var sh = $('dm-share-code');
+    if (sh) sh.onclick = function () {
+      var link = location.origin + location.pathname + '#dm=' + normCode(S.code);
+      var txt = 'Watch Party pe mujhe add karo 👇\nMera code: ' + S.code + '\n' + link;
+      try {
+        if (navigator.share) { navigator.share({ text: txt }).catch(function () {}); }
+        else { window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank'); }
+      } catch (e) { toast('Code: ' + S.code); }
+    };
+    var pc = $('dm-peer-code');
+    if (pc) pc.addEventListener('input', function () {
+      var v = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (v.indexOf('WP1') === 0) v = v.slice(3);
+      v = v.slice(0, 8);
+      this.value = v.length > 4 ? ('WP1-' + v.slice(0, 4) + '-' + v.slice(4)) : (v.length ? 'WP1-' + v : '');
+    });
+    var fb = $('dm-find-btn');
+    if (fb) fb.onclick = function () {
+      var c = normCode(pc.value);
+      if (c.length !== 8) { toast('⚠️ Poora code likho (WP1-XXXX-XXXX)'); return; }
+      if (c === normCode(S.code)) { toast('😂 Ye tumhara apna code hai!'); return; }
+      var f = S.friends[c];
+      $('dm-f-av').textContent = ((f && f.name ? f.name : c)[0] || '?').toUpperCase();
+      $('dm-f-name').textContent = f ? f.name : fmtCode(c);
+      $('dm-found').classList.add('on');
+      toast('✅ Code theek hai — ab message bhejo');
+    };
+    var rb = $('dm-req-btn');
+    if (rb) rb.onclick = function () {
+      var c = normCode(pc.value);
+      if (c.length !== 8) return;
+      if (!S.friends[c]) S.friends[c] = { name: fmtCode(c), color: '#8b72ff', avatar: { type: 'letter' }, ts: 0, un: 0, pending: 1 };
+      sendMsg(c, { t: 'text', x: '👋 Salam! Main ' + myLabel() + ' hoon — Watch Party pe milte hain.' }, true).then(function (ok) {
+        if (!ok) return;
+        $('dm-found').classList.remove('on'); pc.value = '';
+        openChat(c);
+      });
+    };
+    var sb = $('dm-send-btn');
+    if (sb) sb.onclick = function () {
+      var v = $('dm-input').value.trim();
+      if (!v || !curChat) return;
+      $('dm-input').value = '';
+      sendMsg(curChat, { t: 'text', x: v }, false);
+    };
+    var inp = $('dm-input');
+    if (inp) inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') $('dm-send-btn').onclick(); });
+    var wa = $('dm-wa-btn');
+    if (wa) wa.onclick = function () {
+      if (!curChat) return;
+      var arr = S.chats[curChat] || [];
+      var out = null;
+      for (var i = arr.length - 1; i >= 0; i--) { if (arr[i].d === 'out') { out = arr[i]; break; } }
+      var txt = out ? out.x : 'Watch Party pe aa jao — mera code: ' + S.code;
+      try {
+        if (navigator.share) { navigator.share({ text: txt }).catch(function () {}); }
+        else { window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank'); }
+      } catch (e) { toast('WhatsApp nahi khul saka'); }
+    };
+  }
+
+  /* ---------------- expose ---------------- */
+  window.DM = {
+    onConnect: onConnect,
+    onMessage: onDmMessage,
+    open: openSheet,
+    code: function () { return S.code; },
+    debug: function () { return S; },
+    /* chhote helpers (testing + future use) */
+    _friend: function (code, name) {
+      var c = normCode(code);
+      S.friends[c] = S.friends[c] || { name: name || fmtCode(c), color: '#8b72ff', avatar: { type: 'letter' }, ts: 0, un: 0 };
+      save(); subscribeDm(); renderAll(); return c;
+    },
+    _send: function (code, text) { return sendMsg(code, { t: 'text', x: text }, false); },
+    _reqs: function () { return S.reqs; },
+    _accept: function (i) { acceptReq(i); },
+    _unread: function () { return unreadTotal(); }
+  };
+
+  load(); wire(); renderAll();
+  /* agar MQTT pehle hi jur chuka hai to foran subscribe */
+  setTimeout(function () { if (connected()) onConnect(); }, 1500);
+  /* invite link (#dm=CODE) */
+  try {
+    var mm = /(?:^|[#&])dm=([A-Za-z0-9]+)/.exec(location.hash || '');
+    if (mm) {
+      var c = normCode(mm[1]);
+      setTimeout(function () {
+        openSheet(); showView('dm-view-add');
+        var pc2 = $('dm-peer-code');
+        if (pc2) pc2.value = fmtCode(c);
+        if ($('dm-my-code')) $('dm-my-code').textContent = S.code;
+        toast('👤 Invite link khula — "Dost dhoondo" dabao');
+      }, 900);
+    }
+  } catch (e) {}
+})();
+
 </script>
 </body>
 </html>
