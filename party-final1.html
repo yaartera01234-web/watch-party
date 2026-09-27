@@ -862,6 +862,18 @@ main { gap: 11px; }
 #dm-rep4 b { color: #f9a8d4; font-size: 11px; }
 #dm-rep4 s { color: #d1d5db; font-size: 12px; }
 #dm-rep4 button { background: rgba(255,255,255,.12); border: 0; color: #fff; width: 26px; height: 26px; border-radius: 50%; }
+
+/* ===== DM v2.4: header visible (z-index fix) + naam/online + typing + smooth ===== */
+.dm-bar { position: relative; z-index: 6;
+  background: linear-gradient(90deg, rgba(139,114,255,.42), rgba(255,94,188,.30)), var(--wp-menu-bg, rgba(19,16,45,.99)); }
+.dm-bar .bar-av { width: 34px; height: 34px; flex: 0 0 auto; border-radius: 50%; overflow: hidden; }
+.dm-bar .bar-av .avatar { width: 34px; height: 34px; border-radius: 50%; font-size: 15px; }
+.dm-bar .dot4 { width: 8px; height: 8px; border-radius: 50%; background: #6b7280; display: inline-block;
+  margin-right: 5px; vertical-align: middle; }
+.dm-bar .dot4.on { background: #34d399; box-shadow: 0 0 8px rgba(52,211,153,.85); }
+.dm-typing { display: none; flex: 0 0 auto; font-size: 12px; color: #4ade80; font-style: italic; padding: 3px 14px 5px; }
+.dm-typing.on { display: block; }
+.dm-list, #dm-thread { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 </style>
 </head>
 <body>
@@ -3267,6 +3279,7 @@ function renderMembers() {
 <div id="dm-sheet" role="dialog" aria-label="Messages">
   <div class="dm-bar">
     <div class="bk" id="dm-bar-back" style="display:none">←</div>
+    <div class="bar-av" id="dm-bar-av" style="display:none"></div>
     <div><b id="dm-bar-title">💬 Messages</b><s id="dm-bar-sub">Room ke bagair — seedha dost se baat</s></div>
     <div class="dm-e2e" id="dm-bar-e2e">🔒 E2E</div>
     <div class="add2" id="dm-add-btn">＋</div>
@@ -3320,6 +3333,7 @@ function renderMembers() {
   <!-- CHAT -->
   <div class="dm-view" id="dm-view-chat">
     <div class="dm-thread" id="dm-thread"></div>
+    <div class="dm-typing" id="dm-typing"></div>
 
     <div class="dm-g4p" id="dm-g4p">
       <div class="g4h">
@@ -3533,10 +3547,12 @@ function renderMembers() {
   /* ---------------- incoming ---------------- */
   function myInboxPrefix() { return NSP + 'inbox-' + h36(normCode(S.code)) + '/'; }
   function myPresenceTopic() { return NSP + 'presence-' + h36(normCode(S.code)); }
+  function myTypingTopic() { return NSP + 'typing-' + h36(normCode(S.code)); }
 
   function onDmMessage(topic, str) {
     if (topic.indexOf(myInboxPrefix()) !== 0) {
       if (topic.indexOf(NSP + 'presence-') === 0) onPresence(topic, str);
+      else if (topic.indexOf(NSP + 'typing-') === 0) onTyping(topic, str);
       return;
     }
     if (!str) return;
@@ -3593,6 +3609,7 @@ function renderMembers() {
         save(); renderAll();
       }
     } catch (e) {}
+    if (peer === curChat) setChatBar();
   }
 
   function ping(name, text) {
@@ -3606,7 +3623,8 @@ function renderMembers() {
   function subscribeDm() {
     if (!connected()) return;
     var topics = [myInboxPrefix() + '#'];
-    Object.keys(S.friends).forEach(function (c) { topics.push(NSP + 'presence-' + h36(c)); });
+    Object.keys(S.friends).forEach(function (c) { topics.push(NSP + 'presence-' + h36(c)); topics.push(NSP + 'typing-' + h36(c)); });
+
     try { mc().subscribe(topics, { qos: 1 }, function () { subscribed = true; }); } catch (e) {}
   }
   function pubPresence() {
@@ -3634,6 +3652,64 @@ function renderMembers() {
     if (sh) sh.classList.remove('on');
     if (curChat) { markRead(curChat); renderAll(); }
   }
+  /* ---------------- DM v2.4: chat header (naam + online) + typing ---------------- */
+  var dmTypTimer = null, dmLastType = 0;
+  function dmIsOnline(c) { var f = S.friends[c]; return !!(f && f.ts && (nowMs() - f.ts < 150000)); }
+  function setChatBar() {
+    if (!curChat) return;
+    var av = $('dm-bar-av');
+    if (av) {
+      av.innerHTML = '';
+      try { av.appendChild(avatarEl(peerAvatar(curChat), peerName(curChat), peerColor(curChat), 34)); }
+      catch (e) { var fb = document.createElement('div'); fb.className = 'avatar';
+        fb.style.background = peerColor(curChat); var fbs = document.createElement('span');
+        fbs.textContent = (peerName(curChat)[0] || '?').toUpperCase(); fb.appendChild(fbs); av.appendChild(fb); }
+      av.style.display = 'block';
+    }
+    var title = $('dm-bar-title'), sub = $('dm-bar-sub');
+    if (title) title.textContent = peerName(curChat);
+    if (sub) {
+      var on = dmIsOnline(curChat);
+      sub.innerHTML = '<span class="dot4' + (on ? ' on' : '') + '"></span>' + (on ? 'Online' : 'Offline') + ' · 🔒 E2E';
+    }
+  }
+  function showTyping(nm) {
+    var el = $('dm-typing'); if (!el) return;
+    el.textContent = '✍ ' + (nm || peerName(curChat)) + ' Is Typing...';
+    el.classList.add('on');
+    if (dmTypTimer) clearTimeout(dmTypTimer);
+    dmTypTimer = setTimeout(function () { el.classList.remove('on'); }, 3500);
+  }
+  function onTyping(topic, str) {
+    var h = topic.slice((NSP + 'typing-').length);
+    var peer = null;
+    Object.keys(S.friends).forEach(function (c) { if (h36(c) === h) peer = c; });
+    if (!peer || peer !== curChat || !sheetOpen()) return;
+    var nm = peerName(peer);
+    try { var o = JSON.parse(str); if (o && o.n && !isCodeName(o.n, peer)) nm = String(o.n).slice(0, 20); } catch (e) {}
+    showTyping(nm);
+  }
+  function dmInputPing() {
+    if (!curChat || !connected()) return;
+    var t = nowMs(); if (t - dmLastType < 2500) return; dmLastType = t;
+    try { mc().publish(myTypingTopic(), JSON.stringify({ n: myLabel(), ts: t }), { qos: 0 }); } catch (e) {}
+  }
+  (function () {
+    var di = $('dm-input'); if (di) di.addEventListener('input', dmInputPing);
+    setInterval(function () {                                  /* online label taaza rakho */
+      try {
+        if (!curChat || !sheetOpen()) return;
+        var cv = $('dm-view-chat');
+        if (!cv || !cv.classList.contains('on')) return;
+        var sub = $('dm-bar-sub'); if (!sub) return;
+        var on = dmIsOnline(curChat);
+        var dot = sub.querySelector ? sub.querySelector('.dot4') : null;
+        if (dot) { dot.classList.toggle('on', on); }
+        if (sub.textContent.indexOf(on ? 'Offline' : 'Online') >= 0) setChatBar();
+      } catch (e) {}
+    }, 20000);
+  })();
+
   function showView(v) {
     ['dm-view-inbox', 'dm-view-add', 'dm-view-chat'].forEach(function (k) {
       var e = $(k); if (!e) return;
@@ -3643,10 +3719,11 @@ function renderMembers() {
     var back = $('dm-bar-back');
     if (back) back.style.display = (v === 'dm-view-inbox') ? 'none' : 'grid';
     var addb = $('dm-add-btn');
-    if (addb) addb.style.display = (v === 'dm-view-add') ? 'none' : 'grid';
+    if (addb) addb.style.display = (v === 'dm-view-inbox') ? 'grid' : 'none';
+    var avb = $('dm-bar-av'); if (avb) avb.style.display = (v === 'dm-view-chat') ? 'block' : 'none';
     var title = $('dm-bar-title'), sub = $('dm-bar-sub');
     if (v === 'dm-view-add') { title.textContent = '➕ Add Friend'; sub.textContent = 'Code se dost joro — bas ek dafa'; }
-    else if (v === 'dm-view-chat') { title.textContent = peerName(curChat); sub.textContent = '🔒 E2E · ' + (fmtCode(curChat) || 'room ke bagair'); }
+    else if (v === 'dm-view-chat') { setChatBar(); }
     else { title.textContent = '💬 Messages'; sub.textContent = 'Room ke bagair — seedha dost se baat'; }
   }
 
@@ -3997,7 +4074,7 @@ function renderMembers() {
     curChat = normCode(code);
     if (!S.friends[curChat]) S.friends[curChat] = { name: curChat, color: '#8b72ff', avatar: { type: 'letter' }, ts: 0, un: 0 };
     markRead(curChat);
-    renderThread(); showView('dm-view-chat'); renderAll();
+    renderThread(); showView('dm-view-chat'); setChatBar(); renderAll();
     var inp = $('dm-input'); if (inp) try { inp.focus(); } catch (e) {}
   }
 
