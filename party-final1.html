@@ -852,6 +852,16 @@ main { gap: 11px; }
 .dm-row .meta3 b { min-width: 20px; height: 20px; padding: 0 6px; font-size: 10.5px;
   box-shadow: 0 0 0 1px rgba(255,255,255,.22), 0 4px 12px rgba(255,94,188,.4); }
 .dm-row .meta3 u { text-decoration: none; font-size: 11px; opacity: .55; }
+
+/* ===== DM v2.3: bilkul party chat (song wali chat) wala look ===== */
+#dm-thread { padding: 10px; gap: 6px; }
+#dm-thread .d4sys { font-size: 12px; color: #fcd34d; background: rgba(252,211,77,.1);
+  border: 0; padding: 4px 14px; border-radius: 20px; }
+#dm-thread .msg .bubble { max-width: 100%; }
+#dm-rep4 { background: rgba(255,255,255,.08); border: 0; border-radius: 12px; padding: 7px 10px; }
+#dm-rep4 b { color: #f9a8d4; font-size: 11px; }
+#dm-rep4 s { color: #d1d5db; font-size: 12px; }
+#dm-rep4 button { background: rgba(255,255,255,.12); border: 0; color: #fff; width: 26px; height: 26px; border-radius: 50%; }
 </style>
 </head>
 <body>
@@ -3763,63 +3773,55 @@ function renderMembers() {
     var i = $('dm-input'); if (i) { try { i.focus(); } catch (e) {} }
   }
   function d4bind(row, m) {
-    var bub = row.querySelector('.bub4'); if (!bub) return;
-    var sx = 0, sy = 0, dx = 0, dy = 0, drag = false, lp = null, lastTap = 0, usedTouch = false;
-    function start(x, y) {
-      sx = x; sy = y; dx = 0; dy = 0; drag = true;
-      if (lp) clearTimeout(lp);
+    var el = row;
+    if (!el) return;
+    var sx = 0, sy = 0, dx = 0, swiping = false, lp = null, lpFired = false;
+    el.addEventListener('dblclick', function (e) { e.preventDefault(); if (!lpFired) d4setReply(m); });
+    el.addEventListener('touchstart', function (e) {
+      var t = e.touches[0]; sx = t.clientX; sy = t.clientY; dx = 0; swiping = false; lpFired = false;
+      clearTimeout(lp);
       lp = setTimeout(function () {
-        lp = null;
-        if (!drag) return;
-        drag = false;
-        bub.style.transform = ''; bub.classList.remove('sw4'); bub.classList.remove('arm4');
+        lpFired = true;
+        try { if (navigator.vibrate) navigator.vibrate(18); } catch (err) {}
         dmActMsg = m; dmActPeer = curChat;
         if ($('dm-acts4')) $('dm-acts4').classList.add('on');
-      }, 550);
-    }
-    function move(x, y, ev) {
-      if (!drag) return;
-      dx = x - sx; dy = y - sy;
-      if (Math.abs(dx) > 6 || Math.abs(dy) > 6) { if (lp) { clearTimeout(lp); lp = null; } }
-      if (Math.abs(dx) > Math.abs(dy) + 3 && ev && ev.cancelable) { try { ev.preventDefault(); } catch (e) {} }
-      var off = Math.max(-96, Math.min(96, dx));
-      if (Math.abs(off) > 4) { bub.style.transition = 'none'; bub.style.transform = 'translateX(' + off + 'px)'; }
-      bub.classList.toggle('sw4', Math.abs(off) > 8);
-      bub.classList.toggle('arm4', Math.abs(off) > 38);
-    }
-    function end() {
-      if (!drag) return;
-      drag = false;
-      if (lp) { clearTimeout(lp); lp = null; }
-      bub.style.transition = 'transform .18s ease';
-      var armed = Math.abs(dx) > 38 && Math.abs(dx) > Math.abs(dy);
-      bub.style.transform = '';
-      bub.classList.remove('sw4'); bub.classList.remove('arm4');
-      if (armed) d4setReply(m);
-    }
-    /* mobile: touch (sab se reliable) */
-    bub.addEventListener('touchstart', function (e) {
-      var t = e.touches && e.touches[0]; if (!t) return;
-      usedTouch = true;
-      var now = Date.now();
-      if (now - lastTap < 300) { lastTap = 0; if (lp) { clearTimeout(lp); lp = null; } drag = false; d4setReply(m); return; }
-      lastTap = now;
-      start(t.clientX, t.clientY);
+      }, 480);
     }, { passive: true });
-    bub.addEventListener('touchmove', function (e) {
-      var t = e.touches && e.touches[0]; if (!t) return;
-      move(t.clientX, t.clientY, e);
+    el.addEventListener('touchmove', function (e) {
+      if (e.touches.length > 1) return;
+      var t = e.touches[0]; dx = t.clientX - sx; var dy = t.clientY - sy;
+      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) clearTimeout(lp);
+      if (!swiping && dx > 12 && Math.abs(dx) > Math.abs(dy) * 1.5) swiping = true;
+      if (swiping) {
+        e.preventDefault();
+        el.style.transition = 'none';
+        el.style.transform = 'translateX(' + Math.min(dx, 110) + 'px)';
+      }
     }, { passive: false });
-    bub.addEventListener('touchend', function () { end(); });
-    bub.addEventListener('touchcancel', function () {
-      drag = false; if (lp) { clearTimeout(lp); lp = null; }
-      bub.style.transform = ''; bub.classList.remove('sw4'); bub.classList.remove('arm4');
+    el.addEventListener('touchend', function () {
+      el.style.transition = 'transform 0.2s ease';
+      el.style.transform = '';
+      clearTimeout(lp);
+      if (swiping && dx > 60 && !lpFired) d4setReply(m);
+      if (lpFired) setTimeout(function () { lpFired = false; }, 400);
+      swiping = false; dx = 0;
     });
-    /* desktop: mouse */
-    bub.addEventListener('mousedown', function (e) { if (usedTouch) return; start(e.clientX, e.clientY); });
-    bub.addEventListener('mousemove', function (e) { if (usedTouch) return; move(e.clientX, e.clientY, e); });
-    bub.addEventListener('mouseup', function () { if (usedTouch) return; end(); });
-    bub.addEventListener('mouseleave', function () { if (usedTouch) return; end(); });
+    el.addEventListener('touchcancel', function () {
+      el.style.transition = 'transform 0.2s ease'; el.style.transform = '';
+      clearTimeout(lp); swiping = false; dx = 0;
+    });
+    var msx = 0, mdx = 0, mdrag = false;
+    el.addEventListener('mousedown', function (e) { msx = e.clientX; mdrag = true; });
+    el.addEventListener('mousemove', function (e) {
+      if (!mdrag) return; mdx = e.clientX - msx;
+      if (mdx > 40) { el.style.transition = 'none'; el.style.transform = 'translateX(' + Math.min(mdx, 110) + 'px)'; }
+    });
+    el.addEventListener('mouseup', function () {
+      if (!mdrag) return; mdrag = false;
+      el.style.transition = 'transform 0.2s ease'; el.style.transform = '';
+      if (mdx > 60) d4setReply(m);
+      mdx = 0;
+    });
   }
   function d4view(src) {
     var box = $('dm-v4img'); if (!box) return;
@@ -3827,10 +3829,9 @@ function renderMembers() {
     if ($('dm-v4')) $('dm-v4').classList.add('on');
   }
   function d4loadPhoto(bub, m, code) {
-    var holder = bub.querySelector('.ph4'); if (!holder) return;
+    var holder = bub.querySelector('.chat-photo'); if (!holder) return;
     var src = (m.mid && dmLocalPhoto[m.mid]) || null;
     function show(url) {
-      holder.classList.remove('load4');
       holder.innerHTML = '';
       var im = document.createElement('img'); im.src = url; im.alt = 'photo';
       im.onclick = function (ev) { ev.stopPropagation(); d4view(url); };
@@ -3850,34 +3851,28 @@ function renderMembers() {
   }
   function d4bubbleEl(m) {
     var t = m.t || 'text';
-    var b = document.createElement('div'); b.className = 'bub4';
+    var b = document.createElement('div'); b.className = 'bubble';
     if (m.rq && m.rq.x) {
-      var q = document.createElement('div'); q.className = 'q4';
-      var qb = document.createElement('b'); qb.textContent = m.rq.n || '';
-      var qs = document.createElement('s'); qs.textContent = m.rq.x;
-      q.appendChild(qb); q.appendChild(qs); b.appendChild(q);
+      var q = document.createElement('div'); q.className = 'quote';
+      var qn = document.createElement('div'); qn.className = 'q-name'; qn.textContent = m.rq.n || '';
+      var qt = document.createElement('div'); qt.className = 'q-text'; qt.textContent = m.rq.x;
+      q.appendChild(qn); q.appendChild(qt); b.appendChild(q);
     }
     if (t === 'photo') {
-      b.style.padding = '4px';
-      var h = document.createElement('div'); h.className = 'ph4 load4'; h.textContent = '🔒 Photo';
-      b.appendChild(h);
+      var h = document.createElement('div'); h.className = 'chat-photo';
+      var ld = document.createElement('div'); ld.className = 'ph-load'; ld.textContent = '🔒 Photo aa rahi hai...';
+      h.appendChild(ld); b.appendChild(h);
     } else if (t === 'gif') {
-      b.style.padding = '4px';
-      var im = document.createElement('img'); im.className = 'g4'; im.src = m.x; im.alt = 'GIF'; im.loading = 'lazy';
+      var im = document.createElement('img'); im.className = 'chat-gif'; im.src = m.x; im.alt = 'GIF'; im.loading = 'lazy';
       im.onclick = function (ev) { ev.stopPropagation(); d4view(m.x); };
       b.appendChild(im);
     } else if (t === 'voice') {
-      b.classList.add('v4'); b.innerHTML = voiceInner(m);
+      var vh = document.createElement('div'); vh.className = 'chat-voice'; vh.innerHTML = voiceInner(m); b.appendChild(vh);
     } else if (t === 'sys') {
-      b.classList.add('sys'); b.appendChild(document.createTextNode(m.x || ''));
+      b.className = 'bubble sys'; b.appendChild(document.createTextNode(m.x || ''));
     } else {
       b.appendChild(document.createTextNode(m.x || ''));
     }
-    var tm = document.createElement('div'); tm.className = 't4';
-    tm.textContent = timeShort(m.ts) + (m.d === 'out' ? ' ✓✓' : '');
-    b.appendChild(tm);
-    var hint = document.createElement('span'); hint.className = 'swh4'; hint.textContent = '\u21A9';
-    b.appendChild(hint);
     return b;
   }
   function renderThread() {
@@ -3897,19 +3892,27 @@ function renderMembers() {
       }
       var type = m.t || 'text';
       if (type === 'sys') {
-        var s = document.createElement('div'); s.className = 'd4sys'; s.textContent = m.x || ''; t.appendChild(s); return;
+        var s1 = document.createElement('div'); s1.className = 'd4sys'; s1.textContent = m.x || ''; t.appendChild(s1); return;
       }
       var own = m.d === 'out';
-      var row = document.createElement('div'); row.className = 'dm-r4' + (own ? ' own' : '');
+      var nm = own ? 'You' : peerName(curChat);
+      var avObj = own ? (typeof myAvatar !== 'undefined' ? myAvatar : { type: 'letter' }) : peerAvatar(curChat);
+      var avEl;
+      try { avEl = avatarEl(avObj, own ? 'You' : nm, own ? '#ec4899' : peerColor(curChat), 34); }
+      catch (e) { avEl = document.createElement('div'); avEl.className = 'avatar'; var sp1 = document.createElement('span'); sp1.textContent = (nm[0] || '?'); avEl.appendChild(sp1); }
+      var row = document.createElement('div');
+      row.className = 'msg-row ' + (own ? 'own' : 'other');
       if (m.mid) row.dataset.mid = m.mid;
-      var dp = document.createElement('div'); dp.className = 'dp4' + (own ? ' me' : '');
-      var nmSrc = own ? myLabel() : peerName(curChat);
-      dp.textContent = String(nmSrc || '?').replace(/[^A-Za-z0-9]/g, '').charAt(0).toUpperCase() || '?';
-      var col = document.createElement('div'); col.className = 'c4';
-      var nm = document.createElement('div'); nm.className = 'nm4'; nm.textContent = own ? 'You' : peerName(curChat);
+      var wrap = document.createElement('div');
+      wrap.className = 'msg ' + (own ? 'own' : 'other');
+      var sd = document.createElement('div'); sd.className = 'sender';
+      sd.textContent = own ? 'You' : nm;
+      sd.style.color = own ? '#f9a8d4' : peerColor(curChat);
       var bub = d4bubbleEl(m);
-      col.appendChild(nm); col.appendChild(bub);
-      if (own) { row.appendChild(col); row.appendChild(dp); } else { row.appendChild(dp); row.appendChild(col); }
+      var tm = document.createElement('div'); tm.className = 'time';
+      tm.textContent = timeShort(m.ts) + (own ? ' ✓✓' : '');
+      wrap.appendChild(sd); wrap.appendChild(bub); wrap.appendChild(tm);
+      if (own) { row.appendChild(wrap); row.appendChild(avEl); } else { row.appendChild(avEl); row.appendChild(wrap); }
       t.appendChild(row);
       if (type === 'voice') { try { bindVoice(bub, m, curChat); } catch (e) {} }
       if (type === 'photo') { try { d4loadPhoto(bub, m, curChat); } catch (e) {} }
@@ -3936,12 +3939,12 @@ function renderMembers() {
   function fmtDur(s) { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
   function voiceInner(m) {
     var bars = '';
-    for (var i = 0; i < 20; i++) bars += '<i style="height:' + (5 + ((i * 7) % 15)) + 'px"></i>';
-    return '<button class="v4b" type="button">\u25B6</button><div class="v4w">' + bars + '</div><div class="v4d">' + fmtDur(m.dur) + '</div>';
+    for (var i = 0; i < 22; i++) bars += '<i style="height:' + (6 + ((i * 7) % 15)) + 'px"></i>';
+    return '<div class="cv"><button class="cv-play" type="button">\u25B6</button><div class="cv-wave">' + bars + '</div><div class="cv-dur">' + fmtDur(m.dur) + '</div></div>';
   }
   function bindVoice(el, m, code) {
-    var btn = el.querySelector('.v4b'); if (!btn) return;
-    var wave = el.querySelectorAll('.v4w i'), durEl = el.querySelector('.v4d'), audio = null;
+    var btn = el.querySelector('.cv-play'); if (!btn) return;
+    var wave = el.querySelectorAll('.cv-wave i'), durEl = el.querySelector('.cv-dur'), audio = null;
     btn.onclick = async function (ev) {
       ev.stopPropagation();
       if (audio && !audio.paused) { audio.pause(); btn.textContent = '\u25B6'; return; }
