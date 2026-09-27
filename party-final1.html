@@ -780,7 +780,11 @@ main { gap: 11px; }
 .dm-pop4.on { display: flex; }
 .dm-pop4 button { background: none; border: 0; color: #fff; text-align: left; padding: 12px 14px; font-size: 12.5px; cursor: pointer; }
 .dm-pop4 button + button { border-top: 1px solid rgba(255,255,255,.08); }
-#dm-view-chat { position: relative; }
+/* P42: pehle `relative` tha (ID selector class se jeet jata hai). Is se chat view
+   flex flow me aa jati thi -> bar ke neeche 57px khali jagah banti thi aur thread
+   ki height 57px kam ho jati thi. `.dm-view` ka asli design absolute hai, aur
+   absolute bhi apne andar ke popups (⋮ menu) ko theek anchor karta hai. */
+#dm-view-chat { position: absolute; }
 
 
 /* ---------- JOIN SCREEN pe Messages button (room ke bagair) ---------- */
@@ -878,6 +882,19 @@ main { gap: 11px; }
 .dm-inbar { flex: 0 0 auto; }
 .dm-bar { flex: 0 0 auto; }
 
+/* ===== P42: "purane messages gaib / upar scroll nahi hoti" ka asli ilaaj =====
+   Masla: #dm-thread par `justify-content: flex-end` laga hua tha (messages neeche
+   se shuru hon). Jab content container se bara ho jata hai to flex-end usay UPAR ki
+   taraf bahar dhakel deta hai — scrollHeight = clientHeight ban jata hai, upar wale
+   messages sikon (bars) me kat jate hain aur upar scroll bilkul kaam nahi karti.
+   Ilaaj: flex-end hata do, neeche-anchoring ke liye pehla (khali) flex item
+   `margin-top: auto` ke sath — thore messages ho to pehle jaisa neeche hi dikhega,
+   zyada ho to poori tarah scroll ho jayega. */
+#dm-thread { justify-content: flex-start; }
+#dm-thread::before { content: ''; flex: 0 0 0; margin-top: auto; }
+#dm-thread > *, #chat-messages > * { flex-shrink: 0; }
+#dm-thread, #chat-messages { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+
 /* --- inbox: last message ab mini party-bubble me --- */
 .in4 { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
 .in4 b { font-size: 13.5px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -904,6 +921,7 @@ main { gap: 11px; }
 </head>
 <body>
 <!-- YP-P41 -->
+<!-- YP-P42 -->
 
 <!-- ===== JOIN SCREEN ===== -->
 <div id="join-screen">
@@ -3896,6 +3914,7 @@ function renderMembers() {
         v.style.paddingTop = bh + 'px';
       });
       var th = $('dm-thread'); if (th) th.style.minHeight = '0';
+      try { sh.scrollLeft = 0; sh.scrollTop = 0; } catch (e) {}   /* P42: side-shift saaf */
     } catch (e) {}
   }
   try {
@@ -3979,6 +3998,11 @@ function renderMembers() {
       e.classList.remove('on'); e.classList.remove('first');
     });
     var t = $(v); if (t) t.classList.add('on');
+    /* P42: pichhle view ka jhuka hua scroll yaad na rahe (warna content khisak jata hai) */
+    ['dm-view-inbox', 'dm-view-add', 'dm-view-chat'].forEach(function (k) {
+      var e = $(k); if (!e) return; e.scrollLeft = 0; e.scrollTop = 0;
+    });
+    var sh0 = $('dm-sheet'); if (sh0) { sh0.scrollLeft = 0; sh0.scrollTop = 0; }
     var back = $('dm-bar-back');
     if (back) back.style.display = (v === 'dm-view-inbox') ? 'none' : 'grid';
     var addb = $('dm-add-btn');
@@ -4231,9 +4255,13 @@ function renderMembers() {
     }
     return b;
   }
+  var d4JumpBottom = false;                /* P42: chat kholte waqt ek dafa niche jao */
   function renderThread() {
     var t = $('dm-thread'); if (!t || !curChat) return;
     var arr = S.chats[curChat] || [];
+    /* P42: agar user purane messages padh raha hai to usay niche na kheencho */
+    var keepTop = t.scrollTop;
+    var wasBottom = (t.scrollHeight - t.scrollTop - t.clientHeight) < 80;
     t.innerHTML = '';
     if (!arr.length) {
       t.innerHTML = '<div class="dm-empty"><u>👋</u>' + esc(peerName(curChat)) + ' ko salam bhejo!<br><small>Message phone pe lock ho kar jayega (E2E)</small></div>';
@@ -4274,7 +4302,8 @@ function renderMembers() {
       if (type === 'photo') { try { d4loadPhoto(bub, m, curChat); } catch (e) {} }
       d4bind(row, m);
     });
-    t.scrollTop = t.scrollHeight;
+    if (d4JumpBottom || wasBottom) { t.scrollTop = t.scrollHeight; d4JumpBottom = false; }
+    else { t.scrollTop = Math.min(keepTop, Math.max(0, t.scrollHeight - t.clientHeight)); }
   }
 
   function renderAll() {
@@ -4354,8 +4383,11 @@ function renderMembers() {
     curChat = normCode(code);
     if (!S.friends[curChat]) S.friends[curChat] = { name: curChat, color: '#8b72ff', avatar: { type: 'letter' }, ts: 0, un: 0 };
     markRead(curChat);
+    d4JumpBottom = true;                    /* P42: chat khuli to sab se neeche se shuru */
     renderThread(); showView('dm-view-chat'); setChatBar(); renderAll();
-    var inp = $('dm-input'); if (inp) try { inp.focus(); } catch (e) {}
+    /* P42: focus({preventScroll}) — warna browser sheet ko hi side me scroll kar deta tha
+       aur poori chat kuch pixels bayen khisak jati thi (messages ke kinare kat jate the). */
+    var inp = $('dm-input'); if (inp) try { inp.focus({ preventScroll: true }); } catch (e) { try { inp.focus(); } catch (e2) {} }
   }
 
   /* ---------- photo / gif / menu / reply ---------- */
