@@ -911,6 +911,10 @@ main { gap: 11px; }
   max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* v30: chhota version chip (sirf app me dikhta hai) — tap = hata do */
+#appmode-note { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 9999;
+  padding: 7px 14px; border-radius: 20px; font-size: 11.5px; font-weight: 800; letter-spacing: .2px;
+  background: rgba(10,8,25,.86); border: 1px solid rgba(84,232,255,.6); color: #bff3ff;
+  box-shadow: 0 8px 22px rgba(0,0,0,.45); transition: opacity .5s; }
 #appver-chip { position: fixed; left: 8px; bottom: 8px; z-index: 9998; display: none;
   padding: 4px 9px; border-radius: 20px; font-size: 9.5px; font-weight: 800; letter-spacing: .3px;
   background: rgba(10,8,25,.72); border: 1px solid rgba(255,255,255,.22); color: #cfc8ff; opacity: .78; }
@@ -1089,6 +1093,7 @@ main { gap: 11px; }
   btn.textContent = '⛶ Native Player';
   btn.title = 'Native player me kholo — brightness/volume + background';
   document.body.appendChild(btn);        /* v30: body pe (fixed) — wrap ke andar gayab ho jata tha */
+  btn.style.display = '';              /* v31: app me hamesha nazar aaye */
   const titleNow = () => { const t = document.getElementById('mini-title'); return (t && t.textContent) || 'Video'; };
   /* v29: button ab zyada dair tak dikhta hai (pehle `hidden` class ki wajah se gayab ho jata tha) */
   const nativeUrl = () => (mp4.currentSrc || mp4.src || '');
@@ -1098,7 +1103,10 @@ main { gap: 11px; }
   let autoFor = '';
   const open = () => {
     const url = nativeUrl();
-    if (!url) return;
+    if (!url || !/^(https?|blob|file):/i.test(url)) {
+      try { if (typeof toast === 'function') toast('⚠️ Pehle koi direct video link lagao (mp4 / m3u8)'); } catch (e) {}
+      return;
+    }
     /* v30: page ka player chup karo taake party sync na toote (native alag screen hai) */
     try { if (typeof suppressMP4 !== 'undefined') suppressMP4 = true; } catch (e) {}
     try { mp4.pause(); } catch (e) {}
@@ -1126,8 +1134,13 @@ main { gap: 11px; }
   try {
     if (!window.YaarNative) return;
     var av = 0; try { av = window.YaarNative.appVersion ? window.YaarNative.appVersion() : 0; } catch (e) {}
+    var n = document.createElement('div'); n.id = 'appmode-note';
+    n.textContent = '✅ App mode — Native player ready (v' + (av || '?') + ')';
+    document.body.appendChild(n);
+    setTimeout(function () { n.style.opacity = '0'; }, 4200);
+    setTimeout(function () { try { n.remove(); } catch (e) {} }, 5200);
     var c = document.createElement('div'); c.id = 'appver-chip';
-    c.textContent = 'App v' + (av || '?') + ' \u00b7 Page P30';
+    c.textContent = 'App v' + (av || '?') + ' \u00b7 Page P31';
     c.title = 'App aur page ka version';
     c.style.display = 'block';
     c.onclick = function () { c.style.display = 'none'; };
