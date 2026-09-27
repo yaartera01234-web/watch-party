@@ -980,9 +980,13 @@ main { gap: 11px; }
 #dm-sheet.dm-chat .dm-bar .add2 { background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.14); color: #fff; }
 #dm-sheet.dm-chat .dm-e2e { background: rgba(124,58,237,.26); border-color: rgba(167,139,250,.6); color: #ddd0ff; }
 /* input bar: Instagram wali ek gol pill + gol send button */
-#dm-view-chat .dm-inbar { padding: 9px 10px; gap: 8px; border-top: 1px solid rgba(255,255,255,.12); background: rgba(0,0,0,.35); }
-.ig4pill { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 8px 0 8px;
+#dm-view-chat .dm-inbar { padding: 9px 10px; gap: 8px; border-top: 1px solid rgba(255,255,255,.12); background: rgba(0,0,0,.35);
+  align-items: center; }
+/* P46: pill ki basis 0 — warna chhoti screen/bare font pe pill poori width le kar
+   send button ko agli line pe dhakel deta tha (button neeche gir jata tha). */
+.ig4pill { flex: 1 1 0%; min-width: 0; display: flex; align-items: center; gap: 4px; height: 40px; padding: 0 8px 0 8px;
   border-radius: 21px; background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.16); }
+#dm-view-chat #dm-rec-bar { flex: 1 1 100%; order: -2; }
 #dm-view-chat .dm-inbar input { flex: 1 1 auto; min-width: 0; height: 34px; border: 0 !important; background: transparent !important;
   color: #fff; font-size: 13px; padding: 0 4px; }
 #dm-view-chat .dm-inbar input::placeholder { color: rgba(255,255,255,.55); }
@@ -990,7 +994,7 @@ main { gap: 11px; }
   width: auto; min-width: 26px; height: 28px; padding: 0 6px; border: 0 !important; background: transparent !important;
   color: #fff; font-size: 15px; border-radius: 14px; flex: 0 0 auto; }
 #dm-view-chat #dm-gif-btn { font-size: 11px; font-weight: 900; letter-spacing: .4px; }
-#dm-view-chat #dm-send-btn { width: 40px; height: 40px; border-radius: 50%; border: 0; flex: 0 0 auto; font-size: 16px;
+#dm-view-chat #dm-send-btn { width: 40px; height: 40px; border-radius: 50%; border: 0; flex: 0 0 40px; font-size: 16px;
   background: linear-gradient(135deg, #a855f7, #22d3ee); color: #0a0616; }
 /* reply preview (input ke upar) bhi isi rang me */
 #dm-view-chat #dm-rep4 { background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.14); }
