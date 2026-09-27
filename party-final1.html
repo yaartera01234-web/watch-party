@@ -1093,12 +1093,12 @@ main { gap: 11px; }
   btn.textContent = '⛶ Native Player';
   btn.title = 'Native player me kholo — brightness/volume + background';
   document.body.appendChild(btn);        /* v30: body pe (fixed) — wrap ke andar gayab ho jata tha */
-  btn.style.display = '';              /* v31: app me hamesha nazar aaye */
+  btn.style.display = 'block';      /* v32: CSS ke display:none ko override karo */
   const titleNow = () => { const t = document.getElementById('mini-title'); return (t && t.textContent) || 'Video'; };
   /* v29: button ab zyada dair tak dikhta hai (pehle `hidden` class ki wajah se gayab ho jata tha) */
   const nativeUrl = () => (mp4.currentSrc || mp4.src || '');
   const canNative = () => !!nativeUrl() && /^(https?|blob|file):/i.test(nativeUrl());
-  const show = () => { if (canNative()) btn.style.display = ''; };
+  const show = () => { if (canNative()) btn.style.display = 'block'; };
   const hide = () => { btn.style.display = 'none'; };
   let autoFor = '';
   const open = () => {
@@ -1140,7 +1140,7 @@ main { gap: 11px; }
     setTimeout(function () { n.style.opacity = '0'; }, 4200);
     setTimeout(function () { try { n.remove(); } catch (e) {} }, 5200);
     var c = document.createElement('div'); c.id = 'appver-chip';
-    c.textContent = 'App v' + (av || '?') + ' \u00b7 Page P31';
+    c.textContent = 'App v' + (av || '?') + ' \u00b7 Page P32';
     c.title = 'App aur page ka version';
     c.style.display = 'block';
     c.onclick = function () { c.style.display = 'none'; };
