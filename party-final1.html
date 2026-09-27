@@ -1081,8 +1081,8 @@ main { gap: 11px; }
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
 /* ===== v39: heartbeat — app saamne hai ya nahi (chhupi service ise dekhti hai) ===== */
+function isBg() { try { return /(?:^|[?&])bg=1/.test(location.search); } catch (e) { return false; } }
 (function () {
-  function isBg() { try { return /(?:^|[?&])bg=1/.test(location.search); } catch (e) { return false; } }
   function beat() { try { if (!document.hidden && !isBg()) localStorage.setItem('ypVis', String(Date.now())); } catch (e) {} }
   beat();
   try { setInterval(beat, 4000); } catch (e) {}
@@ -1319,6 +1319,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 function publishPresence() {
+  if (isBg()) return;                    /* v39: chhupi bg service khud ko online dikhaye hi na */
   pub(ROOM + '/members/' + myId, { name: myName, color: myColor, avatar: myAvatar, ts: Date.now() }, true);
 }
 setInterval(() => { if (joined && mqttUp) publishPresence(); }, 30000);
@@ -3746,10 +3747,18 @@ function renderMembers() {
   }
   function pubPresence() {
     if (!connected()) return;
-    try { mc().publish(myPresenceTopic(), JSON.stringify({ ts: nowMs(), n: myLabel() }), { qos: 1, retain: true }); } catch (e) {}
+    if (isBg()) return;                  /* v39: chhupa bg-WebView "online" publish na kare (warna banda hamesha online dikhta) */
+    try {
+      var vis = !document.hidden;                                   /* app saamne hai? */
+      var tsv = vis ? nowMs() : (nowMs() - 100000);                 /* peeche gaya -> ~50s me Offline dikhe */
+      mc().publish(myPresenceTopic(), JSON.stringify({ ts: tsv, n: myLabel(), fg: vis ? 1 : 0 }), { qos: 1, retain: true });
+    } catch (e) {}
   }
   function onConnect(c) { if (c) clientRef = c; subscribed = false; subscribeDm(); pubPresence(); }
   setInterval(function () { if (connected()) { if (!subscribed) subscribeDm(); pubPresence(); } }, 45000);
+  /* v39: app saamne aayi / peeche gayi -> foran online/offline signal (45s intezar nahi) */
+  try { document.addEventListener('visibilitychange', function () { if (connected()) pubPresence(); }); } catch (e) {}
+  try { window.addEventListener('pageshow', function () { if (connected()) pubPresence(); }); } catch (e) {}
 
   /* v28: background mode — native service ko batao ke hum zinda hain */
   if (BGMODE) {
