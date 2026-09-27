@@ -709,6 +709,87 @@ main { gap: 11px; }
   backdrop-filter: blur(6px); }
 #native-btn:active { transform: scale(.96); }
 
+
+/* ================= DM CHAT v2 (sample approved) ================= */
+#dm-thread { background-image: radial-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+  radial-gradient(rgba(255,94,188,.05) 1px, transparent 1px);
+  background-size: 22px 22px, 44px 44px; background-position: 0 0, 11px 11px;
+  justify-content: flex-end; }
+.d4day { align-self: center; font-size: 10.5px; font-weight: 800; color: #cfc6ff; letter-spacing: .3px;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); padding: 4px 12px; border-radius: 20px; margin: 3px 0; }
+.d4sys { align-self: center; font-size: 11px; color: #cdefff; background: rgba(84,232,255,.10);
+  border: 1px solid rgba(84,232,255,.28); padding: 6px 12px; border-radius: 14px; text-align: center; max-width: 88%; margin: 3px 0; }
+.dm-r4 { display: flex; gap: 8px; align-items: flex-end; max-width: 100%; }
+.dm-r4.own { flex-direction: row-reverse; }
+.dm-r4 .c4 { display: flex; flex-direction: column; gap: 3px; max-width: 79%; }
+.dm-r4.own .c4 { align-items: flex-end; }
+.nm4 { font-size: 10.5px; font-weight: 800; letter-spacing: .2px; padding-left: 3px; }
+.dm-r4:not(.own) .nm4 { color: #54e8ff; }
+.dm-r4.own .nm4 { color: #ffa6d8; padding-right: 3px; text-align: right; }
+.dp4 { width: 29px; height: 29px; border-radius: 50%; display: grid; place-items: center; font-weight: 900;
+  font-size: 12px; color: #160b22; flex: 0 0 auto; background: linear-gradient(135deg, #54e8ff, #8b72ff); }
+.dp4.me { background: linear-gradient(135deg, #ff5ebc, #a855f7); }
+.dm-r4 .bub4 { touch-action: pan-y; user-select: none; transition: transform .18s ease;
+  -webkit-user-select: none; }
+.dm-r4 .bub4.sw4 { box-shadow: 0 0 0 2px rgba(84,232,255,.55), 0 6px 18px rgba(0,0,0,.4); }
+.dm-r4 .bub4.arm4 { box-shadow: 0 0 0 2px #31d158, 0 6px 18px rgba(0,0,0,.4); }
+.swh4 { position: absolute; left: -30px; top: 50%; transform: translateY(-50%) scale(.7); opacity: 0;
+  width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px;
+  background: rgba(84,232,255,.18); border: 1px solid rgba(84,232,255,.45); transition: .15s; }
+.dm-r4.own .swh4 { right: -30px; left: auto; }
+.bub4.sw4 .swh4 { opacity: 1; transform: translateY(-50%) scale(1); }
+.q4 { margin: -3px -4px 6px; padding: 5px 9px; border-left: 3px solid #54e8ff; border-radius: 8px;
+  background: rgba(0,0,0,.22); font-size: 11.5px; line-height: 1.35; }
+.dm-r4.own .bub4 .q4 { border-left-color: #150c26; background: rgba(20,8,33,.16); }
+.q4 b { display: block; font-size: 10.5px; opacity: .9; }
+.q4 s { text-decoration: none; opacity: .85; display: block; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; max-width: 170px; }
+.bub4 .t4 { font-size: 9.5px; opacity: .6; text-align: right; margin-top: 3px; color: #d8d4f0; }
+.dm-r4.own .bub4 .t4 { color: #2b1030; opacity: .72; }
+.ph4 { width: 180px; height: 126px; border-radius: 12px; display: grid; place-items: center; font-size: 11px;
+  color: #ddd8f5; background: linear-gradient(135deg, #2b2a52, #4b2a63 60%, #6b2f5c);
+  border: 1px solid rgba(255,255,255,.12); overflow: hidden; }
+.ph4 img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.g4 { width: 180px; height: 118px; border-radius: 11px; display: block; object-fit: cover; background: #20182f; }
+.dm-rep4 { display: none; align-items: center; gap: 9px; padding: 8px 11px; margin: 0 11px 6px; border-radius: 12px;
+  background: rgba(84,232,255,.10); border: 1px solid rgba(84,232,255,.35); }
+.dm-rep4.on { display: flex; }
+.dm-rep4 .l { flex: 1; min-width: 0; }
+.dm-rep4 b { display: block; font-size: 11px; color: #54e8ff; }
+.dm-rep4 s { display: block; font-size: 11.5px; color: #cfd6ff; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dm-rep4 button { width: 26px; height: 26px; border-radius: 9px; border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.08); color: #fff; cursor: pointer; }
+#dm-photo-btn, #dm-gif-btn { width: 38px; border-radius: 11px; border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.07); color: #fff; font-size: 15px; cursor: pointer; flex: 0 0 auto; }
+#dm-gif-btn { font-size: 11px; font-weight: 900; letter-spacing: .4px; }
+.dm-g4p { display: none; position: absolute; left: 0; right: 0; bottom: 0; z-index: 26; height: 58%;
+  background: rgba(12,8,24,.985); border-top: 1px solid rgba(255,255,255,.14); flex-direction: column; }
+.dm-g4p.on { display: flex; }
+.g4h { display: flex; gap: 8px; padding: 9px 10px; align-items: center; border-bottom: 1px solid rgba(255,255,255,.09); }
+.g4h input { flex: 1; height: 34px; border-radius: 11px; padding: 0 12px; font-size: 12.5px; color: #fff; outline: none;
+  border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.07); min-width: 0; }
+.g4h button { width: 30px; height: 30px; border-radius: 10px; border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.08); color: #fff; cursor: pointer; }
+.g4g { flex: 1; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; padding: 8px; align-content: start; }
+.dm-v4 { display: none; position: absolute; inset: 0; z-index: 40; background: rgba(0,0,0,.94); place-items: center; }
+.dm-v4.on { display: grid; }
+.dm-v4 .big4 { width: 88%; height: 56%; display: grid; place-items: center; }
+.dm-v4 button { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.1); color: #fff; font-size: 15px; cursor: pointer; }
+.dm-acts4 { display: none; position: absolute; left: 50%; transform: translateX(-50%); bottom: 68px; z-index: 31;
+  gap: 6px; padding: 6px; border-radius: 12px; background: rgba(16,11,32,.97);
+  border: 1px solid rgba(255,255,255,.14); box-shadow: 0 14px 34px rgba(0,0,0,.6); }
+.dm-acts4.on { display: flex; }
+.dm-acts4 button { border: 0; border-radius: 9px; padding: 8px 11px; font-size: 12px; font-weight: 700; cursor: pointer;
+  background: rgba(255,255,255,.09); color: #fff; }
+.dm-pop4 { display: none; position: absolute; top: 46px; right: 12px; z-index: 30; flex-direction: column;
+  min-width: 196px; background: rgba(16,11,32,.97); border: 1px solid rgba(255,255,255,.14);
+  border-radius: 13px; overflow: hidden; box-shadow: 0 18px 44px rgba(0,0,0,.6); }
+.dm-pop4.on { display: flex; }
+.dm-pop4 button { background: none; border: 0; color: #fff; text-align: left; padding: 12px 14px; font-size: 12.5px; cursor: pointer; }
+.dm-pop4 button + button { border-top: 1px solid rgba(255,255,255,.08); }
+#dm-view-chat { position: relative; }
+
 </style>
 </head>
 <body>
@@ -3116,7 +3197,12 @@ function renderMembers() {
     <div><b id="dm-bar-title">💬 Messages</b><s id="dm-bar-sub">Room ke bagair — seedha dost se baat</s></div>
     <div class="dm-e2e" id="dm-bar-e2e">🔒 E2E</div>
     <div class="add2" id="dm-add-btn">＋</div>
+    <div class="add2" id="dm-menu-btn">⋮</div>
     <div class="add2" id="dm-close-btn" style="background:rgba(255,255,255,.12);color:#fff">✕</div>
+  </div>
+  <div class="dm-pop4" id="dm-pop4">
+    <button id="dm-clear-chat" type="button">🧹 Ye chat clear karo</button>
+    <button id="dm-e2e-info" type="button">🔒 E2E — sirf tum aur wahi</button>
   </div>
 
   <!-- INBOX -->
@@ -3161,13 +3247,37 @@ function renderMembers() {
   <!-- CHAT -->
   <div class="dm-view" id="dm-view-chat">
     <div class="dm-thread" id="dm-thread"></div>
-    <div class="dm-wa" id="dm-wa-btn">📲 WhatsApp pe bhi bhejo</div>
+
+    <div class="dm-g4p" id="dm-g4p">
+      <div class="g4h">
+        <input id="dm-g4q" placeholder="GIF search karo... (khali = trending)" autocomplete="off" maxlength="60">
+        <button id="dm-g4x" type="button">✕</button>
+      </div>
+      <div class="g4g" id="dm-g4g"></div>
+    </div>
+
+    <div class="dm-v4" id="dm-v4"><div class="big4" id="dm-v4img"></div><button id="dm-v4x" type="button">✕</button></div>
+
+    <div class="dm-acts4" id="dm-acts4">
+      <button data-a="reply" type="button">↩ Reply</button>
+      <button data-a="copy" type="button">📋 Copy</button>
+      <button data-a="del" type="button">🗑 Delete</button>
+    </div>
+
+    <div class="dm-rep4" id="dm-rep4">
+      <div class="l"><b id="dm-rep4n"></b><s id="dm-rep4t"></s></div>
+      <button id="dm-rep4x" type="button">✕</button>
+    </div>
+
     <div class="dm-inbar">
       <div id="dm-rec-bar" class="hidden"><span class="rdot"></span><b id="dm-rec-time">0:00 / 1:00</b><button id="dm-rec-cancel" type="button">✕</button><button id="dm-rec-send" type="button">➤</button></div>
+      <button id="dm-photo-btn" type="button" title="Photo bhejo">🖼️</button>
+      <button id="dm-gif-btn" type="button" title="GIF bhejo">GIF</button>
       <button id="dm-mic-btn" type="button" title="Voice message bhejo">🎤</button>
       <input id="dm-input" placeholder="Message likho..." maxlength="500" autocomplete="off">
       <button id="dm-send-btn">➤</button>
     </div>
+    <input id="dm-photo-file" type="file" accept="image/*" style="display:none">
   </div>
 </div>
 <div id="dm-toast"></div>
@@ -3311,7 +3421,7 @@ function renderMembers() {
     if (!connected()) { toast('📡 Tower se connect nahi — message nahi gaya'); return false; }
     var midv = mid();
     var e;
-    try { e = await encTo(peer, { mid: midv, ts: nowMs(), t: payload.t, x: payload.x, u: payload.u || '', dv: payload.dv || '', dur: payload.dur || 0 }); }
+    try { e = await encTo(peer, { mid: midv, ts: nowMs(), t: payload.t, x: payload.x, u: payload.u || '', dv: payload.dv || '', dur: payload.dur || 0, rq: payload.rq || null }); }
     catch (err) { toast('🔒 Lock nahi hua — dobara try karo'); return false; }
     var out = { c: S.code, n: myLabel(), k: (typeof myColor !== 'undefined' && myColor) ? myColor : S.color, ts: nowMs(), iv: e.iv, ct: e.ct };
     if (withAvatar && typeof myAvatar !== 'undefined') out.a = myAvatar;
@@ -3319,7 +3429,7 @@ function renderMembers() {
     try { mc().publish(topic, JSON.stringify(out), { qos: 1, retain: true }); }
     catch (err) { toast('📡 bheja nahi ja saka'); return false; }
     S.seen[midv] = 1;
-    appendMsg(peer, { d: 'out', t: payload.t, x: payload.x, mid: midv, ts: nowMs(), u: payload.u, dv: payload.dv, dur: payload.dur });
+    appendMsg(peer, { d: 'out', t: payload.t, x: payload.x, mid: midv, ts: nowMs(), u: payload.u, dv: payload.dv, dur: payload.dur, rq: payload.rq || null });
     save(); renderAll();
     return true;
   }
@@ -3363,7 +3473,7 @@ function renderMembers() {
           S.reqs.push({ code: peer, name: p.n || peer, color: p.k || '#8b72ff', avatar: p.a || { type: 'letter' },
                         ts: body.ts || nowMs(), preview: String(body.x || '').slice(0, 80),
                         x: body.x || '', t: body.t || 'text', mid: body.mid || msgId,
-                        u: body.u || '', dv: body.dv || '', dur: body.dur || 0 });
+                        u: body.u || '', dv: body.dv || '', dur: body.dur || 0, rq: body.rq || null });
           ping(p.n || peer, body.x || '');
         }
       } else {
@@ -3373,7 +3483,7 @@ function renderMembers() {
         S.friends[peer].name = p.n || S.friends[peer].name;
         if (p.k) S.friends[peer].color = p.k;
         if (p.a) S.friends[peer].avatar = p.a;
-        appendMsg(peer, { d: 'in', t: body.t, x: body.x, u: body.u || '', dv: body.dv || '', dur: body.dur || 0, mid: body.mid || msgId, ts: body.ts || p.ts || nowMs() });
+        appendMsg(peer, { d: 'in', t: body.t, x: body.x, u: body.u || '', dv: body.dv || '', dur: body.dur || 0, rq: body.rq || null, mid: body.mid || msgId, ts: body.ts || p.ts || nowMs() });
         if (curChat === peer && sheetOpen()) { markRead(peer); renderThread(); }
         else { S.friends[peer].un = (S.friends[peer].un || 0) + 1; ping(p.n || peer, body.x || ''); }
       }
@@ -3477,7 +3587,7 @@ function renderMembers() {
     S.reqs.splice(i, 1);
     S.friends[r.code] = { name: r.name || r.code, color: r.color || '#8b72ff', avatar: r.avatar || { type: 'letter' }, ts: nowMs(), un: 0 };
     /* request wala asli message chat mein daal do — kuch zaya na ho */
-    if (r.x) appendMsg(r.code, { d: 'in', t: r.t || 'text', x: r.x, u: r.u || '', dv: r.dv || '', dur: r.dur || 0, mid: r.mid || mid(), ts: r.ts || nowMs() });
+    if (r.x) appendMsg(r.code, { d: 'in', t: r.t || 'text', x: r.x, u: r.u || '', dv: r.dv || '', dur: r.dur || 0, rq: r.rq || null, mid: r.mid || mid(), ts: r.ts || nowMs() });
     /* peer ko batao ke accept ho gaya */
     sendMsg(r.code, { t: 'sys', x: '✅ ' + myLabel() + ' ne tumhari request accept kar li — ab baat kar sakte ho!' }, true);
     save(); subscribeDm(); renderAll();
@@ -3532,27 +3642,159 @@ function renderMembers() {
       w.appendChild(d);
     });
   }
+  /* ================= DM CHAT v2 (sample approved) ================= */
+  var dmReply = null, dmActMsg = null, dmActPeer = null;
+  var dmLocalPhoto = {};    /* mid -> dataURL / blobURL (foran dikhane ke liye) */
+
+  function d4day(ts) {
+    var d = new Date(ts || nowMs()), n = new Date();
+    if (d.toDateString() === n.toDateString()) return 'Aaj';
+    if (d.toDateString() === new Date(n.getTime() - 86400000).toDateString()) return 'Kal';
+    return d.getDate() + '/' + (d.getMonth() + 1) + '/' + String(d.getFullYear()).slice(2);
+  }
+  function d4prev(m) {
+    var t = m.t || 'text';
+    if (t === 'photo') return '🖼️ Photo';
+    if (t === 'gif') return 'GIF';
+    if (t === 'voice') return '🎤 Voice message';
+    return String(m.x || '');
+  }
+  function d4setReply(m) {
+    if (!curChat) return;
+    dmReply = { n: (m.d === 'out' ? 'You' : peerName(curChat)), x: d4prev(m).slice(0, 90) };
+    if ($('dm-rep4n')) $('dm-rep4n').textContent = dmReply.n;
+    if ($('dm-rep4t')) $('dm-rep4t').textContent = dmReply.x;
+    if ($('dm-rep4')) $('dm-rep4').classList.add('on');
+    var i = $('dm-input'); if (i) { try { i.focus(); } catch (e) {} }
+  }
+  function d4bind(row, m) {
+    var bub = row.querySelector('.bub4'); if (!bub) return;
+    var sx = 0, dx = 0, drag = false, lp = null;
+    bub.addEventListener('pointerdown', function (e) {
+      sx = e.clientX; dx = 0; drag = true;
+      try { bub.setPointerCapture(e.pointerId); } catch (err) {}
+      lp = setTimeout(function () { lp = null; drag = false; dmActMsg = m; dmActPeer = curChat; if ($('dm-acts4')) $('dm-acts4').classList.add('on'); }, 620);
+    });
+    bub.addEventListener('pointermove', function (e) {
+      if (!drag) return;
+      dx = e.clientX - sx;
+      if (Math.abs(dx) > 8 && lp) { clearTimeout(lp); lp = null; }
+      var off = Math.max(-24, Math.min(92, dx));
+      if (Math.abs(off) > 4) { bub.style.transition = 'none'; bub.style.transform = 'translateX(' + off + 'px)'; }
+      bub.classList.toggle('sw4', off > 8);
+      bub.classList.toggle('arm4', off > 52);
+    });
+    var end = function () {
+      if (!drag) return;
+      drag = false;
+      if (lp) { clearTimeout(lp); lp = null; }
+      bub.style.transition = 'transform .18s ease';
+      var armed = dx > 52;
+      bub.style.transform = '';
+      bub.classList.remove('sw4');
+      bub.classList.remove('arm4');
+      if (armed) d4setReply(m);
+    };
+    bub.addEventListener('pointerup', end);
+    bub.addEventListener('pointercancel', end);
+  }
+  function d4view(src) {
+    var box = $('dm-v4img'); if (!box) return;
+    box.innerHTML = '<img src="' + esc(src) + '" style="width:100%;height:100%;object-fit:contain;border-radius:16px">';
+    if ($('dm-v4')) $('dm-v4').classList.add('on');
+  }
+  function d4loadPhoto(bub, m, code) {
+    var holder = bub.querySelector('.ph4'); if (!holder) return;
+    var src = (m.mid && dmLocalPhoto[m.mid]) || null;
+    function show(url) {
+      holder.classList.remove('load4');
+      holder.innerHTML = '';
+      var im = document.createElement('img'); im.src = url; im.alt = 'photo';
+      im.onclick = function (ev) { ev.stopPropagation(); d4view(url); };
+      holder.appendChild(im);
+    }
+    if (src) { show(src); return; }
+    (async function () {
+      try {
+        var r = await fetch(m.u, { mode: 'cors', cache: 'force-cache' });
+        if (!r.ok) throw new Error('f');
+        var pt = await decBytes(code, await r.arrayBuffer(), m.dv);
+        var url = URL.createObjectURL(new Blob([pt], { type: 'image/jpeg' }));
+        if (m.mid) dmLocalPhoto[m.mid] = url;
+        show(url);
+      } catch (e) { holder.textContent = '🔒 Photo nahi khuli'; }
+    })();
+  }
+  function d4bubbleEl(m) {
+    var t = m.t || 'text';
+    var b = document.createElement('div'); b.className = 'bub4';
+    if (m.rq && m.rq.x) {
+      var q = document.createElement('div'); q.className = 'q4';
+      var qb = document.createElement('b'); qb.textContent = m.rq.n || '';
+      var qs = document.createElement('s'); qs.textContent = m.rq.x;
+      q.appendChild(qb); q.appendChild(qs); b.appendChild(q);
+    }
+    if (t === 'photo') {
+      b.style.padding = '4px';
+      var h = document.createElement('div'); h.className = 'ph4 load4'; h.textContent = '🔒 Photo';
+      b.appendChild(h);
+    } else if (t === 'gif') {
+      b.style.padding = '4px';
+      var im = document.createElement('img'); im.className = 'g4'; im.src = m.x; im.alt = 'GIF'; im.loading = 'lazy';
+      im.onclick = function (ev) { ev.stopPropagation(); d4view(m.x); };
+      b.appendChild(im);
+    } else if (t === 'voice') {
+      b.classList.add('v4'); b.innerHTML = voiceInner(m);
+    } else if (t === 'sys') {
+      b.classList.add('sys'); b.appendChild(document.createTextNode(m.x || ''));
+    } else {
+      b.appendChild(document.createTextNode(m.x || ''));
+    }
+    var tm = document.createElement('div'); tm.className = 't4';
+    tm.textContent = timeShort(m.ts) + (m.d === 'out' ? ' ✓✓' : '');
+    b.appendChild(tm);
+    var hint = document.createElement('span'); hint.className = 'swh4'; hint.textContent = '\u21A9';
+    b.appendChild(hint);
+    return b;
+  }
   function renderThread() {
     var t = $('dm-thread'); if (!t || !curChat) return;
     var arr = S.chats[curChat] || [];
     t.innerHTML = '';
     if (!arr.length) {
       t.innerHTML = '<div class="dm-empty"><u>👋</u>' + esc(peerName(curChat)) + ' ko salam bhejo!<br><small>Message phone pe lock ho kar jayega (E2E)</small></div>';
+      return;
     }
+    var lastDay = '';
     arr.forEach(function (m) {
-      var d = document.createElement('div'); d.className = 'dm-m' + (m.d === 'out' ? ' own' : '');
+      var day = d4day(m.ts);
+      if (day !== lastDay) {
+        lastDay = day;
+        var dch = document.createElement('div'); dch.className = 'd4day'; dch.textContent = day; t.appendChild(dch);
+      }
       var type = m.t || 'text';
-      var inner;
-      if (type === 'gif') inner = '<div class="bub4" style="padding:4px"><img src="' + esc(m.x) + '" alt="GIF" style="max-width:190px;border-radius:11px;display:block"></div>';
-      else if (type === 'voice') inner = '<div class="bub4 v4">' + voiceInner(m) + '</div>';
-      else if (type === 'sys') inner = '<div class="bub4 sys">' + esc(m.x) + '</div>';
-      else inner = '<div class="bub4">' + esc(m.x) + '</div>';
-      d.innerHTML = inner + '<div class="t4">' + timeShort(m.ts) + (m.d === 'out' ? ' ✓✓' : '') + '</div>';
-      t.appendChild(d);
-      if (type === 'voice') bindVoice(d, m, curChat);
+      if (type === 'sys') {
+        var s = document.createElement('div'); s.className = 'd4sys'; s.textContent = m.x || ''; t.appendChild(s); return;
+      }
+      var own = m.d === 'out';
+      var row = document.createElement('div'); row.className = 'dm-r4' + (own ? ' own' : '');
+      if (m.mid) row.dataset.mid = m.mid;
+      var dp = document.createElement('div'); dp.className = 'dp4' + (own ? ' me' : '');
+      var nmSrc = own ? myLabel() : peerName(curChat);
+      dp.textContent = String(nmSrc || '?').replace(/[^A-Za-z0-9]/g, '').charAt(0).toUpperCase() || '?';
+      var col = document.createElement('div'); col.className = 'c4';
+      var nm = document.createElement('div'); nm.className = 'nm4'; nm.textContent = own ? 'You' : peerName(curChat);
+      var bub = d4bubbleEl(m);
+      col.appendChild(nm); col.appendChild(bub);
+      if (own) { row.appendChild(col); row.appendChild(dp); } else { row.appendChild(dp); row.appendChild(col); }
+      t.appendChild(row);
+      if (type === 'voice') { try { bindVoice(bub, m, curChat); } catch (e) {} }
+      if (type === 'photo') { try { d4loadPhoto(bub, m, curChat); } catch (e) {} }
+      d4bind(row, m);
     });
     t.scrollTop = t.scrollHeight;
   }
+
   function renderAll() { renderBadge(); renderReqs(); renderChats(); if (sheetOpen() && curChat) renderThread(); }
 
   /* ---------------- voice ---------------- */
@@ -3631,6 +3873,128 @@ function renderMembers() {
     markRead(curChat);
     renderThread(); showView('dm-view-chat'); renderAll();
     var inp = $('dm-input'); if (inp) try { inp.focus(); } catch (e) {}
+  }
+
+  /* ---------- photo / gif / menu / reply ---------- */
+  async function dmSendPhoto(f) {
+    if (!curChat || !f) return;
+    if (!/^image\//.test(f.type || '')) { toast('🖼️ Sirf photo select karo'); return; }
+    if (!connected()) { toast('📡 Tower se connect nahi — photo nahi jayegi'); return; }
+    if (typeof fileToDataURL !== 'function' || typeof imgDownscale !== 'function') { toast('⚠️ Photo bhejne ki sahulat abhi nahi'); return; }
+    var peer = curChat;
+    toast('📤 Photo is Uploading...');
+    try {
+      var raw = await fileToDataURL(f);
+      var small = await imgDownscale(raw, 1280, 0.8);
+      var enc = await encBytes(peer, b64d(small.split(',')[1]).buffer);
+      var url = await lbUpload(new Blob([enc.ct], { type: 'application/octet-stream' }), 'dm-photo.jpg.enc');
+      var ok = await sendMsg(peer, { t: 'photo', x: '🖼️ Photo', u: url, dv: enc.iv }, true);
+      if (ok) {
+        var arr = S.chats[peer] || [];
+        for (var i = arr.length - 1; i >= 0; i--) {
+          if (arr[i].t === 'photo' && !arr[i].u) { arr[i].u = url; arr[i].dv = enc.iv; dmLocalPhoto[arr[i].mid] = small; break; }
+        }
+        save(); renderAll();
+      }
+    } catch (e) { toast('⚠️ Photo nahi gayi — net check karo'); }
+  }
+  async function dmGifLoad(q) {
+    var grid = $('dm-g4g'); if (!grid) return;
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;font-size:11.5px;opacity:.8;padding:14px">⏳ GIFs aa rahe hain...</div>';
+    var key = (typeof KLIPY_KEY !== 'undefined') ? KLIPY_KEY : '';
+    if (!key) { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;font-size:11.5px;padding:14px">GIF available nahi</div>'; return; }
+    try {
+      var cid = 'wp_' + ((typeof myId !== 'undefined' && myId) || 'x');
+      var url = 'https://api.klipy.com/api/v1/' + key + '/gifs/' + (q ? 'search?q=' + encodeURIComponent(q) + '&' : 'trending?') +
+        'per_page=24&customer_id=' + encodeURIComponent(cid) + '&page=1';
+      var r = await fetch(url, { cache: 'no-store' });
+      var j = await r.json();
+      var items = (j && j.data && j.data.data) || [];
+      grid.innerHTML = '';
+      var n = 0;
+      items.forEach(function (it) {
+        var f = (it && it.file) || {};
+        var small = (f.sm && f.sm.gif && f.sm.gif.url) || (f.md && f.md.gif && f.md.gif.url);
+        var full = (f.md && f.md.gif && f.md.gif.url) || (f.hd && f.hd.gif && f.hd.gif.url) || (f.sm && f.sm.gif && f.sm.gif.url);
+        if (!small || !full) return;
+        n++;
+        var d = document.createElement('div');
+        d.style.cssText = 'height:80px;border-radius:11px;overflow:hidden;cursor:pointer;background:#20203a';
+        var im = document.createElement('img'); im.src = small; im.loading = 'lazy';
+        im.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
+        d.appendChild(im);
+        d.onclick = function () {
+          if ($('dm-g4p')) $('dm-g4p').classList.remove('on');
+          if (curChat) sendMsg(curChat, { t: 'gif', x: full }, false);
+        };
+        grid.appendChild(d);
+      });
+      if (!n) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;font-size:11.5px;padding:14px">Kuch nahi mila 🔄</div>';
+    } catch (e) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;font-size:11.5px;padding:14px">GIF load nahi hue 🔄</div>';
+    }
+  }
+  function d4sendText() {
+    var inp = $('dm-input'); if (!inp || !curChat) return;
+    var v = inp.value.trim(); if (!v) return;
+    inp.value = '';
+    var rq = dmReply; dmReply = null;
+    if ($('dm-rep4')) $('dm-rep4').classList.remove('on');
+    sendMsg(curChat, { t: 'text', x: v, rq: rq }, false);
+  }
+  function d4Wire2() {
+    var ph = $('dm-photo-btn'), pf = $('dm-photo-file'), gb = $('dm-gif-btn'), gp = $('dm-g4p');
+    if (ph && pf) ph.onclick = function () { if (gp) gp.classList.remove('on'); pf.click(); };
+    if (pf) pf.addEventListener('change', function (e) {
+      var f = e.target.files && e.target.files[0];
+      pf.value = '';
+      if (f) dmSendPhoto(f);
+    });
+    if (gb && gp) gb.onclick = function () { gp.classList.toggle('on'); if (gp.classList.contains('on')) dmGifLoad(''); };
+    var gx = $('dm-g4x'); if (gx) gx.onclick = function () { gp.classList.remove('on'); };
+    var gq = $('dm-g4q'); if (gq) gq.addEventListener('input', function () { dmGifLoad(this.value.trim()); });
+    var vx = $('dm-v4x'); if (vx) vx.onclick = function () { $('dm-v4').classList.remove('on'); };
+    var mb = $('dm-menu-btn'), pop4 = $('dm-pop4');
+    if (mb && pop4) mb.onclick = function (e) { e.stopPropagation(); pop4.classList.toggle('on'); };
+    var cc = $('dm-clear-chat');
+    if (cc) cc.onclick = function () {
+      if (pop4) pop4.classList.remove('on');
+      if (!curChat) return;
+      S.chats[curChat] = []; save(); renderThread(); renderChats();
+      toast('🧹 Chat clear ho gayi (sirf tumhare phone se)');
+    };
+    var ei = $('dm-e2e-info');
+    if (ei) ei.onclick = function () {
+      if (pop4) pop4.classList.remove('on');
+      toast('🔒 Ye chat sirf tum aur ' + (curChat ? peerName(curChat) : 'dost') + ' padh sakte ho — dono codes se chaabi banti hai');
+    };
+    var rx = $('dm-rep4x');
+    if (rx) rx.onclick = function () { dmReply = null; $('dm-rep4').classList.remove('on'); };
+    var acts = $('dm-acts4');
+    if (acts) acts.querySelectorAll('button').forEach(function (b) {
+      b.onclick = function () {
+        var a = b.getAttribute('data-a');
+        acts.classList.remove('on');
+        if (!dmActMsg || !dmActPeer) return;
+        if (a === 'reply') d4setReply(dmActMsg);
+        else if (a === 'copy') { try { navigator.clipboard.writeText(d4prev(dmActMsg)); toast('📋 Copy ho gaya'); } catch (e) { toast(d4prev(dmActMsg)); } }
+        else if (a === 'del') {
+          var arr = S.chats[dmActPeer] || [];
+          S.chats[dmActPeer] = arr.filter(function (x) { return x.mid !== dmActMsg.mid; });
+          save(); renderThread(); renderChats();
+          toast('🗑 Message hata diya (sirf tumhare paas se)');
+        }
+      };
+    });
+    /* send button -> reply ke sath */
+    var sb = $('dm-send-btn');
+    if (sb) sb.onclick = function () { d4sendText(); };
+    var inp = $('dm-input');
+    if (inp) inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') d4sendText(); });
+    document.addEventListener('click', function () {
+      if (pop4) pop4.classList.remove('on');
+      if (acts) acts.classList.remove('on');
+    });
   }
 
   /* ---------------- wire up ---------------- */
@@ -3746,11 +4110,16 @@ function renderMembers() {
     _reqs: function () { return S.reqs; },
     _accept: function (i) { acceptReq(i); },
     _search: function (q) { var el = $('dm-q'); if (el) el.value = q || ''; renderChats(); var w = $('dm-chat-wrap'); return w ? w.children.length : -1; },
+    _open: function (c) { openChat(c); },
+    _photo: function (f) { return dmSendPhoto(f); },
+    _gif: function (u) { return sendMsg(curChat, { t: 'gif', x: u }, false); },
+    _thread: function () { return $('dm-thread'); },
+    _replyLast: function () { var a2 = S.chats[curChat] || []; if (a2.length) d4setReply(a2[a2.length - 1]); },
     _list: function () { renderChats(); var w = $('dm-chat-wrap'); return w ? w.innerHTML : ''; },
     _unread: function () { return unreadTotal(); }
   };
 
-  load(); wire(); renderAll();
+  load(); wire(); d4Wire2(); renderAll();
   /* agar MQTT pehle hi jur chuka hai to foran subscribe */
   setTimeout(function () { if (connected()) onConnect(); }, 1500);
   /* invite link (#dm=CODE) */
