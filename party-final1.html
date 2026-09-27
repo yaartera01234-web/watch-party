@@ -903,7 +903,7 @@ main { gap: 11px; }
 </style>
 </head>
 <body>
-<!-- YP-P37 -->
+<!-- YP-P38 -->
 
 <!-- ===== JOIN SCREEN ===== -->
 <div id="join-screen">
@@ -1080,6 +1080,14 @@ main { gap: 11px; }
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
+/* ===== v39: heartbeat — app saamne hai ya nahi (chhupi service ise dekhti hai) ===== */
+(function () {
+  function beat() { try { if (!document.hidden) localStorage.setItem('ypVis', String(Date.now())); } catch (e) {} }
+  beat();
+  try { setInterval(beat, 4000); } catch (e) {}
+  try { document.addEventListener('visibilitychange', beat); window.addEventListener('pageshow', beat); } catch (e) {}
+})();
+
 /* ===== v28: BACKGROUND MODE (?bg=1) — foreground service ka chhupa WebView ===== */
 var BGMODE = false;
 try { BGMODE = /(?:^|[?&])bg=1(?:&|$)/.test(location.search || ''); } catch (e) {}
@@ -3703,6 +3711,12 @@ function renderMembers() {
     /* v26/v28: app peeche ya band ho to system notification (native bridge) */
     try {
       if (document.hidden || BGMODE) {
+        /* v39: chhupi service har waqt chalti rehti hai — magar agar app khud saamne hai
+           (ypVis heartbeat taaza hai) to notification NAHI (warna chat khuli hone pe bhi aati) */
+        if (BGMODE) {
+          var yv = 0; try { yv = parseInt(localStorage.getItem('ypVis') || '0', 10) || 0; } catch (e2) {}
+          if (Date.now() - yv < 12000) return;
+        }
         if (window.YaarNative && window.YaarNative.notify) {
           window.YaarNative.notify('💬 ' + (name || 'Messages'), String(text || 'Naya message').slice(0, 120));
         }
