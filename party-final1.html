@@ -903,7 +903,7 @@ main { gap: 11px; }
 </style>
 </head>
 <body>
-<!-- YP-P40 -->
+<!-- YP-P41 -->
 
 <!-- ===== JOIN SCREEN ===== -->
 <div id="join-screen">
@@ -2647,6 +2647,20 @@ function imgDownscale(dataUrl, maxSide, q) {
     im.onerror = rej; im.src = dataUrl;
   });
 }
+/* v41: photo ka size cap — bari file = slow upload. steps me quality ghata kar
+   target ke andar le aate hain (1280 se shuru, zaroorat pe chhota). */
+async function imgFit(dataUrl, maxSide, q, targetBytes) {
+  var steps = [[maxSide, q], [Math.round(maxSide * 0.88), Math.max(0.55, q - 0.08)],
+               [Math.round(maxSide * 0.78), Math.max(0.5, q - 0.15)], [Math.round(maxSide * 0.68), Math.max(0.45, q - 0.22)]];
+  var out = null;
+  for (var i = 0; i < steps.length; i++) {
+    out = await imgDownscale(dataUrl, steps[i][0], steps[i][1]);
+    var bytes = Math.round((out.length - (out.indexOf(',') + 1)) * 0.75);
+    if (bytes <= targetBytes || i === steps.length - 1) break;
+  }
+  return out;
+}
+
 function showPhoto(holder, url) {
   holder.innerHTML = '';
   const im = document.createElement('img');
@@ -2657,14 +2671,14 @@ function showPhoto(holder, url) {
 async function loadPhoto(holder, m) {
   if (m.mid && localPhotos[m.mid]) { showPhoto(holder, localPhotos[m.mid]); return; }
   try {
-    const r = await fetch(m.img, { mode: 'cors', cache: 'force-cache' });
-    if (!r.ok) throw new Error('fetch');
-    const pt = await e2eDecBytes(await r.arrayBuffer(), m.iv);
+    const buf2 = await anyRefBuf(m.img, partyBlobBase());
+    const pt = await e2eDecBytes(buf2, m.iv);
     showPhoto(holder, URL.createObjectURL(new Blob([pt], { type: 'image/jpeg' })));
   } catch (e) {
     holder.innerHTML = '';
     const d = document.createElement('div'); d.className = 'ph-load';
-    d.textContent = '🔒 Photo nahi khuli (room name same hai? 72h guzar gaye?)';
+    d.textContent = '🔒 Photo khul nahi rahi — dobara try karne ke liye tap karo';
+    d.onclick = () => loadPhoto(holder, m);
     holder.appendChild(d);
   }
 }
@@ -2726,16 +2740,95 @@ const WPVoice = {
 
 function fmtDur(s) { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
 
-async function lbUpload(blob, name) {
-  const fd = new FormData();
+/* v41: photo/voice ka pehla rasta ab MQTT tower hai (chat wahi connection use karti hai)
+   — host website ka jhanjhat khatam, aur bhaut tez. Blob retained rehta hai, is liye baad
+   me aane wale ko bhi mil jata hai. Agar tower mana kare ya blob bara ho to litterbox
+   (2 koshish) fallback. Dono fail = saaf error, "net check" ka jhoota bahana nahi. */
+/* P41-BLOB-START */
+var MQTT_BLOB_CAP = 480 * 1024;
+function partyBlobBase() { return String((typeof TP !== 'undefined' && TP && TP.chat) ? TP.chat : 'YaarParty786/x7k2/room-main/chat') + '/blob'; }
+function blobCli() {
+  try { if (typeof client !== 'undefined' && client) return client; } catch (e) {}
+  return null;
+}
+function mqttPutBlob(bytes, base) {
+  return new Promise(function (resolve, reject) {
+    var c = blobCli();
+    if (!c || typeof mqttUp === 'undefined' || !mqttUp) { reject(new Error('blob-no-tower')); return; }
+    var u8 = (bytes instanceof Uint8Array) ? bytes : (bytes && bytes.byteLength !== undefined ? new Uint8Array(bytes) : null);
+    if (!u8 || !u8.length) { reject(new Error('blob-empty')); return; }
+    if (u8.length > MQTT_BLOB_CAP) { reject(new Error('blob-too-big')); return; }
+    var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    var topic = base + '/' + id;
+    var fin = false;
+    var tm = setTimeout(function () { if (!fin) { fin = true; reject(new Error('blob-timeout')); } }, 20000);
+    try {
+      c.publish(topic, u8, { qos: 1, retain: true }, function (err) {
+        if (fin) return; fin = true; clearTimeout(tm);
+        if (err) reject(err); else resolve(id);
+      });
+    } catch (e) { if (!fin) { fin = true; clearTimeout(tm); reject(e); } }
+  });
+}
+function mqttGetBlob(base, id) {
+  return new Promise(function (resolve, reject) {
+    var c = blobCli();
+    if (!c || !id) { reject(new Error('blob-no-tower')); return; }
+    var topic = base + '/' + id;
+    var fin = false;
+    function stop() { try { c.removeListener('message', onM); } catch (e) {} try { c.unsubscribe(topic); } catch (e) {} }
+    function onM(t, buf) {
+      if (fin || t !== topic) return;
+      fin = true; clearTimeout(tm); stop();
+      try { resolve(new Uint8Array(buf).buffer); } catch (e) { try { resolve(buf.buffer); } catch (e2) { reject(e2); } }
+    }
+    var tm = setTimeout(function () { if (!fin) { fin = true; stop(); reject(new Error('blob-timeout')); } }, 9000);
+    c.on('message', onM);
+    try { c.subscribe(topic, { qos: 1 }, function () {}); } catch (e) { fin = true; clearTimeout(tm); reject(e); }
+  });
+}
+async function anyRefBuf(ref, base) {
+  if (typeof ref === 'string' && ref.indexOf('mqtt:') === 0) return await mqttGetBlob(base, ref.slice(5));
+  var r = await fetch(ref, { mode: 'cors', cache: 'force-cache' });
+  if (!r.ok) throw new Error('fetch' + r.status);
+  return await r.arrayBuffer();
+}
+/* P41-BLOB-END */
+async function upFetch(url, init, ms) {
+  var ctl = null, tm = null;
+  try {
+    if (typeof AbortController !== 'undefined') { ctl = new AbortController(); tm = setTimeout(function () { try { ctl.abort(); } catch (e) {} }, ms); }
+    var r = await fetch(url, Object.assign({ signal: ctl ? ctl.signal : null }, init));
+    var t = (await r.text()).trim();
+    if (!r.ok) throw new Error('http' + r.status);
+    return t;
+  } finally { if (tm) clearTimeout(tm); }
+}
+async function upLitterbox(blob, name) {
+  var fd = new FormData();
   fd.append('reqtype', 'fileupload');
   fd.append('time', '72h');
   fd.append('fileToUpload', blob, name || 'wp.bin');
-  const r = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', { method: 'POST', body: fd });
-  const url = (await r.text()).trim();
-  if (!r.ok || !/^https?:\/\//.test(url)) throw new Error('upload');
-  return url;
+  var t = await upFetch('https://litterbox.catbox.moe/resources/internals/api.php', { method: 'POST', body: fd }, 15000);
+  if (!/^https?:\/\//.test(t)) throw new Error('lb-bad');
+  return t;
 }
+/* P41-UP-START */
+async function lbUpload(blob, name, base) {
+  var bb = base || partyBlobBase();
+  /* 1) tower pe hi rakh do — sab se tez (test: 317 KB = 0.16s, litterbox 13.8s) */
+  try {
+    var buf = await blob.arrayBuffer();
+    var id = await mqttPutBlob(buf, bb);
+    return 'mqtt:' + id;
+  } catch (e) {}
+  /* 2) tower na maane (bara blob ya publish fail) -> litterbox */
+  for (var t = 0; t < 2; t++) {
+    try { return await upLitterbox(blob, name); } catch (e) {}
+  }
+  throw new Error('upload-fail');
+}
+/* P41-UP-END */
 
 async function sendVoiceBlob(blob, dur) {
   if (!blob || voiceBusy) return;
@@ -2756,7 +2849,7 @@ async function sendVoiceBlob(blob, dur) {
     if (!w) throw new Error('enc');
     pub(TP.chat, w, false);
   } catch (e) {
-    addSysMsg('⚠️ Voice nahi gayi — net/upload check karo');
+    addSysMsg('⚠️ Voice nahi jayi (tower se connection nahi) — dobara try karo');
   } finally {
     voiceBusy = false;
     if (mb) mb.classList.remove('busy');
@@ -2783,9 +2876,7 @@ function voiceBubble(holder, m) {
     try {
       let src = (m.mid && localVoice[m.mid]) || null;
       if (!src) {
-        const r = await fetch(m.aud, { mode: 'cors', cache: 'force-cache' });
-        if (!r.ok) throw new Error('fetch');
-        const pt = await e2eDecBytes(await r.arrayBuffer(), m.iv);
+        const pt = await e2eDecBytes(await anyRefBuf(m.aud, partyBlobBase()), m.iv);
         src = URL.createObjectURL(new Blob([pt], { type: 'audio/webm' }));
         if (m.mid) localVoice[m.mid] = src;
       }
@@ -2837,16 +2928,10 @@ async function sendPhotoFile(file) {
   addSysMsg('📤 Photo is Uploading...');
   try {
     const raw = await fileToDataURL(file);
-    const small = await imgDownscale(raw, 1280, 0.8);
+    const small = await imgFit(raw, 1280, 0.8, 300000);
     const bytes = b64d(small.split(',')[1]).buffer;
     const enc = await e2eEncBytes(bytes);
-    const fd = new FormData();
-    fd.append('reqtype', 'fileupload');
-    fd.append('time', '72h');
-    fd.append('fileToUpload', enc.blob, 'wp.jpg');
-    const r = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', { method: 'POST', body: fd });
-    const url = (await r.text()).trim();
-    if (!r.ok || !/^https?:\/\//.test(url)) throw new Error('upload fail');
+    const url = await lbUpload(enc.blob, 'wp.jpg');
     const d = new Date();
     const myMid = mid();
     localPhotos[myMid] = small;
@@ -2854,7 +2939,7 @@ async function sendPhotoFile(file) {
     if (!w) throw new Error('enc');
     pub(TP.chat, w, false);
   } catch (e) {
-    addSysMsg('⚠️ Photo nahi gayi — net/upload check karo');
+    addSysMsg('⚠️ Photo nahi jayi (tower se connection nahi) — dobara try karo');
   } finally {
     photoBusy = false;
     if (pb) pb.disabled = false;
@@ -3655,6 +3740,8 @@ function renderMembers() {
 
   /* ---------------- incoming ---------------- */
   function myInboxPrefix() { return NSP + 'inbox-' + h36(normCode(S.code)) + '/'; }
+  function pairTag(peerRaw) { return [normCode(S.code), normCode(peerRaw)].sort().join('|'); }
+  function dmBlobBase(peerCode) { return 'YaarParty786/x7k2/blobs/' + h36(pairTag(peerCode)); }
   function myPresenceTopic() { return NSP + 'presence-' + h36(normCode(S.code)); }
   function myTypingTopic() { return NSP + 'typing-' + h36(normCode(S.code)); }
 
@@ -4105,13 +4192,17 @@ function renderMembers() {
     if (src) { show(src); return; }
     (async function () {
       try {
-        var r = await fetch(m.u, { mode: 'cors', cache: 'force-cache' });
-        if (!r.ok) throw new Error('f');
-        var pt = await decBytes(code, await r.arrayBuffer(), m.dv);
+        var pt = await decBytes(code, await anyRefBuf(m.u, dmBlobBase(code)), m.dv);
         var url = URL.createObjectURL(new Blob([pt], { type: 'image/jpeg' }));
         if (m.mid) dmLocalPhoto[m.mid] = url;
         show(url);
-      } catch (e) { holder.textContent = '🔒 Photo nahi khuli'; }
+      } catch (e) {
+        holder.textContent = '🔒 Photo khul nahi rahi — tap karo dobara try ke liye';
+        holder.onclick = function () {
+          holder.innerHTML = '<div class="ph-load">🔒 Photo aa rahi hai...</div>';
+          d4loadPhoto(bub, m, code);
+        };
+      }
     })();
   }
   function d4bubbleEl(m) {
@@ -4221,9 +4312,7 @@ function renderMembers() {
       try {
         var src = (m.mid && localVoice[m.mid]) || null;
         if (!src) {
-          var r = await fetch(m.u, { mode: 'cors', cache: 'force-cache' });
-          if (!r.ok) throw new Error('fetch');
-          var pt = await decBytes(code, await r.arrayBuffer(), m.dv);
+          var pt = await decBytes(code, await anyRefBuf(m.u, dmBlobBase(code)), m.dv);
           src = URL.createObjectURL(new Blob([pt], { type: 'audio/webm' }));
           if (m.mid) localVoice[m.mid] = src;
         }
@@ -4247,7 +4336,7 @@ function renderMembers() {
     try {
       var enc = await encBytes(peer, await blob.arrayBuffer());
       var ext = /mp4|m4a/i.test(blob.type || '') ? '.m4a' : '.webm';
-      var url = await lbUpload(new Blob([enc.ct], { type: 'application/octet-stream' }), 'dm-voice' + ext + '.enc');
+      var url = await lbUpload(new Blob([enc.ct], { type: 'application/octet-stream' }), 'dm-voice' + ext + '.enc', dmBlobBase(peer));
       var ok = await sendMsg(peer, { t: 'voice', x: '\uD83C\uDFA4 Voice message', u: url, dv: enc.iv, dur: dur }, true);
       if (ok) {
         var arr2 = S.chats[normCode(peer)] || [];
@@ -4256,7 +4345,7 @@ function renderMembers() {
         }
         save(); renderAll();
       }
-    } catch (e) { toast('\u26A0\uFE0F Voice nahi gayi \u2014 net check karo'); }
+    } catch (e) { toast('\u26A0\uFE0F Voice nahi jayi (tower connection) \u2014 dobara try karo'); }
     voiceBusy2 = false;
   }
 
@@ -4276,12 +4365,12 @@ function renderMembers() {
     if (!connected()) { toast('📡 Tower se connect nahi — photo nahi jayegi'); return; }
     if (typeof fileToDataURL !== 'function' || typeof imgDownscale !== 'function') { toast('⚠️ Photo bhejne ki sahulat abhi nahi'); return; }
     var peer = curChat;
-    toast('📤 Photo is Uploading...');
+    toast('📤 Photo jaa rahi hai…');
     try {
       var raw = await fileToDataURL(f);
-      var small = await imgDownscale(raw, 1280, 0.8);
+      var small = await imgFit(raw, 1280, 0.8, 300000);
       var enc = await encBytes(peer, b64d(small.split(',')[1]).buffer);
-      var url = await lbUpload(new Blob([enc.ct], { type: 'application/octet-stream' }), 'dm-photo.jpg.enc');
+      var url = await lbUpload(new Blob([enc.ct], { type: 'application/octet-stream' }), 'dm-photo.jpg.enc', dmBlobBase(peer));
       var ok = await sendMsg(peer, { t: 'photo', x: '🖼️ Photo', u: url, dv: enc.iv }, true);
       if (ok) {
         var arr = S.chats[peer] || [];
@@ -4290,7 +4379,7 @@ function renderMembers() {
         }
         save(); renderAll();
       }
-    } catch (e) { toast('⚠️ Photo nahi gayi — net check karo'); }
+    } catch (e) { toast('⚠️ Photo nahi jayi (tower connection) — dobara 🖼️ dabao'); }
   }
   async function dmGifLoad(q) {
     var grid = $('dm-g4g'); if (!grid) return;
