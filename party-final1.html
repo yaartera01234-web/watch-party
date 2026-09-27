@@ -1082,7 +1082,8 @@ main { gap: 11px; }
 <script>
 /* ===== v39: heartbeat — app saamne hai ya nahi (chhupi service ise dekhti hai) ===== */
 (function () {
-  function beat() { try { if (!document.hidden) localStorage.setItem('ypVis', String(Date.now())); } catch (e) {} }
+  function isBg() { try { return /(?:^|[?&])bg=1/.test(location.search); } catch (e) { return false; } }
+  function beat() { try { if (!document.hidden && !isBg()) localStorage.setItem('ypVis', String(Date.now())); } catch (e) {} }
   beat();
   try { setInterval(beat, 4000); } catch (e) {}
   try { document.addEventListener('visibilitychange', beat); window.addEventListener('pageshow', beat); } catch (e) {}
