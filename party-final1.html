@@ -867,7 +867,9 @@ main { gap: 11px; }
 .dm-bar { position: relative; z-index: 6;
   background: linear-gradient(90deg, rgba(139,114,255,.42), rgba(255,94,188,.30)), var(--wp-menu-bg, rgba(19,16,45,.99)); }
 .dm-bar .bar-av { width: 34px; height: 34px; flex: 0 0 auto; border-radius: 50%; overflow: hidden; }
-.dm-bar .bar-av .avatar { width: 34px; height: 34px; border-radius: 50%; font-size: 15px; }
+.dm-bar .bar-av .av3 { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  font-weight: 900; font-size: 15px; color: #160b22; }
+.dm-bar .bar-av .av3 img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
 .dm-bar .dot4 { width: 8px; height: 8px; border-radius: 50%; background: #6b7280; display: inline-block;
   margin-right: 5px; vertical-align: middle; }
 .dm-bar .dot4.on { background: #34d399; box-shadow: 0 0 8px rgba(52,211,153,.85); }
@@ -3658,14 +3660,7 @@ function renderMembers() {
   function setChatBar() {
     if (!curChat) return;
     var av = $('dm-bar-av');
-    if (av) {
-      av.innerHTML = '';
-      try { av.appendChild(avatarEl(peerAvatar(curChat), peerName(curChat), peerColor(curChat), 34)); }
-      catch (e) { var fb = document.createElement('div'); fb.className = 'avatar';
-        fb.style.background = peerColor(curChat); var fbs = document.createElement('span');
-        fbs.textContent = (peerName(curChat)[0] || '?').toUpperCase(); fb.appendChild(fbs); av.appendChild(fb); }
-      av.style.display = 'block';
-    }
+    if (av) { av.innerHTML = avatarHTML(curChat, 'av3'); av.style.display = 'block'; }
     var title = $('dm-bar-title'), sub = $('dm-bar-sub');
     if (title) title.textContent = peerName(curChat);
     if (sub) {
