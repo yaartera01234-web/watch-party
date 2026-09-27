@@ -1107,6 +1107,9 @@ main { gap: 11px; }
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
+/* ===== v28: BACKGROUND MODE (?bg=1) — foreground service ka chhupa WebView ===== */
+var BGMODE = false;
+try { BGMODE = /(?:^|[?&])bg=1(?:&|$)/.test(location.search || ''); } catch (e) {}
 /* ═══════════════════════════════════════════════════════════
    📻 ZERO-CONFIG PARTY — koi account, koi chaabi nahi!
    Public MQTT towers (free, no signup) par chalta hai.
@@ -3458,6 +3461,49 @@ function renderMembers() {
     } catch (e) {}
   }
 
+  /* ===== v28: dusre WebView (background service) ka naya state apne me mila lo ===== */
+  function mergeStore() {
+    try {
+      if (BGMODE) return;
+      var raw = localStorage.getItem(DKEY); if (!raw) return;
+      var d = JSON.parse(raw); if (!d || !d.chats) return;
+      var ch = false;
+      Object.keys(d.chats || {}).forEach(function (c) {
+        var mine = S.chats[c] || [], theirs = d.chats[c] || [], have = {};
+        mine.forEach(function (m) { if (m && m.mid) have[m.mid] = 1; });
+        for (var i = 0; i < theirs.length; i++) {
+          var m = theirs[i];
+          if (m && m.mid && !have[m.mid]) { mine.push(m); ch = true; }
+        }
+        mine.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+        S.chats[c] = mine.slice(-500);
+      });
+      Object.keys(d.friends || {}).forEach(function (c) {
+        var f = S.friends[c], g = d.friends[c]; if (!g) return;
+        if (!f) { S.friends[c] = g; ch = true; return; }
+        if ((g.ts || 0) > (f.ts || 0)) {
+          f.ts = g.ts || f.ts;
+          if (g.name) f.name = g.name;
+          if (g.color) f.color = g.color;
+          if (g.avatar) f.avatar = g.avatar;
+        }
+      });
+      (d.reqs || []).forEach(function (r) {
+        if (!r || !r.code) return;
+        for (var i = 0; i < S.reqs.length; i++) if (S.reqs[i].code === r.code) return;
+        S.reqs.push(r); ch = true;
+      });
+      Object.keys(S.friends).forEach(recountUn);
+      if (ch) { save(); renderAll(); }
+    } catch (e) {}
+  }
+  try {
+    window.addEventListener('storage', function (ev) {
+      try { if (ev && ev.key && ev.key !== DKEY) return; if (!document.hidden) mergeStore(); } catch (e) {}
+    });
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) mergeStore(); });
+  } catch (e) {}
+
   /* ---------------- crypto ---------------- */
   var keyCache = {};
   async function pairKey(peerRaw) {
@@ -3645,16 +3691,26 @@ function renderMembers() {
   }
 
   function ping(name, text) {
-    toast('💬 ' + name + ': ' + String(text || '').slice(0, 60));
-    beep();
-    /* v26: app peeche ho to system notification (native bridge) */
+    if (!BGMODE) { toast('💬 ' + name + ': ' + String(text || '').slice(0, 60)); beep(); }
+    /* v26/v28: app peeche ya band ho to system notification (native bridge) */
     try {
-      if (document.hidden && window.YaarNative && window.YaarNative.notify) {
-        window.YaarNative.notify('💬 ' + (name || 'Messages'), String(text || 'Naya message').slice(0, 120));
+      if (document.hidden || BGMODE) {
+        if (window.YaarNative && window.YaarNative.notify) {
+          window.YaarNative.notify('💬 ' + (name || 'Messages'), String(text || 'Naya message').slice(0, 120));
+        }
       }
     } catch (e) {}
   }
-  function markRead(peer) { if (S.friends[peer]) { S.friends[peer].un = 0; save(); } }
+  function markRead(peer) { if (S.friends[peer]) { S.friends[peer].un = 0; S.friends[peer].lrt = nowMs(); save(); } }
+  /* v28: unread ko messages se gino (do WebView ke state merge ke baad sahi rahe) */
+  function recountUn(peer) {
+    try {
+      var f = S.friends[peer]; if (!f || typeof f.lrt === 'undefined') return;
+      var arr = S.chats[peer] || [], n = 0;
+      for (var i = 0; i < arr.length; i++) { var m = arr[i]; if (m && m.d === 'in' && (m.ts || 0) > f.lrt) n++; }
+      f.un = n;
+    } catch (e) {}
+  }
 
   /* ---------------- subscribe / connect ---------------- */
   var subscribed = false;
@@ -3671,6 +3727,15 @@ function renderMembers() {
   }
   function onConnect(c) { if (c) clientRef = c; subscribed = false; subscribeDm(); pubPresence(); }
   setInterval(function () { if (connected()) { if (!subscribed) subscribeDm(); pubPresence(); } }, 45000);
+
+  /* v28: background mode — native service ko batao ke hum zinda hain */
+  if (BGMODE) {
+    var bgBeat = function () {
+      try { if (window.YaarNative && window.YaarNative.bgPing) window.YaarNative.bgPing(); } catch (e) {}
+    };
+    try { if (window.YaarNative && window.YaarNative.bgReady) window.YaarNative.bgReady(); } catch (e) {}
+    bgBeat(); setInterval(bgBeat, 60000);
+  }
 
   /* ---------------- views ---------------- */
   var curChat = null;
@@ -4071,7 +4136,10 @@ function renderMembers() {
     t.scrollTop = t.scrollHeight;
   }
 
-  function renderAll() { renderBadge(); renderReqs(); renderChats(); if (sheetOpen() && curChat) renderThread(); }
+  function renderAll() {
+    if (BGMODE) return;                       /* v28: background mode me sirf data, koi DOM kaam nahi */
+    renderBadge(); renderReqs(); renderChats(); if (sheetOpen() && curChat) renderThread();
+  }
 
   /* ---------------- voice ---------------- */
   var localVoice = {};
