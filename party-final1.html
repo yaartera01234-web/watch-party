@@ -768,7 +768,19 @@ const nameInput = $('name-input'), joinBtn = $('join-btn');
 const roomInput = $('room-input');
 const towerInput = $('tower-input');
 function savePrefs() {
-  try { localStorage.setItem('wp3', JSON.stringify({ name: nameInput.value.slice(0, 20), room: roomInput.value.slice(0, 20), tower: towerInput.value })); } catch (e) {}
+  try {
+    /* DP (avatar) bhi yaad rakho — pehle sirf name/room/tower save hote the, is liye
+       app band karne ke baad DP dobara lagana parta tha. Upload ki hui chhoti pic
+       (96x96 JPEG, ~5 KB) seedha localStorage mein rakhte hain; 200 KB se bari ho to
+       skip (jagah bachane ke liye). */
+    const av = (myAvatar && (myAvatar.type === 'upload' ? (myAvatar.data || '').length < 200000
+                             : myAvatar.type === 'dicebear' ? !!myAvatar.url
+                             : true)) ? myAvatar : { type: 'letter' };
+    localStorage.setItem('wp3', JSON.stringify({
+      name: nameInput.value.slice(0, 20), room: roomInput.value.slice(0, 20),
+      tower: towerInput.value, avatar: av
+    }));
+  } catch (e) {}
 }
 function loadPrefs() {
   try {
@@ -776,6 +788,7 @@ function loadPrefs() {
     if (p.name) nameInput.value = p.name;
     if (p.room) roomInput.value = p.room;
     if (p.tower !== undefined && BROKERS[+p.tower]) towerInput.value = p.tower;
+    if (p.avatar && p.avatar.type) myAvatar = p.avatar;   /* 🔁 DP wapas */
   } catch (e) {}
 }
 const urlInput = $('url-input'), loadBtn = $('load-btn');
@@ -1055,6 +1068,7 @@ $('avatar-shuffle-btn').onclick = () => {
   const seed = Math.random().toString(36).slice(2, 10);
   myAvatar = { type: 'dicebear', url: 'https://api.dicebear.com/9.x/fun-emoji/svg?seed=' + seed };
   renderJoinAvatar();
+  savePrefs();
 };
 $('avatar-upload-btn').onclick = () => $('avatar-file').click();
 $('avatar-file').addEventListener('change', (e) => {
@@ -1072,6 +1086,7 @@ $('avatar-file').addEventListener('change', (e) => {
       c.getContext('2d').drawImage(img, sx, sy, s, s, 0, 0, 96, 96);
       myAvatar = { type: 'upload', data: c.toDataURL('image/jpeg', 0.7) };
       renderJoinAvatar();
+      savePrefs();
     };
     img.src = reader.result;
   };
