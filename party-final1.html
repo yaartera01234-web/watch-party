@@ -645,6 +645,52 @@ main { gap: 11px; }
   padding: 9px 13px; border-radius: 12px; pointer-events: none; max-width: 88%; text-align: center; }
 #dm-toast.on { opacity: 1; transform: translate(-50%, 0); }
 
+/* ---------- DM VOICE ---------- */
+.dm-inbar { flex-wrap: wrap; }
+.dm-inbar #dm-mic-btn { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); color: #fff; font-size: 15px; }
+.dm-m .bub4.v4 { padding: 5px 10px 5px 5px; display: flex; align-items: center; gap: 8px; min-width: 160px; }
+.v4b { width: 32px; height: 32px; border-radius: 50%; border: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #22d3ee, #8b5cf6); color: #fff; font-size: 12px; flex-shrink: 0; }
+.dm-m.own .bub4.v4 .v4b { background: rgba(20,8,33,.30); }
+.v4w { display: flex; align-items: center; gap: 2px; height: 24px; flex: 1; }
+.v4w i { display: block; width: 3px; border-radius: 2px; background: rgba(255,255,255,.42); }
+.dm-m.own .v4w i { background: rgba(20,8,33,.30); }
+.v4w i.on { background: #54e8ff; }
+.dm-m.own .v4w i.on { background: #150c26; }
+.v4d { font-size: 10.5px; font-weight: 700; opacity: .86; min-width: 28px; text-align: right; }
+#dm-rec-bar { flex: 1 1 100%; display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-radius: 11px;
+  background: rgba(255,60,120,.14); border: 1px solid rgba(255,90,140,.42); font-size: 11.5px; font-weight: 800; }
+#dm-rec-bar.hidden { display: none; }
+#dm-rec-bar .rdot { width: 9px; height: 9px; border-radius: 50%; background: #ff4d6d; animation: dmrec 1s infinite; }
+#dm-rec-bar b { flex: 1; }
+#dm-rec-bar button { width: 30px; height: 27px; border-radius: 9px; border: 0; font-weight: 900; cursor: pointer; font-size: 12px; }
+#dm-rec-cancel { background: rgba(255,255,255,.16); color: #fff; }
+#dm-rec-send { background: linear-gradient(135deg, #ff5ebc, #8b72ff); color: #150c26; }
+@keyframes dmrec { 0%,100% { opacity: 1; } 50% { opacity: .22; } }
+
+
+/* ---------- VOICE MESSAGE ---------- */
+#mic-btn.busy { box-shadow: 0 0 0 2px rgba(255,77,109,.6); }
+#rec-bar { display: flex; align-items: center; gap: 8px; padding: 7px 10px; margin-bottom: 6px;
+  border-radius: 12px; background: rgba(255,60,120,.14); border: 1px solid rgba(255,90,140,.42); }
+#rec-bar.hidden { display: none; }
+.rec-dot { width: 9px; height: 9px; border-radius: 50%; background: #ff4d6d; animation: recPulse 1s infinite; flex-shrink: 0; }
+@keyframes recPulse { 0%,100% { opacity: 1; } 50% { opacity: .22; } }
+#rec-time { font-size: 12px; font-weight: 800; letter-spacing: .3px; flex: 1; }
+#rec-bar button { border: 0; border-radius: 9px; height: 28px; padding: 0 11px; font-weight: 900; cursor: pointer; font-size: 12px; }
+#rec-cancel { background: rgba(255,255,255,.16); color: #fff; }
+#rec-send { background: linear-gradient(135deg, #ff5ebc, #8b72ff); color: #150c26; }
+.chat-voice .cv { display: flex; align-items: center; gap: 9px; min-width: 168px; padding: 2px 0; }
+.chat-voice .cv-play { width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer; font-size: 13px; flex-shrink: 0;
+  background: linear-gradient(135deg, #22d3ee, #8b5cf6); color: #fff; display: flex; align-items: center; justify-content: center; }
+.bubble.own .chat-voice .cv-play { background: rgba(20,8,33,.30); color: #fff; }
+.chat-voice .cv-wave { display: flex; align-items: center; gap: 2px; flex: 1; height: 26px; }
+.chat-voice .cv-wave i { display: block; width: 3px; border-radius: 2px; background: rgba(255,255,255,.42); }
+.bubble.own .chat-voice .cv-wave i { background: rgba(20,8,33,.30); }
+.chat-voice .cv-wave i.on { background: #54e8ff; }
+.bubble.own .chat-voice .cv-wave i.on { background: #150c26; }
+.chat-voice .cv-dur { font-size: 11px; font-weight: 700; opacity: .86; min-width: 30px; text-align: right; }
+
 </style>
 </head>
 <body>
@@ -797,8 +843,10 @@ main { gap: 11px; }
           <button class="emoji" data-e="👍">👍</button>
           <button id="gif-btn" type="button" title="GIF bhejo">GIF</button>
           <button id="pic-btn" type="button" title="Gallery se photo bhejo">🖼️</button>
+          <button id="mic-btn" type="button" title="Voice message bhejo">🎤</button>
         </div>
         <input id="pic-file" type="file" accept="image/*" style="display:none" />
+        <div id="rec-bar" class="hidden"><span class="rec-dot"></span><b id="rec-time">0:00 / 1:00</b><button id="rec-cancel" type="button">✕</button><button id="rec-send" type="button">➤</button></div>
         <div class="input-row">
           <input id="chat-input" type="text" placeholder="Message likho..." maxlength="500" autocomplete="off" />
           <button id="send-btn">➤</button>
@@ -2178,6 +2226,9 @@ function addMsg(m) {
     holder.appendChild(ld);
     bubble.appendChild(holder);
     loadPhoto(holder, m);
+  } else if (m.aud) {
+    const holder = document.createElement('div'); holder.className = 'chat-voice';
+    bubble.appendChild(holder); voiceBubble(holder, m);
   } else if (m.gif) {
     const gi = document.createElement('img');
     gi.className = 'chat-gif'; gi.src = m.gif; gi.alt = 'GIF'; gi.loading = 'lazy';
@@ -2358,6 +2409,165 @@ async function loadPhoto(holder, m) {
     holder.appendChild(d);
   }
 }
+
+/* ---------- VOICE MESSAGE (record + E2E + litterbox) ---------- */
+const VOICE_MAX_SEC = 60;
+let vRec = null, vChunks = [], vStream = null, vTick = null, vStartTs = 0, vCancelled = false, vUi = null;
+const localVoice = {};    /* apni bheji hui voice foran chalane ke liye */
+let voiceBusy = false;
+
+const WPVoice = {
+  supported: () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder),
+  busy: () => !!vRec,
+  secs: () => (vRec ? Math.floor((Date.now() - vStartTs) / 1000) : 0),
+  start: async function (ui) {
+    if (vRec) return false;
+    vUi = ui || {};
+    if (!WPVoice.supported()) { if (vUi.onErr) vUi.onErr('🎤 Ye device record support nahi karta'); return false; }
+    try {
+      vStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+      if (vUi.onErr) vUi.onErr('🎤 Mic ki ijazat do (Allow dabao)');
+      return false;
+    }
+    let mime = '';
+    ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'].forEach((m) => {
+      if (!mime && window.MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) mime = m;
+    });
+    vChunks = []; vCancelled = false; vStartTs = Date.now();
+    try {
+      vRec = mime ? new MediaRecorder(vStream, { mimeType: mime, audioBitsPerSecond: 32000 }) : new MediaRecorder(vStream);
+    } catch (e) {
+      try { vRec = new MediaRecorder(vStream); } catch (e2) { if (vUi.onErr) vUi.onErr('🎤 Recorder start nahi hua'); vStream = null; return false; }
+    }
+    vRec.ondataavailable = (e) => { if (e.data && e.data.size) vChunks.push(e.data); };
+    vRec.onstop = () => {
+      const dur = Math.max(1, Math.round((Date.now() - vStartTs) / 1000));
+      let type = 'audio/webm';
+      try { type = (vRec && vRec.mimeType) || mime || 'audio/webm'; } catch (e) {}
+      try { vStream.getTracks().forEach((t) => t.stop()); } catch (e) {}
+      vStream = null;
+      const blob = (!vCancelled && vChunks.length) ? new Blob(vChunks, { type: String(type).split(';')[0] }) : null;
+      const ui2 = vUi;
+      vRec = null; vChunks = []; vCancelled = false; vUi = null;
+      if (vTick) { clearInterval(vTick); vTick = null; }
+      if (ui2 && ui2.onStop) ui2.onStop(blob, dur);
+    };
+    vRec.start();
+    vTick = setInterval(() => {
+      const s = Math.floor((Date.now() - vStartTs) / 1000);
+      if (vUi && vUi.onTick) vUi.onTick(s);
+      if (s >= VOICE_MAX_SEC) WPVoice.stop();
+    }, 250);
+    return true;
+  },
+  stop: function () { if (vTick) { clearInterval(vTick); vTick = null; } try { if (vRec && vRec.state !== 'inactive') vRec.stop(); } catch (e) {} },
+  cancel: function () { vCancelled = true; WPVoice.stop(); }
+};
+
+function fmtDur(s) { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+
+async function lbUpload(blob, name) {
+  const fd = new FormData();
+  fd.append('reqtype', 'fileupload');
+  fd.append('time', '72h');
+  fd.append('fileToUpload', blob, name || 'wp.bin');
+  const r = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', { method: 'POST', body: fd });
+  const url = (await r.text()).trim();
+  if (!r.ok || !/^https?:\/\//.test(url)) throw new Error('upload');
+  return url;
+}
+
+async function sendVoiceBlob(blob, dur) {
+  if (!blob || voiceBusy) return;
+  if (!e2eKey) { addSysMsg('🔒 Chaabi ban rahi hai — 1 second baad dobara try karo'); return; }
+  if (!mqttUp) { addSysMsg('Tower connect nahi — voice nahi jayegi'); return; }
+  voiceBusy = true;
+  const mb = $('mic-btn'); if (mb) mb.classList.add('busy');
+  addSysMsg('📤 Voice is Sending...');
+  try {
+    const enc = await e2eEncBytes(await blob.arrayBuffer());
+    const ext = /mp4|m4a/i.test(blob.type || '') ? '.m4a' : '.webm';
+    const url = await lbUpload(enc.blob, 'wp-voice' + ext);
+    const myMid = mid();
+    localVoice[myMid] = URL.createObjectURL(blob);
+    const d = new Date();
+    const w = await e2eEnc({ name: myName, color: myColor, text: '', aud: url, iv: enc.iv, dur: dur,
+      time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), senderId: myId, mid: myMid });
+    if (!w) throw new Error('enc');
+    pub(TP.chat, w, false);
+  } catch (e) {
+    addSysMsg('⚠️ Voice nahi gayi — net/upload check karo');
+  } finally {
+    voiceBusy = false;
+    if (mb) mb.classList.remove('busy');
+  }
+}
+
+function voiceBubble(holder, m) {
+  holder.innerHTML = '';
+  const wrap = document.createElement('div'); wrap.className = 'cv';
+  const pb = document.createElement('button'); pb.className = 'cv-play'; pb.type = 'button'; pb.textContent = '▶';
+  const wave = document.createElement('div'); wave.className = 'cv-wave';
+  for (let i = 0; i < 22; i++) { const b = document.createElement('i'); b.style.height = (6 + ((i * 7) % 15)) + 'px'; wave.appendChild(b); }
+  const du = document.createElement('div'); du.className = 'cv-dur'; du.textContent = fmtDur(m.dur);
+  wrap.appendChild(pb); wrap.appendChild(wave); wrap.appendChild(du);
+  holder.appendChild(wrap);
+  const bars = wave.querySelectorAll('i');
+  let audio = null;
+  const reset = () => { pb.textContent = '▶'; bars.forEach((b) => b.classList.remove('on')); du.textContent = fmtDur(m.dur); };
+  pb.onclick = async (ev) => {
+    ev.stopPropagation();
+    if (audio && !audio.paused) { audio.pause(); pb.textContent = '▶'; return; }
+    if (audio && audio.paused && audio.currentTime > 0) { try { await audio.play(); pb.textContent = '⏸'; } catch (e) {} return; }
+    pb.textContent = '⏳';
+    try {
+      let src = (m.mid && localVoice[m.mid]) || null;
+      if (!src) {
+        const r = await fetch(m.aud, { mode: 'cors', cache: 'force-cache' });
+        if (!r.ok) throw new Error('fetch');
+        const pt = await e2eDecBytes(await r.arrayBuffer(), m.iv);
+        src = URL.createObjectURL(new Blob([pt], { type: 'audio/webm' }));
+        if (m.mid) localVoice[m.mid] = src;
+      }
+      audio = new Audio(src);
+      audio.onended = reset;
+      audio.ontimeupdate = () => {
+        const total = audio.duration || m.dur || 0;
+        const p = audio.duration ? (audio.currentTime / audio.duration) : 0;
+        bars.forEach((b, i) => b.classList.toggle('on', (i / bars.length) <= p));
+        du.textContent = fmtDur(Math.max(0, total - audio.currentTime));
+      };
+      await audio.play();
+      pb.textContent = '⏸';
+    } catch (e) {
+      pb.textContent = '⚠️';
+      setTimeout(reset, 1200);
+    }
+  };
+}
+
+/* mic button + recording bar (watch party chat) */
+function recUi(on) { const rb = $('rec-bar'); if (rb) rb.classList.toggle('hidden', !on); }
+const micBtn = $('mic-btn'), recTime = $('rec-time');
+if (micBtn) {
+  micBtn.onclick = async () => {
+    if (WPVoice.busy()) { WPVoice.stop(); return; }
+    try { closeEmojiInput(); } catch (e) {}
+    try { closeReactTray(); } catch (e) {}
+    try { gifPanel.classList.add('hidden'); } catch (e) {}
+    const ok = await WPVoice.start({
+      onTick: (s) => { if (recTime) recTime.textContent = fmtDur(s) + ' / 1:00'; },
+      onStop: (blob, dur) => { recUi(false); if (blob) sendVoiceBlob(blob, dur); },
+      onErr: (msg) => { recUi(false); addSysMsg(msg); }
+    });
+    if (ok) { recUi(true); if (recTime) recTime.textContent = '0:00 / 1:00'; }
+  };
+}
+const recCancelBtn = $('rec-cancel'), recSendBtn = $('rec-send');
+if (recCancelBtn) recCancelBtn.onclick = () => { WPVoice.cancel(); recUi(false); };
+if (recSendBtn) recSendBtn.onclick = () => WPVoice.stop();
+
 async function sendPhotoFile(file) {
   if (!file || photoBusy) return;
   if (!/^image\//.test(file.type || '')) { addSysMsg('📷 Sirf photo select karo'); return; }
@@ -2913,6 +3123,8 @@ function renderMembers() {
     <div class="dm-thread" id="dm-thread"></div>
     <div class="dm-wa" id="dm-wa-btn">📲 WhatsApp pe bhi bhejo</div>
     <div class="dm-inbar">
+      <div id="dm-rec-bar" class="hidden"><span class="rdot"></span><b id="dm-rec-time">0:00 / 1:00</b><button id="dm-rec-cancel" type="button">✕</button><button id="dm-rec-send" type="button">➤</button></div>
+      <button id="dm-mic-btn" type="button" title="Voice message bhejo">🎤</button>
       <input id="dm-input" placeholder="Message likho..." maxlength="500" autocomplete="off">
       <button id="dm-send-btn">➤</button>
     </div>
@@ -3059,7 +3271,7 @@ function renderMembers() {
     if (!connected()) { toast('📡 Tower se connect nahi — message nahi gaya'); return false; }
     var midv = mid();
     var e;
-    try { e = await encTo(peer, { mid: midv, ts: nowMs(), t: payload.t, x: payload.x }); }
+    try { e = await encTo(peer, { mid: midv, ts: nowMs(), t: payload.t, x: payload.x, u: payload.u || '', dv: payload.dv || '', dur: payload.dur || 0 }); }
     catch (err) { toast('🔒 Lock nahi hua — dobara try karo'); return false; }
     var out = { c: S.code, n: myLabel(), k: (typeof myColor !== 'undefined' && myColor) ? myColor : S.color, ts: nowMs(), iv: e.iv, ct: e.ct };
     if (withAvatar && typeof myAvatar !== 'undefined') out.a = myAvatar;
@@ -3067,7 +3279,7 @@ function renderMembers() {
     try { mc().publish(topic, JSON.stringify(out), { qos: 1, retain: true }); }
     catch (err) { toast('📡 bheja nahi ja saka'); return false; }
     S.seen[midv] = 1;
-    appendMsg(peer, { d: 'out', t: payload.t, x: payload.x, mid: midv, ts: nowMs() });
+    appendMsg(peer, { d: 'out', t: payload.t, x: payload.x, mid: midv, ts: nowMs(), u: payload.u, dv: payload.dv, dur: payload.dur });
     save(); renderAll();
     return true;
   }
@@ -3110,7 +3322,8 @@ function renderMembers() {
         if (!S.reqs.some(function (r) { return r.code === peer; })) {
           S.reqs.push({ code: peer, name: p.n || peer, color: p.k || '#8b72ff', avatar: p.a || { type: 'letter' },
                         ts: body.ts || nowMs(), preview: String(body.x || '').slice(0, 80),
-                        x: body.x || '', t: body.t || 'text', mid: body.mid || msgId });
+                        x: body.x || '', t: body.t || 'text', mid: body.mid || msgId,
+                        u: body.u || '', dv: body.dv || '', dur: body.dur || 0 });
           ping(p.n || peer, body.x || '');
         }
       } else {
@@ -3120,7 +3333,7 @@ function renderMembers() {
         S.friends[peer].name = p.n || S.friends[peer].name;
         if (p.k) S.friends[peer].color = p.k;
         if (p.a) S.friends[peer].avatar = p.a;
-        appendMsg(peer, { d: 'in', t: body.t, x: body.x, mid: body.mid || msgId, ts: body.ts || p.ts || nowMs() });
+        appendMsg(peer, { d: 'in', t: body.t, x: body.x, u: body.u || '', dv: body.dv || '', dur: body.dur || 0, mid: body.mid || msgId, ts: body.ts || p.ts || nowMs() });
         if (curChat === peer && sheetOpen()) { markRead(peer); renderThread(); }
         else { S.friends[peer].un = (S.friends[peer].un || 0) + 1; ping(p.n || peer, body.x || ''); }
       }
@@ -3224,7 +3437,7 @@ function renderMembers() {
     S.reqs.splice(i, 1);
     S.friends[r.code] = { name: r.name || r.code, color: r.color || '#8b72ff', avatar: r.avatar || { type: 'letter' }, ts: nowMs(), un: 0 };
     /* request wala asli message chat mein daal do — kuch zaya na ho */
-    if (r.x) appendMsg(r.code, { d: 'in', t: r.t || 'text', x: r.x, mid: r.mid || mid(), ts: r.ts || nowMs() });
+    if (r.x) appendMsg(r.code, { d: 'in', t: r.t || 'text', x: r.x, u: r.u || '', dv: r.dv || '', dur: r.dur || 0, mid: r.mid || mid(), ts: r.ts || nowMs() });
     /* peer ko batao ke accept ho gaya */
     sendMsg(r.code, { t: 'sys', x: '✅ ' + myLabel() + ' ne tumhari request accept kar li — ab baat kar sakte ho!' }, true);
     save(); subscribeDm(); renderAll();
@@ -3273,14 +3486,85 @@ function renderMembers() {
       var type = m.t || 'text';
       var inner;
       if (type === 'gif') inner = '<div class="bub4" style="padding:4px"><img src="' + esc(m.x) + '" alt="GIF" style="max-width:190px;border-radius:11px;display:block"></div>';
+      else if (type === 'voice') inner = '<div class="bub4 v4">' + voiceInner(m) + '</div>';
       else if (type === 'sys') inner = '<div class="bub4 sys">' + esc(m.x) + '</div>';
       else inner = '<div class="bub4">' + esc(m.x) + '</div>';
       d.innerHTML = inner + '<div class="t4">' + timeShort(m.ts) + (m.d === 'out' ? ' ✓✓' : '') + '</div>';
       t.appendChild(d);
+      if (type === 'voice') bindVoice(d, m, curChat);
     });
     t.scrollTop = t.scrollHeight;
   }
   function renderAll() { renderBadge(); renderReqs(); renderChats(); if (sheetOpen() && curChat) renderThread(); }
+
+  /* ---------------- voice ---------------- */
+  var localVoice = {};
+  var voiceBusy2 = false;
+  async function encBytes(peer, buf) {
+    var k = await pairKey(peer);
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    var ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, k, buf);
+    return { iv: b64e(iv), ct: ct };
+  }
+  async function decBytes(peer, buf, ivB64) {
+    var k = await pairKey(peer);
+    return await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(ivB64) }, k, buf);
+  }
+  function fmtDur(s) { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+  function voiceInner(m) {
+    var bars = '';
+    for (var i = 0; i < 20; i++) bars += '<i style="height:' + (5 + ((i * 7) % 15)) + 'px"></i>';
+    return '<button class="v4b" type="button">\u25B6</button><div class="v4w">' + bars + '</div><div class="v4d">' + fmtDur(m.dur) + '</div>';
+  }
+  function bindVoice(el, m, code) {
+    var btn = el.querySelector('.v4b'); if (!btn) return;
+    var wave = el.querySelectorAll('.v4w i'), durEl = el.querySelector('.v4d'), audio = null;
+    btn.onclick = async function (ev) {
+      ev.stopPropagation();
+      if (audio && !audio.paused) { audio.pause(); btn.textContent = '\u25B6'; return; }
+      if (audio && audio.paused) { try { await audio.play(); btn.textContent = '\u23F8'; } catch (e) {} return; }
+      btn.textContent = '\u23F3';
+      try {
+        var src = (m.mid && localVoice[m.mid]) || null;
+        if (!src) {
+          var r = await fetch(m.u, { mode: 'cors', cache: 'force-cache' });
+          if (!r.ok) throw new Error('fetch');
+          var pt = await decBytes(code, await r.arrayBuffer(), m.dv);
+          src = URL.createObjectURL(new Blob([pt], { type: 'audio/webm' }));
+          if (m.mid) localVoice[m.mid] = src;
+        }
+        audio = new Audio(src);
+        audio.onended = function () { btn.textContent = '\u25B6'; for (var i = 0; i < wave.length; i++) wave[i].classList.remove('on'); if (durEl) durEl.textContent = fmtDur(m.dur); };
+        audio.ontimeupdate = function () {
+          var p = audio.duration ? (audio.currentTime / audio.duration) : 0;
+          for (var i = 0; i < wave.length; i++) wave[i].classList.toggle('on', (i / wave.length) <= p);
+          if (durEl) durEl.textContent = fmtDur(Math.max(0, Math.round((audio.duration || m.dur || 0) - audio.currentTime)));
+        };
+        await audio.play(); btn.textContent = '\u23F8';
+      } catch (e) { btn.textContent = '\u26A0\uFE0F'; setTimeout(function () { btn.textContent = '\u25B6'; }, 1200); }
+    };
+  }
+  async function sendVoice(peer, blob, dur) {
+    if (voiceBusy2 || !blob) return;
+    if (!connected()) { toast('\uD83D\uDCE1 Tower se connect nahi \u2014 voice nahi jayegi'); return; }
+    if (typeof lbUpload !== 'function') { toast('\uD83C\uDFA4 Voice abhi available nahi'); return; }
+    voiceBusy2 = true;
+    toast('\uD83D\uDCE4 Voice is Sending...');
+    try {
+      var enc = await encBytes(peer, await blob.arrayBuffer());
+      var ext = /mp4|m4a/i.test(blob.type || '') ? '.m4a' : '.webm';
+      var url = await lbUpload(new Blob([enc.ct], { type: 'application/octet-stream' }), 'dm-voice' + ext + '.enc');
+      var ok = await sendMsg(peer, { t: 'voice', x: '\uD83C\uDFA4 Voice message', u: url, dv: enc.iv, dur: dur }, true);
+      if (ok) {
+        var arr2 = S.chats[normCode(peer)] || [];
+        for (var i = arr2.length - 1; i >= 0; i--) {
+          if (arr2[i].t === 'voice' && !arr2[i].u) { arr2[i].u = url; arr2[i].dv = enc.iv; arr2[i].dur = dur; localVoice[arr2[i].mid] = URL.createObjectURL(blob); break; }
+        }
+        save(); renderAll();
+      }
+    } catch (e) { toast('\u26A0\uFE0F Voice nahi gayi \u2014 net check karo'); }
+    voiceBusy2 = false;
+  }
 
   /* ---------------- chat open ---------------- */
   function openChat(code) {
@@ -3300,6 +3584,24 @@ function renderMembers() {
     var addb = $('dm-add-btn'); if (addb) addb.onclick = function () { $('dm-my-code').textContent = S.code; showView('dm-view-add'); };
     var back = $('dm-bar-back'); if (back) back.onclick = function () { curChat = null; showView('dm-view-inbox'); renderAll(); };
     var q = $('dm-q'); if (q) q.addEventListener('input', renderChats);
+
+    /* mic (voice message) */
+    var mic = $('dm-mic-btn'), recBar2 = $('dm-rec-bar'), recT = $('dm-rec-time');
+    function recUi2(on) { if (recBar2) recBar2.classList.toggle('hidden', !on); }
+    if (mic) mic.onclick = async function () {
+      if (typeof WPVoice === 'undefined' || !WPVoice.supported()) { toast('🎤 Ye device voice support nahi karta'); return; }
+      if (!curChat) { toast('Pehle chat kholo'); return; }
+      if (WPVoice.busy()) { WPVoice.stop(); return; }
+      var peer = curChat;
+      var ok = await WPVoice.start({
+        onTick: function (s) { if (recT) recT.textContent = fmtDur(s) + ' / 1:00'; },
+        onStop: function (blob, dur) { recUi2(false); if (blob) sendVoice(peer, blob, dur); },
+        onErr: function (m2) { recUi2(false); toast(m2); }
+      });
+      if (ok) { recUi2(true); if (recT) recT.textContent = '0:00 / 1:00'; }
+    };
+    var rcb = $('dm-rec-cancel'); if (rcb) rcb.onclick = function () { if (typeof WPVoice !== 'undefined') WPVoice.cancel(); recUi2(false); };
+    var rsb = $('dm-rec-send'); if (rsb) rsb.onclick = function () { if (typeof WPVoice !== 'undefined') WPVoice.stop(); };
 
     var cp = $('dm-copy-code');
     if (cp) cp.onclick = function () {
@@ -3372,6 +3674,7 @@ function renderMembers() {
   window.DM = {
     onConnect: onConnect,
     onMessage: onDmMessage,
+    sendVoice: sendVoice,
     open: openSheet,
     code: function () { return S.code; },
     debug: function () { return S; },
