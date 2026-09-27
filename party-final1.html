@@ -702,17 +702,6 @@ main { gap: 11px; }
 .chat-voice .cv-dur { font-size: 11px; font-weight: 700; opacity: .86; min-width: 30px; text-align: right; }
 
 
-/* ---------- NATIVE PLAYER BUTTON (sirf app mein dikhta hai) ---------- */
-#native-btn { position: fixed; top: 62px; right: 12px; z-index: 9999; display: none;
-  padding: 7px 13px; border-radius: 20px; border: 1px solid rgba(84,232,255,.75); cursor: pointer;
-  background: linear-gradient(135deg, rgba(84,232,255,.92), rgba(139,114,255,.92)); color: #08131f; font-size: 12px; font-weight: 900; letter-spacing: .2px;
-  box-shadow: 0 6px 18px rgba(84,232,255,.35), inset 0 1px 0 rgba(255,255,255,.45);
-  animation: nbPulse 2.4s ease-in-out infinite; }
-@keyframes nbPulse { 0%,100% { box-shadow: 0 6px 18px rgba(84,232,255,.30), inset 0 1px 0 rgba(255,255,255,.45); }
-  50% { box-shadow: 0 6px 26px rgba(84,232,255,.65), inset 0 1px 0 rgba(255,255,255,.55); } }
-#native-btn:active { transform: scale(.96); }
-
-
 /* ================= DM CHAT v2 (sample approved) ================= */
 #dm-thread { background-image: radial-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
   radial-gradient(rgba(255,94,188,.05) 1px, transparent 1px);
@@ -910,18 +899,11 @@ main { gap: 11px; }
 .mbq { border-left: 2px solid rgba(255,255,255,.85); padding-left: 6px; margin-right: 2px; font-size: 11px; opacity: .92;
   max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* v30: chhota version chip (sirf app me dikhta hai) — tap = hata do */
-#appmode-note { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 9999;
-  padding: 7px 14px; border-radius: 20px; font-size: 11.5px; font-weight: 800; letter-spacing: .2px;
-  background: rgba(10,8,25,.86); border: 1px solid rgba(84,232,255,.6); color: #bff3ff;
-  box-shadow: 0 8px 22px rgba(0,0,0,.45); transition: opacity .5s; }
-#appver-chip { position: fixed; left: 8px; bottom: 8px; z-index: 9998; display: none;
-  padding: 4px 9px; border-radius: 20px; font-size: 9.5px; font-weight: 800; letter-spacing: .3px;
-  background: rgba(10,8,25,.72); border: 1px solid rgba(255,255,255,.22); color: #cfc8ff; opacity: .78; }
 
 </style>
 </head>
 <body>
+<!-- YP-P37 -->
 
 <!-- ===== JOIN SCREEN ===== -->
 <div id="join-screen">
@@ -1083,73 +1065,9 @@ main { gap: 11px; }
 </div>
 
 
-/* ---------- NATIVE PLAYER (Media3) — sirf app ke andar ---------- */
-(function () {
-  if (!window.YaarNative || !window.YaarNative.openPlayer) return;   /* browser me kuch nahi */
-  return;   /* v34: native player BAND (user: "native ko dafa kro") — premium player hi chalega */
-  const wrap = document.querySelector('.player-wrap');
-  const mp4 = document.getElementById('mp4-player');
-  if (!wrap || !mp4) return;
-  const btn = document.createElement('button');
-  btn.id = 'native-btn'; btn.type = 'button';
-  btn.textContent = '⛶ Native Player';
-  btn.title = 'Native player me kholo — brightness/volume + background';
-  document.body.appendChild(btn);        /* v30: body pe (fixed) — wrap ke andar gayab ho jata tha */
-  btn.style.display = 'block';      /* v32: CSS ke display:none ko override karo */
-  const titleNow = () => { const t = document.getElementById('mini-title'); return (t && t.textContent) || 'Video'; };
-  /* v29: button ab zyada dair tak dikhta hai (pehle `hidden` class ki wajah se gayab ho jata tha) */
-  const nativeUrl = () => (mp4.currentSrc || mp4.src || '');
-  const canNative = () => !!nativeUrl() && /^(https?|blob|file):/i.test(nativeUrl());
-  const show = () => { if (canNative()) btn.style.display = 'block'; };
-  const hide = () => { btn.style.display = 'none'; };
-  let autoFor = '';
-  const open = () => {
-    const url = nativeUrl();
-    if (!url || !/^(https?|blob|file):/i.test(url)) {
-      try { if (typeof toast === 'function') toast('⚠️ Pehle koi direct video link lagao (mp4 / m3u8)'); } catch (e) {}
-      return;
-    }
-    /* v30: page ka player chup karo taake party sync na toote (native alag screen hai) */
-    try { if (typeof suppressMP4 !== 'undefined') suppressMP4 = true; } catch (e) {}
-    try { mp4.pause(); } catch (e) {}
-    try { window.YaarNative.openPlayer(url, titleNow()); } catch (e) {}
-  };
-  /* v29: solo (room ke bahar) direct video -> native player KHUD khul jaye.
-     Room ke andar auto nahi kholte warna party sync tut jaye. */
-  const autoOpen = () => {
-    const url = nativeUrl();
-    if (!canNative() || url === autoFor) return;
-    autoFor = url;
-    setTimeout(open, 650);      /* v30: har haal me (room me bhi) native khul jaye */
-  };
-  ['loadedmetadata', 'loadeddata', 'canplay'].forEach((ev) => mp4.addEventListener(ev, () => { show(); autoOpen(); }));
-  mp4.addEventListener('playing', () => { show(); autoOpen(); });
-  mp4.addEventListener('emptied', hide);
-  setInterval(show, 1500);   /* src lagne ke baad bhi button aa jaye */
-  btn.onclick = open;
-})();
 
 <div id="react-tray"></div>
-<script>
-/* v30: app version + page build chip (diagnostic) */
-(function () {
-  try {
-    if (!window.YaarNative) return;
-    var av = 0; try { av = window.YaarNative.appVersion ? window.YaarNative.appVersion() : 0; } catch (e) {}
-    var n = document.createElement('div'); n.id = 'appmode-note';
-    n.textContent = '✅ App mode — Premium player ready (v' + (av || '?') + ')';
-    document.body.appendChild(n);
-    setTimeout(function () { n.style.opacity = '0'; }, 4200);
-    setTimeout(function () { try { n.remove(); } catch (e) {} }, 5200);
-    var c = document.createElement('div'); c.id = 'appver-chip';
-    c.textContent = 'App v' + (av || '?') + ' \u00b7 Page P35';
-    c.title = 'App aur page ka version';
-    c.style.display = 'block';
-    c.onclick = function () { c.style.display = 'none'; };
-    document.body.appendChild(c);
-  } catch (e) {}
-})();
-</script>
+<!-- YP-P37: version chip + appmode note hata diye (user request) -->
 <div id="gif-view">
   <button id="gif-view-close" type="button">✕</button>
   <img id="gif-view-img" src="" alt="GIF" />
@@ -1356,6 +1274,11 @@ function onConnect() {
   if (joined) publishPresence();
   if (everConnected) {
     if (joined) addSysMsg('🔄 Tower se wapis jur gaye! ✅');
+    /* v36: reconnect pe mera asli haal dobara — pause net ki wajah se chhoot gaya ho to bhi sab ruk jaye */
+    try {
+      const pn = (currentType === 'youtube') ? ytIsPlayingNow() : !mp4.paused;
+      if (joined && currentType !== 'none' && !pn && iPausedByMe) pubCmd('pause', { time: localNow(), user: true });
+    } catch (e) {}
   } else {
     everConnected = true;
     renderQueue(queueLocal.items, queueLocal.index);
@@ -1649,8 +1572,8 @@ function applyCmd(c) {
   if (c.action === 'load' && c.video) {
     loadVideoLocal(c.video, true);
     addSysMsg('🎬 ' + c.by + ' ne nayi video lagai');
-  } else if (c.action === 'play') remotePlay(t || 0);
-  else if (c.action === 'pause') remotePause(t || 0);
+  } else if (c.action === 'play') remotePlay(t || 0, !!c.user);
+  else if (c.action === 'pause') remotePause(t || 0, !!c.user);
   else if (c.action === 'seek') remoteSeek(t);
   else if (c.action === 'sync') { remoteSeek(t); if (c.playing) remotePlay(t || 0); else remotePause(t || 0); addSysMsg('🔄 ' + c.by + ' ne sab ko sync kiya'); }
 }
@@ -1670,7 +1593,9 @@ function applyState(s) {
     }
   }, 1200);
 }
-function remotePlay(t) {
+function remotePlay(t, force) {
+  if (!force && Date.now() < localHoldUntil) return;   /* v36: maine khud pause kiya tha — wapis play na karo */
+  if (force) iPausedByMe = false;
   if (currentType === 'youtube' && ytReady && ytPlayer.playVideo) {
     suppressYT = true;
     syncQuiet = Date.now() + 2500;
@@ -1686,9 +1611,9 @@ function remotePlay(t) {
     setTimeout(() => suppressMP4 = false, 1000);
   }
 }
-function remotePause(t) {
+function remotePause(t, force) {
   // hum ne abhi play kiya tha aur time bhi qareeb hai -> yeh YouTube/buffering ka flap hai, asli pause nahi
-  if (Date.now() < playGraceUntil && Math.abs(localNow() - (isFinite(t) ? t : 0)) < 6) return;
+  if (!force && Date.now() < playGraceUntil && Math.abs(localNow() - (isFinite(t) ? t : 0)) < 6) return;
   if (currentType === 'youtube' && ytReady && ytPlayer.pauseVideo) {
     suppressYT = true;
     syncQuiet = Date.now() + 2500;
@@ -1885,12 +1810,40 @@ function pubPlayState(kind, timeFn) {
     pubCmd(p.kind, { time: t });
   }, 800);
 }
+/* ---------- v36: STOP/PAUSE PAKKA ----------
+   Masla: pause dabane ke baad bhi awaz aati rehti thi (pause dusri taraf pohanchta hi nahi tha,
+   ya flap/remote play usay wapis chala deta tha). Ab:
+     - user ka pause FORAN publish hota hai (800ms debounce + syncQuiet dono bypass)
+     - dusra phone "user" flag dekhte hi pause kar deta hai (grace-guard usay rokta nahi)
+     - maine khud pause kiya ho to 5s tak koi remote/flap play mere paas chalta nahi
+     - reconnect pe agar main paused hoon to pause dobara chala jata hai */
+let localHoldUntil = 0, iPausedByMe = false;
+function userPauseEverywhere() {
+  localHoldUntil = Date.now() + 5000;
+  iPausedByMe = true;
+  try { if (currentType === 'youtube' && ytReady && ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo(); } catch (e) {}
+  try { if (!mp4.paused) mp4.pause(); } catch (e) {}
+  if (joined && mqttUp) {
+    const t = localNow();
+    pubCmd('pause', { time: t, user: true });                     /* foran — debounce bypass */
+    try {
+      if (stateLocal && stateLocal.type && stateLocal.type !== 'none') {
+        pubState(Object.assign({}, stateLocal, { playing: false, time: t, type: currentType }));
+      }
+    } catch (e) {}
+  }
+}
+function userPlayEverywhere() {
+  localHoldUntil = 0; iPausedByMe = false;
+  if (joined && mqttUp) pubCmd('play', { time: localNow(), user: true });
+}
 function premiumTogglePlay() {
   if (currentType === 'youtube' && ytReady && ytPlayer) {
-    if (ytIsPlayingNow()) ytPlayer.pauseVideo();
-    else { markPlayingIntent(2000); ytPlayer.playVideo(); }
+    if (ytIsPlayingNow()) { ytPlayer.pauseVideo(); userPauseEverywhere(); }
+    else { markPlayingIntent(2000); ytPlayer.playVideo(); userPlayEverywhere(); }
   } else if (currentType === 'mp4' || currentType === 'hls') {
-    if (mp4.paused) mp4.play().catch(() => {}); else mp4.pause();
+    if (mp4.paused) { mp4.play().catch(() => {}); userPlayEverywhere(); }
+    else { mp4.pause(); userPauseEverywhere(); }
   }
 }
 function premiumSeekBy(delta) {
@@ -2111,7 +2064,7 @@ mp4.addEventListener('play', () => { updateMP3UI(); updatePremiumVideoUI(); armP
 mp4.addEventListener('pause', () => { updateMP3UI(); updatePremiumVideoUI(); showPremiumControls(); if (!suppressMP4 && (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) pubPlayState('pause', () => mp4.currentTime); });
 mp4.addEventListener('seeked', () => { updateMP3UI(); updatePremiumVideoUI(); showPremiumControls(); if (!suppressMP4 && (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) pubCmd('seek', { time: mp4.currentTime }); });
 mp4.addEventListener('ended', () => { if ((currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') && joined) onVideoEnded(); });
-mp3Play.onclick = () => { if (!isAudioMode()) return; if (mp4.paused) mp4.play().catch(() => {}); else mp4.pause(); };
+mp3Play.onclick = () => { if (!isAudioMode()) return; if (mp4.paused) { mp4.play().catch(() => {}); userPlayEverywhere(); } else { mp4.pause(); userPauseEverywhere(); } };
 mp3Back.onclick = () => { if (isAudioMode()) mp4.currentTime = Math.max(0, (mp4.currentTime || 0) - 10); };
 mp3Forward.onclick = () => { if (isAudioMode()) mp4.currentTime = Math.min(mp4.duration || Infinity, (mp4.currentTime || 0) + 10); };
 mp3Progress.onclick = (e) => { if (!isAudioMode() || !mp4.duration) return; const r = mp3Progress.getBoundingClientRect(); mp4.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * mp4.duration; };
@@ -4566,8 +4519,25 @@ function renderMembers() {
     + '#pp-toast{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:15;padding:8px 13px;border-radius:12px;'
     + 'background:rgba(10,8,25,.92);border:1px solid rgba(255,255,255,.2);color:#fff;font:700 11.5px/1.3 system-ui,sans-serif;'
     + 'opacity:0;transition:opacity .2s;pointer-events:none;max-width:88%;text-align:center}'
-    + '@media (max-width:500px){.pp-btn{height:25px;padding:0 7px;font-size:9.5px}}';
+    + '@media (max-width:500px){.pp-btn{height:25px;padding:0 7px;font-size:9.5px}}'
+    /* v36: naye controls sirf fullscreen me — mini player ka design saaf rahe */
+    + '.pp-newctl{display:none !important}'
+    + '.player-wrap.pp-fs .pp-newctl,.player-wrap:fullscreen .pp-newctl,.player-wrap:-webkit-full-screen .pp-newctl'
+    + '{display:inline-flex !important}';
   document.head.appendChild(st);
+
+  /* ---------- v36: fullscreen detect (naye controls + gestures ke liye) ---------- */
+  function ppIsFs() {
+    try { return !!(document.fullscreenElement || document.webkitFullscreenElement || document.webkitCurrentFullScreenElement); }
+    catch (e) { return false; }
+  }
+  function ppFsSync() { try { wrap.classList.toggle('pp-fs', ppIsFs()); } catch (e) {} }
+  ['fullscreenchange', 'webkitfullscreenchange', 'resize', 'orientationchange'].forEach(function (ev) {
+    document.addEventListener(ev, function () { ppFsSync(); });
+    window.addEventListener(ev, function () { ppFsSync(); setTimeout(applyAsp, 120); });
+  });
+  var fsLast = null;                 /* kuch WebViews me fullscreen event nahi aata -> halka poll */
+  setInterval(function () { var v = ppIsFs(); if (v !== fsLast) { fsLast = v; ppFsSync(); } }, 400);
 
   var hud = document.createElement('div'); hud.id = 'pp-hud';
   hud.innerHTML = '<span id="pp-hud-ic">☀️</span><span id="pp-hud-tx">100%</span>';
@@ -4590,7 +4560,7 @@ function renderMembers() {
   }
 
   /* ---------- buttons (premium controls me add) ---------- */
-  function mk(t, id) { var b = document.createElement('button'); b.type = 'button'; b.className = 'pp-btn'; b.id = id; b.textContent = t; return b; }
+  function mk(t, id) { var b = document.createElement('button'); b.type = 'button'; b.className = 'pp-btn pp-newctl'; b.id = id; b.textContent = t; return b; }
   var bAsp = mk('⛶ Fit', 'pp-aspect');
   var bAud = mk('🔊 Audio', 'pp-audio');
   var bBr  = mk('☀️ 100%', 'pp-bright');
@@ -4654,8 +4624,9 @@ function renderMembers() {
   };
   /* fullscreen / rotation / box size badalne pe crop dobara lagao */
   ['resize', 'orientationchange', 'fullscreenchange', 'webkitfullscreenchange'].forEach(function (ev) {
-    window.addEventListener(ev, function () { setTimeout(applyAsp, 120); });
+    window.addEventListener(ev, function () { ppFsSync(); setTimeout(applyAsp, 120); });
   });
+  ppFsSync();
 
   /* ---------- BRIGHTNESS (left drag) ---------- */
   var br = parseFloat(localStorage.getItem('pp_bright') || '1');
@@ -4683,6 +4654,7 @@ function renderMembers() {
   var g = null;
   wrap.addEventListener('touchstart', function (e) {
     if (e.touches.length !== 1) { g = null; return; }
+    if (!ppIsFs()) { g = null; return; }   /* v36: brightness/volume sirf fullscreen me */
     var t = e.touches[0], r = wrap.getBoundingClientRect();
     g = { y: t.clientY, x: t.clientX, z: (t.clientX - r.left) < r.width / 2 ? 'br' : 'vo',
           b0: br, v0: (isFinite(mp4.volume) ? mp4.volume : 1), on: false, h: r.height };
