@@ -3701,6 +3701,13 @@ function renderMembers() {
       localStorage.setItem(DKEY, JSON.stringify(S));
     } catch (e) {}
   }
+  function reqItems(r) {
+    if (!r) return [];
+    if (Array.isArray(r.messages)) return r.messages;
+    r.messages = r.x ? [{ d: 'in', t: r.t || 'text', x: r.x, u: r.u || '', dv: r.dv || '',
+      dur: r.dur || 0, rq: r.rq || null, mid: r.mid || '', ts: r.ts || nowMs() }] : [];
+    return r.messages;
+  }
 
   /* ===== v28: dusre WebView (background service) ka naya state apne me mila lo ===== */
   function mergeStore() {
@@ -3729,10 +3736,28 @@ function renderMembers() {
           if (g.avatar) f.avatar = g.avatar;
         }
       });
+      Object.keys(d.seen || {}).forEach(function (midKey) {
+        if (!S.seen[midKey]) { S.seen[midKey] = 1; ch = true; }
+      });
       (d.reqs || []).forEach(function (r) {
         if (!r || !r.code) return;
-        for (var i = 0; i < S.reqs.length; i++) if (S.reqs[i].code === r.code) return;
-        S.reqs.push(r); ch = true;
+        var local = null;
+        for (var i = 0; i < S.reqs.length; i++) if (S.reqs[i].code === r.code) { local = S.reqs[i]; break; }
+        if (!local) {
+          r.messages = reqItems(r).slice(-MAX_MSGS);
+          S.reqs.push(r); ch = true; return;
+        }
+        var mineReq = reqItems(local), otherReq = reqItems(r), haveReq = {};
+        mineReq.forEach(function (m) { if (m && m.mid) haveReq[m.mid] = 1; });
+        otherReq.forEach(function (m) { if (m && m.mid && !haveReq[m.mid]) { mineReq.push(m); haveReq[m.mid] = 1; ch = true; } });
+        mineReq.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+        local.messages = mineReq.slice(-MAX_MSGS);
+        if ((r.ts || 0) > (local.ts || 0)) {
+          ['name', 'color', 'avatar', 'preview', 'x', 't', 'u', 'dv', 'dur', 'rq', 'mid', 'ts'].forEach(function (k) {
+            if (typeof r[k] !== 'undefined') local[k] = r[k];
+          });
+          ch = true;
+        }
       });
       Object.keys(S.friends).forEach(recountUn);
       if (ch) { save(); renderAll(); }
@@ -3884,6 +3909,7 @@ function renderMembers() {
   function myPresenceTopic() { return NSP + 'presence-' + h36(normCode(S.code)); }
   function myTypingTopic() { return NSP + 'typing-' + h36(normCode(S.code)); }
 
+  var dmInFlight = Object.create(null); /* same retained packet dobara aaye to parallel decrypt na ho */
   function onDmMessage(topic, str) {
     if (topic.indexOf(myInboxPrefix()) !== 0) {
       if (topic.indexOf(NSP + 'presence-') === 0) onPresence(topic, str);
@@ -3897,45 +3923,63 @@ function renderMembers() {
     if (peer === normCode(S.code)) { clearRetained(topic); return; }
     var msgId = topic.split('/').pop();
     if (S.seen[msgId]) { clearRetained(topic); return; }
-    S.seen[msgId] = 1; save();
+    if (dmInFlight[msgId]) return;
+    dmInFlight[msgId] = 1;
 
     (async function () {
-      var body;
-      try { body = await decFrom(peer, p); } catch (e) { return; }     /* locked nahi khula -> chhod do */
-      clearRetained(topic);                                            /* padh liya -> mailbox saaf */
-      if (!body) return;
-      /* P43: reaction aayi -> naya bubble nahi, us purane message pe chip lagao */
-      if (body.t === 'react') {
-        if (S.friends[peer] && body.rx && body.rx !== '1') {
-          if (rxApply(peer, body.rx, body.x || '', 'peer')) {
-            save();
-            if (curChat === peer) renderThread();
+      try {
+        var body;
+        try { body = await decFrom(peer, p); } catch (e) { return; } /* unlock na ho to retained packet bachao */
+        if (!body) return;
+
+        /* P43: reaction aayi -> naya bubble nahi, us purane message pe chip lagao */
+        if (body.t === 'react') {
+          if (S.friends[peer] && body.rx && body.rx !== '1') {
+            if (rxApply(peer, body.rx, body.x || '', 'peer') && curChat === peer) renderThread();
           }
+          /* Seen + mailbox clear sirf decrypt aur local apply ke BAAD — warna crash ke baad msg kho sakta tha. */
+          S.seen[msgId] = 1; save(); clearRetained(topic);
+          return;
         }
-        return;
-      }
-      var known = !!S.friends[peer];
-      if (!known && (!body.t || body.t !== 'sys')) {
-        /* pehli dafa -> Message Request (Snackchat style) */
-        if (!S.reqs.some(function (r) { return r.code === peer; })) {
-          S.reqs.push({ code: peer, name: p.n || peer, color: p.k || '#8b72ff', avatar: p.a || { type: 'letter' },
-                        ts: body.ts || nowMs(), preview: String(body.x || '').slice(0, 80),
-                        x: body.x || '', t: body.t || 'text', mid: body.mid || msgId,
-                        u: body.u || '', dv: body.dv || '', dur: body.dur || 0, rq: body.rq || null });
+        var known = !!S.friends[peer];
+        if (!known && (!body.t || body.t !== 'sys')) {
+          /* Pehli dafa request banao; accept hone tak aane wale har DM ko bhi sambhalo. */
+          var req = null;
+          for (var ri = 0; ri < S.reqs.length; ri++) if (S.reqs[ri].code === peer) { req = S.reqs[ri]; break; }
+          if (!req) {
+            req = { code: peer, name: p.n || peer, color: p.k || '#8b72ff', avatar: p.a || { type: 'letter' }, messages: [] };
+            S.reqs.push(req);
+          }
+          var reqMsg = { d: 'in', t: body.t || 'text', x: body.x || '', u: body.u || '', dv: body.dv || '',
+            dur: body.dur || 0, rq: body.rq || null, mid: body.mid || msgId, ts: body.ts || p.ts || nowMs() };
+          var reqList = reqItems(req);
+          if (!reqList.some(function (m) { return m && m.mid === reqMsg.mid; })) reqList.push(reqMsg);
+          req.messages = reqList.slice(-MAX_MSGS);
+          req.name = p.n || req.name || peer;
+          req.color = p.k || req.color || '#8b72ff';
+          req.avatar = p.a || req.avatar || { type: 'letter' };
+          req.ts = reqMsg.ts;
+          req.preview = (reqMsg.t === 'photo' ? '🖼️ Photo' : reqMsg.t === 'gif' ? '🎞️ GIF' : reqMsg.t === 'voice' ? '🎤 Voice message' : String(reqMsg.x || '')).slice(0, 80);
+          req.x = reqMsg.x; req.t = reqMsg.t; req.u = reqMsg.u; req.dv = reqMsg.dv; req.dur = reqMsg.dur; req.rq = reqMsg.rq; req.mid = reqMsg.mid;
           ping(p.n || peer, body.x || '');
+        } else {
+          if (!known) {   /* sys message se friend ban gaya */
+            S.friends[peer] = S.friends[peer] || { name: p.n || peer, color: p.k || '#8b72ff', avatar: p.a || { type: 'letter' }, ts: nowMs() };
+          }
+          if (p.n && !isCodeName(p.n, peer)) S.friends[peer].name = String(p.n).slice(0, 20);
+          if (p.k) S.friends[peer].color = p.k;
+          if (p.a) S.friends[peer].avatar = p.a;
+          appendMsg(peer, { d: 'in', t: body.t, x: body.x, u: body.u || '', dv: body.dv || '', dur: body.dur || 0, rq: body.rq || null, mid: body.mid || msgId, ts: body.ts || p.ts || nowMs() });
+          if (curChat === peer && sheetOpen()) { markRead(peer); renderThread(); }
+          else { S.friends[peer].un = (S.friends[peer].un || 0) + 1; ping(p.n || peer, body.x || '', peer); }
         }
-      } else {
-        if (!known) {   /* sys message se friend ban gaya */
-          S.friends[peer] = S.friends[peer] || { name: p.n || peer, color: p.k || '#8b72ff', avatar: p.a || { type: 'letter' }, ts: nowMs() };
-        }
-        if (p.n && !isCodeName(p.n, peer)) S.friends[peer].name = String(p.n).slice(0, 20);
-        if (p.k) S.friends[peer].color = p.k;
-        if (p.a) S.friends[peer].avatar = p.a;
-        appendMsg(peer, { d: 'in', t: body.t, x: body.x, u: body.u || '', dv: body.dv || '', dur: body.dur || 0, rq: body.rq || null, mid: body.mid || msgId, ts: body.ts || p.ts || nowMs() });
-        if (curChat === peer && sheetOpen()) { markRead(peer); renderThread(); }
-        else { S.friends[peer].un = (S.friends[peer].un || 0) + 1; ping(p.n || peer, body.x || '', peer); }
+        /* Pehle delivered content persist; uske baad hi retained MQTT mailbox clear. */
+        S.seen[msgId] = 1;
+        save(); renderAll();
+        clearRetained(topic);
+      } finally {
+        delete dmInFlight[msgId];
       }
-      save(); renderAll();
     })();
   }
 
@@ -4181,8 +4225,11 @@ function renderMembers() {
     var r = S.reqs[i]; if (!r) return;
     S.reqs.splice(i, 1);
     S.friends[r.code] = { name: r.name || r.code, color: r.color || '#8b72ff', avatar: r.avatar || { type: 'letter' }, ts: nowMs(), un: 0 };
-    /* request wala asli message chat mein daal do — kuch zaya na ho */
-    if (r.x) appendMsg(r.code, { d: 'in', t: r.t || 'text', x: r.x, u: r.u || '', dv: r.dv || '', dur: r.dur || 0, rq: r.rq || null, mid: r.mid || mid(), ts: r.ts || nowMs() });
+    /* Request pending hone ke dauran aaye saare msgs chat me le aao. */
+    reqItems(r).forEach(function (m) {
+      appendMsg(r.code, { d: 'in', t: m.t || 'text', x: m.x || '', u: m.u || '', dv: m.dv || '',
+        dur: m.dur || 0, rq: m.rq || null, mid: m.mid || mid(), ts: m.ts || nowMs() });
+    });
     /* peer ko batao ke accept ho gaya */
     sendMsg(r.code, { t: 'sys', x: '✅ ' + myLabel() + ' ne tumhari request accept kar li — ab baat kar sakte ho!' }, true);
     save(); subscribeDm(); renderAll();
