@@ -3927,7 +3927,7 @@ function renderMembers() {
 
   /* ---------------- private 1:1 WebRTC voice calls ----------------
      MQTT carries only AES-GCM encrypted call control/SDP. Media is peer-to-peer.
-     This is foreground-only: no background ringing and no FCM. */
+     Hidden Activity can ring via the native call notification; mic starts only after answer. No FCM. */
   var dmCall = null, dmCallTimeout = null, dmCallTicker = null, dmCallRingTimer = null, dmCallRingCtx = null;
   var dmCallSeen = Object.create(null), dmCallSeenOrder = [];
   function myCallPrefix() { return NSP + 'call-' + h36(normCode(S.code)) + '/'; }
@@ -3939,6 +3939,18 @@ function renderMembers() {
       }
     } catch (e) {}
     return false;
+  }
+  function callNativeIncoming(ctx) {
+    var shown = false;
+    try {
+      if (window.YaarNative && typeof window.YaarNative.showIncomingCall === 'function') {
+        shown = !!window.YaarNative.showIncomingCall(peerName(ctx.peer), ctx.id);
+      }
+    } catch (e) {}
+    if (!shown) callStartRing();
+  }
+  function callNativeClearIncoming() {
+    try { if (window.YaarNative && typeof window.YaarNative.clearIncomingCall === 'function') window.YaarNative.clearIncomingCall(); } catch (e) {}
   }
   function callClearTimer() { if (dmCallTimeout) { clearTimeout(dmCallTimeout); dmCallTimeout = null; } }
   function callTimeout(ctx, ms, fn) {
@@ -4078,7 +4090,7 @@ function renderMembers() {
   }
   async function callAccept() {
     var ctx = dmCall; if (!ctx || ctx.state !== 'incoming') return;
-    callStopRing(); callClearTimer(); ctx.state = 'connecting'; callRender();
+    callNativeClearIncoming(); callStopRing(); callClearTimer(); ctx.state = 'connecting'; callRender();
     callTimeout(ctx, 45000, function () { callSend(ctx.peer, ctx.id, 'hangup'); callFinish(false); toast('⏱ Call connect nahi hui'); });
     try {
       var stream = await callGetMic(ctx); if (!stream || dmCall !== ctx) return;
@@ -4093,10 +4105,11 @@ function renderMembers() {
     var action = body.a, ctx = dmCall;
     if (action === 'invite') {
       if (!S.friends[peer]) { callSend(peer, body.id, 'unavailable'); return; }
-      if (BGMODE || document.hidden) { callSend(peer, body.id, 'unavailable'); return; }
+      if (BGMODE) { callSend(peer, body.id, 'unavailable'); return; }
       if (ctx) { callSend(peer, body.id, 'busy'); return; }
       ctx = { id: body.id, peer: peer, role: 'callee', state: 'incoming', muted: false, speaker: false, startedAt: 0 };
-      dmCall = ctx; callRender(); callStartRing();
+      dmCall = ctx; callRender();
+      if (document.hidden) callNativeIncoming(ctx); else callStartRing();
       callTimeout(ctx, 30000, function () { callSend(ctx.peer, ctx.id, 'unavailable'); callFinish(false); toast('📵 Missed voice call'); });
       return;
     }
@@ -4145,7 +4158,6 @@ function renderMembers() {
     if (BGMODE || document.hidden) { toast('📞 Call ke liye app saamne rakho'); return; }
     if (dmCall) { toast('📞 Pehle wali call khatam karo'); return; }
     if (!connected()) { toast('📡 Connection nahi — call nahi lag saki'); return; }
-    if (!dmIsOnline(peer)) { toast('📵 Dost abhi online nahi'); return; }
     var ctx = { id: mid(), peer: peer, role: 'caller', state: 'calling', muted: false, speaker: false, startedAt: 0 };
     dmCall = ctx; callRender();
     callTimeout(ctx, 30000, function () { callSend(peer, ctx.id, 'cancel'); callFinish(false); toast('⏱ Jawab nahi aaya'); });
@@ -4166,6 +4178,12 @@ function renderMembers() {
   }
   function callEnd() { if (!dmCall) return; callSend(dmCall.peer, dmCall.id, 'hangup'); callFinish(false); }
   function callDecline() { if (!dmCall) return; callSend(dmCall.peer, dmCall.id, 'decline'); callFinish(false); }
+  window.yaarAnswerIncomingCall = function (callId) {
+    if (dmCall && dmCall.state === 'incoming' && (!callId || dmCall.id === callId)) callAccept();
+  };
+  window.yaarDeclineIncomingCall = function (callId) {
+    if (dmCall && dmCall.state === 'incoming' && (!callId || dmCall.id === callId)) callDecline();
+  };
   function callToggleMute() {
     if (!dmCall || !dmCall.localStream) return;
     dmCall.muted = !dmCall.muted;
@@ -4179,10 +4197,13 @@ function renderMembers() {
   }
   try {
     document.addEventListener('visibilitychange', function () {
-      if (document.hidden && dmCall && dmCall.state !== 'active') callEnd();
+      if (document.hidden && dmCall && dmCall.state === 'incoming') callNativeIncoming(dmCall);
+      else if (!document.hidden && dmCall && dmCall.state === 'incoming') {
+        callNativeClearIncoming(); callStartRing();
+      } else if (document.hidden && dmCall && dmCall.state !== 'active') callEnd();
     });
     window.addEventListener('pagehide', function () {
-      if (dmCall && dmCall.state !== 'active') callEnd();
+      if (dmCall && dmCall.state !== 'active' && dmCall.state !== 'incoming') callEnd();
     });
   } catch (e) {}
 
