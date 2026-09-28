@@ -1021,6 +1021,47 @@ main { gap: 11px; }
   background: linear-gradient(135deg, #a855f7, #22d3ee); color: #0a0616; font-size: 11.5px; font-weight: 900;
   box-shadow: 0 8px 20px rgba(0,0,0,.45); }
 
+/* ---------- Private 1:1 voice call ---------- */
+#dm-sheet.dm-chat .dm-bar-title-wrap { flex: 1 1 auto; min-width: 0; }
+#dm-sheet.dm-chat .dm-bar-title-wrap b, #dm-sheet.dm-chat .dm-bar-title-wrap s { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dm-bar .dm-call-open { margin-left: 0 !important; padding: 0; border: 0; color: #fff; background: rgba(255,255,255,.10); }
+.dm-call-open svg { display: block; }
+.dm-call-screen { position: fixed; inset: 0; z-index: 120; width: min(100%, 520px); height: 100%; margin: 0 auto; overflow: hidden;
+  display: flex; flex-direction: column; padding: max(12px, env(safe-area-inset-top, 0px)) 22px max(12px, env(safe-area-inset-bottom, 0px));
+  color: #fff; background: radial-gradient(ellipse at 50% 26%,rgba(139,92,246,.28),transparent 42%),radial-gradient(ellipse at 15% 100%,rgba(255,94,188,.14),transparent 38%),linear-gradient(155deg,#100a20 0%,#17102d 48%,#0b1021 100%); }
+.dm-call-screen:before { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 40%,rgba(139,92,246,.10),transparent 38%); }
+.dm-call-top { position: relative; z-index: 1; height: 62px; flex: 0 0 62px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #eee8ff; }
+.dm-call-top-spacer { width: 40px; flex: 0 0 40px; }
+.dm-call-top-title { font-size: 13px; font-weight: 700; }
+.dm-call-top-lock { min-width: 40px; display: flex; justify-content: flex-end; align-items: center; font-size: 11px; color: #b8f4d4; white-space: nowrap; }
+.dm-call-center { position: relative; z-index: 1; flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 0 18px; text-align: center; }
+.dm-call-avatar-ring { position: relative; width: 162px; height: 162px; display: grid; place-items: center; margin-bottom: 25px; }
+.dm-call-avatar-ring:before, .dm-call-avatar-ring:after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(173,145,255,.34); animation: dm-call-pulse 2.8s ease-out infinite; }
+.dm-call-avatar-ring:after { inset: 15px; animation-delay: .8s; }
+#dm-call-avatar .dm-call-avatar-inner { position: relative; z-index: 1; width: 112px; height: 112px; border-radius: 50%; display: grid; place-items: center; overflow: hidden; font-size: 43px; font-weight: 800; color: #180c2e; box-shadow: 0 16px 44px rgba(139,92,246,.30),inset 0 2px 5px rgba(255,255,255,.35); }
+#dm-call-avatar .dm-call-avatar-inner img { width: 100%; height: 100%; object-fit: cover; }
+.dm-call-center h2 { max-width: 92%; margin: 0 0 7px; font-size: 28px; letter-spacing: .2px; font-weight: 750; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dm-call-status { margin: 0; color: #bdb6dd; font-size: 13px; }
+.dm-call-timer { margin-top: 14px; color: #f3efff; font-size: 17px; font-variant-numeric: tabular-nums; letter-spacing: 1.3px; }
+.dm-call-wave { height: 35px; margin-top: 22px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+.dm-call-wave i { display: block; width: 3px; height: 9px; border-radius: 4px; background: linear-gradient(180deg,#54e8ff,#c38aff); animation: dm-call-wave 900ms ease-in-out infinite alternate; }
+.dm-call-wave i:nth-child(2n) { animation-delay: 150ms; } .dm-call-wave i:nth-child(3n) { animation-delay: 300ms; } .dm-call-wave i:nth-child(4n) { animation-delay: 450ms; }
+.dm-call-screen[data-state="incoming"] .dm-call-wave i, .dm-call-screen[data-state="calling"] .dm-call-wave i { animation-play-state: paused; opacity: .65; }
+.dm-call-controls { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 27px; padding: 18px 0 37px; flex: 0 0 auto; }
+.dm-call-control-wrap { display: flex; flex-direction: column; align-items: center; gap: 9px; }
+.dm-call-control-wrap > span { font-size: 11px; color: #cfc6ee; }
+.dm-call-action { width: 62px; height: 62px; padding: 0; border: 1px solid rgba(255,255,255,.14); border-radius: 50%; display: grid; place-items: center; color: #fff; background: rgba(255,255,255,.10); backdrop-filter: blur(10px); cursor: pointer; transition: transform .15s, background .15s, border-color .15s; }
+.dm-call-action:active { transform: scale(.95); }
+.dm-call-action svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.dm-call-answer { color: #07251c; background: linear-gradient(135deg,#34d399,#22d3ee); border-color: rgba(255,255,255,.28); box-shadow: 0 8px 28px rgba(52,211,153,.25); }
+.dm-call-answer svg { transform: rotate(-45deg); }
+.dm-call-decline { width: 70px; height: 70px; border: 0; background: linear-gradient(135deg,#ff5d76,#ed245a); box-shadow: 0 8px 28px rgba(237,36,90,.35); }
+.dm-call-decline svg { transform: rotate(135deg); stroke-width: 2.7; }
+.dm-call-neutral.is-on { color: #150c26; background: linear-gradient(135deg,#54e8ff,#a78bfa); border-color: rgba(255,255,255,.32); }
+#dm-call-remote { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+@keyframes dm-call-pulse { 0% { transform: scale(.80); opacity: .8; } 100% { transform: scale(1.22); opacity: 0; } }
+@keyframes dm-call-wave { from { height: 7px; opacity: .65; } to { height: 28px; opacity: 1; } }
+@media(max-height:700px) { .dm-call-avatar-ring { width: 130px; height: 130px; margin-bottom: 17px; } #dm-call-avatar .dm-call-avatar-inner { width: 92px; height: 92px; font-size: 36px; } .dm-call-center { padding-bottom: 8px; } .dm-call-controls { padding-bottom: 22px; gap: 20px; } .dm-call-action { width: 56px; height: 56px; } .dm-call-decline { width: 64px; height: 64px; } .dm-call-wave { margin-top: 12px; } }
 </style>
 </head>
 <body>
@@ -3542,7 +3583,8 @@ function renderMembers() {
   <div class="dm-bar">
     <div class="bk" id="dm-bar-back" style="display:none">←</div>
     <div class="bar-av" id="dm-bar-av" style="display:none"></div>
-    <div><b id="dm-bar-title">💬 Messages</b><s id="dm-bar-sub">Room ke bagair — seedha dost se baat</s></div>
+    <div class="dm-bar-title-wrap" id="dm-bar-title-wrap"><b id="dm-bar-title">💬 Messages</b><s id="dm-bar-sub">Room ke bagair — seedha dost se baat</s></div>
+    <button class="add2 dm-call-open" id="dm-call-btn" type="button" aria-label="Voice call" title="Voice call" style="display:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.79a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.89.34 1.83.58 2.79.7A2 2 0 0 1 22 16.92Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="dm-e2e" id="dm-bar-e2e">🔒 E2E</div>
     <div class="add2" id="dm-add-btn">＋</div>
     <div class="add2" id="dm-menu-btn">⋮</div>
@@ -3647,6 +3689,27 @@ function renderMembers() {
     <input id="dm-photo-file" type="file" accept="image/*" style="display:none">
   </div>
 </div>
+<section class="dm-call-screen hidden" id="dm-call-screen" role="dialog" aria-modal="true" aria-label="Private voice call">
+  <div class="dm-call-top"><span class="dm-call-top-spacer" aria-hidden="true"></span><span class="dm-call-top-title">Private voice call</span><span class="dm-call-top-lock">🔒 E2E</span></div>
+  <div class="dm-call-center">
+    <div class="dm-call-avatar-ring"><div class="dm-call-avatar" id="dm-call-avatar"></div></div>
+    <h2 id="dm-call-name">Friend</h2>
+    <p class="dm-call-status" id="dm-call-status">Calling…</p>
+    <div class="dm-call-timer" id="dm-call-timer">00:00</div>
+    <div class="dm-call-wave" id="dm-call-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </div>
+  <div class="dm-call-controls hidden" id="dm-call-incoming-controls">
+    <div class="dm-call-control-wrap"><button class="dm-call-action dm-call-decline" id="dm-call-decline" type="button" aria-label="Decline call"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.24.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2Z"/></svg></button><span>Decline</span></div>
+    <div class="dm-call-control-wrap"><button class="dm-call-action dm-call-answer" id="dm-call-accept" type="button" aria-label="Answer call"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.24.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2Z"/></svg></button><span>Answer</span></div>
+  </div>
+  <div class="dm-call-controls hidden" id="dm-call-outgoing-controls"><div class="dm-call-control-wrap"><button class="dm-call-action dm-call-decline" id="dm-call-cancel" type="button" aria-label="Cancel call"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.24.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2Z"/></svg></button><span>End call</span></div></div>
+  <div class="dm-call-controls hidden" id="dm-call-active-controls">
+    <div class="dm-call-control-wrap"><button class="dm-call-action dm-call-neutral" id="dm-call-mute" type="button" aria-label="Mute microphone"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/></svg></button><span id="dm-call-mute-label">Mute</span></div>
+    <div class="dm-call-control-wrap"><button class="dm-call-action dm-call-neutral" id="dm-call-speaker" type="button" aria-label="Turn speaker on"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7m3-10a9 9 0 0 1 0 13"/></svg></button><span id="dm-call-speaker-label">Speaker</span></div>
+    <div class="dm-call-control-wrap"><button class="dm-call-action dm-call-decline" id="dm-call-end" type="button" aria-label="End call"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.24.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2Z"/></svg></button><span>End call</span></div>
+  </div>
+  <audio id="dm-call-remote" autoplay playsinline></audio>
+</section>
 <div id="dm-toast"></div>
 
 <script>
@@ -3862,7 +3925,258 @@ function renderMembers() {
   function clearRetained(topic) { try { var c = mc(); if (c) c.publish(topic, '', { qos: 1, retain: true }); } catch (e) {} }
   function connected() { return (typeof mqttUp !== 'undefined' && mqttUp && !!mc()); }
 
-  async function sendMsg(peerRaw, payload, withAvatar) {
+  /* ---------------- private 1:1 WebRTC voice calls ----------------
+     MQTT carries only AES-GCM encrypted call control/SDP. Media is peer-to-peer.
+     This is foreground-only: no background ringing and no FCM. */
+  var dmCall = null, dmCallTimeout = null, dmCallTicker = null, dmCallRingTimer = null, dmCallRingCtx = null;
+  var dmCallSeen = Object.create(null), dmCallSeenOrder = [];
+  function myCallPrefix() { return NSP + 'call-' + h36(normCode(S.code)) + '/'; }
+  function callTopic(peer, id) { return NSP + 'call-' + h36(normCode(peer)) + '/' + h36(normCode(S.code)) + '/' + id; }
+  function callNativeRoute(speaker) {
+    try {
+      if (window.YaarNative && typeof window.YaarNative.setCallAudioRoute === 'function') {
+        window.YaarNative.setCallAudioRoute(!!speaker); return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+  function callClearTimer() { if (dmCallTimeout) { clearTimeout(dmCallTimeout); dmCallTimeout = null; } }
+  function callTimeout(ctx, ms, fn) {
+    callClearTimer();
+    dmCallTimeout = setTimeout(function () { if (dmCall === ctx && ctx.state !== 'active') fn(); }, ms);
+  }
+  function callElapsed(ctx) {
+    if (!ctx || !ctx.startedAt) return '00:00';
+    var s = Math.max(0, Math.floor((Date.now() - ctx.startedAt) / 1000));
+    return ('0' + Math.floor(s / 60)).slice(-2) + ':' + ('0' + (s % 60)).slice(-2);
+  }
+  function callRender() {
+    var screen = $('dm-call-screen'); if (!screen) return;
+    if (!dmCall) { screen.classList.add('hidden'); return; }
+    var c = dmCall, state = c.state || 'calling';
+    screen.classList.remove('hidden'); screen.setAttribute('data-state', state);
+    var av = $('dm-call-avatar'); if (av) av.innerHTML = avatarHTML(c.peer, 'dm-call-avatar-inner');
+    var nm = $('dm-call-name'); if (nm) nm.textContent = peerName(c.peer);
+    var status = $('dm-call-status');
+    if (status) status.textContent = state === 'incoming' ? 'Incoming voice call' : state === 'calling' ? 'Calling…' : state === 'connecting' ? 'Connecting…' : state === 'reconnecting' ? 'Reconnecting…' : 'Connected';
+    var timer = $('dm-call-timer'); if (timer) { timer.textContent = callElapsed(c); timer.style.visibility = c.startedAt ? 'visible' : 'hidden'; }
+    var inc = $('dm-call-incoming-controls'), out = $('dm-call-outgoing-controls'), active = $('dm-call-active-controls');
+    if (inc) inc.classList.toggle('hidden', state !== 'incoming');
+    if (out) out.classList.toggle('hidden', state === 'incoming' || state === 'active' || state === 'reconnecting');
+    if (active) active.classList.toggle('hidden', state !== 'active' && state !== 'reconnecting');
+    var mute = $('dm-call-mute'), muteLabel = $('dm-call-mute-label');
+    if (mute) { mute.classList.toggle('is-on', !!c.muted); mute.setAttribute('aria-label', c.muted ? 'Unmute microphone' : 'Mute microphone'); }
+    if (muteLabel) muteLabel.textContent = c.muted ? 'Unmute' : 'Mute';
+    var speaker = $('dm-call-speaker'), speakerLabel = $('dm-call-speaker-label');
+    if (speaker) { speaker.classList.toggle('is-on', !!c.speaker); speaker.setAttribute('aria-label', c.speaker ? 'Turn speaker off' : 'Turn speaker on'); }
+    if (speakerLabel) speakerLabel.textContent = c.speaker ? 'Speaker on' : 'Speaker';
+    if (speaker && speaker.parentElement) speaker.parentElement.style.display = (window.YaarNative && typeof window.YaarNative.setCallAudioRoute === 'function') ? 'flex' : 'none';
+  }
+  function callStopRing() {
+    if (dmCallRingTimer) { clearTimeout(dmCallRingTimer); dmCallRingTimer = null; }
+    try { if (dmCallRingCtx) dmCallRingCtx.close(); } catch (e) {}
+    dmCallRingCtx = null;
+  }
+  function callRingPulse() {
+    if (!dmCall || dmCall.state !== 'incoming') { callStopRing(); return; }
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) {
+        if (!dmCallRingCtx) dmCallRingCtx = new AC();
+        if (dmCallRingCtx.state === 'suspended') dmCallRingCtx.resume().catch(function () {});
+        var base = dmCallRingCtx.currentTime;
+        [0, .38].forEach(function (offset) {
+          var osc = dmCallRingCtx.createOscillator(), gain = dmCallRingCtx.createGain();
+          osc.type = 'sine'; osc.frequency.value = 660;
+          gain.gain.setValueAtTime(0, base + offset);
+          gain.gain.linearRampToValueAtTime(.045, base + offset + .025);
+          gain.gain.linearRampToValueAtTime(0, base + offset + .23);
+          osc.connect(gain); gain.connect(dmCallRingCtx.destination);
+          osc.start(base + offset); osc.stop(base + offset + .24);
+        });
+      }
+    } catch (e) {}
+    dmCallRingTimer = setTimeout(callRingPulse, 2200);
+  }
+  function callStartRing() { callStopRing(); callRingPulse(); }
+  async function callSend(peer, id, action, extra) {
+    if (!connected()) return false;
+    var body = { k: 'voice-call-v1', a: action, id: id, from: S.code, ts: nowMs(), n: mid() };
+    if (extra) Object.keys(extra).forEach(function (k) { body[k] = extra[k]; });
+    var enc;
+    try { enc = await encTo(peer, body); } catch (e) { return false; }
+    var packet = { c: S.code, iv: enc.iv, ct: enc.ct };
+    return new Promise(function (resolve) {
+      var done = false, tm = setTimeout(function () { if (!done) { done = true; resolve(false); } }, 4500);
+      try {
+        mc().publish(callTopic(peer, id), JSON.stringify(packet), { qos: 1, retain: false }, function (err) {
+          if (done) return; done = true; clearTimeout(tm); resolve(!err);
+        });
+      } catch (e) { if (!done) { done = true; clearTimeout(tm); resolve(false); } }
+    });
+  }
+  function callMakePeer(ctx) {
+    var pc = new RTCPeerConnection({ iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }
+    ] });
+    ctx.pc = pc;
+    pc.ontrack = function (ev) {
+      if (dmCall !== ctx) return;
+      var audio = $('dm-call-remote'); if (!audio) return;
+      try { audio.srcObject = (ev.streams && ev.streams[0]) ? ev.streams[0] : new MediaStream([ev.track]); audio.play().catch(function () {}); } catch (e) {}
+    };
+    var update = function () {
+      if (dmCall !== ctx) return;
+      var cs = pc.connectionState || '', is = pc.iceConnectionState || '';
+      if (cs === 'connected' || is === 'connected' || is === 'completed') {
+        callClearTimer(); ctx.state = 'active'; if (!ctx.startedAt) ctx.startedAt = Date.now(); callRender();
+        if (!dmCallTicker) dmCallTicker = setInterval(function () { if (!dmCall) return; var t = $('dm-call-timer'); if (t) t.textContent = callElapsed(dmCall); }, 1000);
+      } else if (cs === 'disconnected' || is === 'disconnected') {
+        ctx.state = 'reconnecting'; callRender();
+        callTimeout(ctx, 12000, function () { callSend(ctx.peer, ctx.id, 'hangup'); callFinish(false); toast('📡 Call connection chali gayi'); });
+      } else if (cs === 'failed' || is === 'failed') {
+        callSend(ctx.peer, ctx.id, 'hangup'); callFinish(false); toast('📡 Call connect nahi hui');
+      }
+    };
+    pc.onconnectionstatechange = update; pc.oniceconnectionstatechange = update;
+    return pc;
+  }
+  function callWaitIce(pc) {
+    return new Promise(function (resolve) {
+      if (!pc || pc.iceGatheringState === 'complete') { resolve(); return; }
+      var done = false, tm = setTimeout(finish, 6500);
+      function finish() { if (done) return; done = true; clearTimeout(tm); try { pc.removeEventListener('icegatheringstatechange', check); } catch (e) {} resolve(); }
+      function check() { if (pc.iceGatheringState === 'complete') finish(); }
+      try { pc.addEventListener('icegatheringstatechange', check); } catch (e) { finish(); }
+    });
+  }
+  async function callGetMic(ctx) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('mic unavailable');
+    var stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+    if (dmCall !== ctx) { stream.getTracks().forEach(function (t) { t.stop(); }); return null; }
+    ctx.localStream = stream; callNativeRoute(false);
+    return stream;
+  }
+  async function callStartOffer(ctx) {
+    callTimeout(ctx, 45000, function () { callSend(ctx.peer, ctx.id, 'hangup'); callFinish(false); toast('⏱ Call connect nahi hui'); });
+    try {
+      var stream = await callGetMic(ctx); if (!stream || dmCall !== ctx) return;
+      var pc = callMakePeer(ctx); stream.getTracks().forEach(function (t) { pc.addTrack(t, stream); });
+      var offer = await pc.createOffer(); await pc.setLocalDescription(offer); await callWaitIce(pc);
+      if (dmCall !== ctx) return;
+      ctx.state = 'connecting'; callRender();
+      if (!await callSend(ctx.peer, ctx.id, 'offer', { sdp: pc.localDescription.sdp })) throw new Error('signal');
+      if (ctx.state !== 'active') callTimeout(ctx, 35000, function () { callSend(ctx.peer, ctx.id, 'hangup'); callFinish(false); toast('⏱ Call connect nahi hui'); });
+    } catch (e) {
+      if (dmCall === ctx) { callSend(ctx.peer, ctx.id, 'hangup'); callFinish(false); toast('🎤 Mic ya call setup check karo'); }
+    }
+  }
+  async function callAccept() {
+    var ctx = dmCall; if (!ctx || ctx.state !== 'incoming') return;
+    callStopRing(); callClearTimer(); ctx.state = 'connecting'; callRender();
+    callTimeout(ctx, 45000, function () { callSend(ctx.peer, ctx.id, 'hangup'); callFinish(false); toast('⏱ Call connect nahi hui'); });
+    try {
+      var stream = await callGetMic(ctx); if (!stream || dmCall !== ctx) return;
+      var pc = callMakePeer(ctx); stream.getTracks().forEach(function (t) { pc.addTrack(t, stream); });
+      if (!await callSend(ctx.peer, ctx.id, 'accept')) throw new Error('signal');
+      callTimeout(ctx, 35000, function () { callSend(ctx.peer, ctx.id, 'hangup'); callFinish(false); toast('⏱ Call connect nahi hui'); });
+    } catch (e) {
+      if (dmCall === ctx) { callSend(ctx.peer, ctx.id, 'decline'); callFinish(false); toast('🎤 Mic permission allow karo'); }
+    }
+  }
+  async function callHandle(peer, body) {
+    var action = body.a, ctx = dmCall;
+    if (action === 'invite') {
+      if (!S.friends[peer]) { callSend(peer, body.id, 'unavailable'); return; }
+      if (BGMODE || document.hidden) { callSend(peer, body.id, 'unavailable'); return; }
+      if (ctx) { callSend(peer, body.id, 'busy'); return; }
+      ctx = { id: body.id, peer: peer, role: 'callee', state: 'incoming', muted: false, speaker: false, startedAt: 0 };
+      dmCall = ctx; callRender(); callStartRing();
+      callTimeout(ctx, 30000, function () { callSend(ctx.peer, ctx.id, 'unavailable'); callFinish(false); toast('📵 Missed voice call'); });
+      return;
+    }
+    if (!ctx || ctx.id !== body.id || ctx.peer !== peer) return;
+    if (action === 'accept' && ctx.role === 'caller' && ctx.state === 'calling') { callClearTimer(); callStartOffer(ctx); return; }
+    if (action === 'offer' && ctx.role === 'callee' && ctx.pc && body.sdp) {
+      try {
+        await ctx.pc.setRemoteDescription({ type: 'offer', sdp: body.sdp });
+        var answer = await ctx.pc.createAnswer(); await ctx.pc.setLocalDescription(answer); await callWaitIce(ctx.pc);
+        if (dmCall === ctx) {
+          if (!await callSend(ctx.peer, ctx.id, 'answer', { sdp: ctx.pc.localDescription.sdp })) throw new Error('signal');
+          callTimeout(ctx, 35000, function () { callSend(ctx.peer, ctx.id, 'hangup'); callFinish(false); toast('⏱ Call connect nahi hui'); });
+        }
+      } catch (e) { callSend(ctx.peer, ctx.id, 'hangup'); callFinish(false); toast('📡 Call setup fail hui'); }
+      return;
+    }
+    if (action === 'answer' && ctx.role === 'caller' && ctx.pc && body.sdp) {
+      try { await ctx.pc.setRemoteDescription({ type: 'answer', sdp: body.sdp }); }
+      catch (e) { callSend(ctx.peer, ctx.id, 'hangup'); callFinish(false); toast('📡 Call setup fail hui'); }
+      return;
+    }
+    if (action === 'decline' || action === 'busy' || action === 'unavailable' || action === 'cancel') {
+      callFinish(false);
+      if (action !== 'cancel') toast(action === 'decline' ? '📵 Call decline ho gayi' : action === 'busy' ? '📞 Dost doosri call par hai' : '📵 Dost abhi available nahi');
+      return;
+    }
+    if (action === 'hangup') { callFinish(false); toast('📞 Call khatam ho gayi'); }
+  }
+  async function onCallMessage(topic, str) {
+    var prefix = myCallPrefix(); if (topic.indexOf(prefix) !== 0 || !str) return;
+    var path = topic.slice(prefix.length).split('/'); if (path.length < 2) return;
+    var packet; try { packet = JSON.parse(str); } catch (e) { return; }
+    if (!packet || !packet.c || !packet.iv || !packet.ct) return;
+    var peer = normCode(packet.c), callId = path[1];
+    if (!peer || !S.friends[peer] || h36(peer) !== path[0]) return;
+    var body; try { body = await decFrom(peer, packet); } catch (e) { return; }
+    if (!body || body.k !== 'voice-call-v1' || body.id !== callId || normCode(body.from) !== peer || !body.n) return;
+    if (dmCallSeen[body.n]) return;
+    dmCallSeen[body.n] = 1; dmCallSeenOrder.push(body.n);
+    if (dmCallSeenOrder.length > 300) delete dmCallSeen[dmCallSeenOrder.shift()];
+    await callHandle(peer, body);
+  }
+  async function startVoiceCall() {
+    var peer = curChat;
+    if (!peer || !S.friends[peer]) return;
+    if (BGMODE || document.hidden) { toast('📞 Call ke liye app saamne rakho'); return; }
+    if (dmCall) { toast('📞 Pehle wali call khatam karo'); return; }
+    if (!connected()) { toast('📡 Connection nahi — call nahi lag saki'); return; }
+    if (!dmIsOnline(peer)) { toast('📵 Dost abhi online nahi'); return; }
+    var ctx = { id: mid(), peer: peer, role: 'caller', state: 'calling', muted: false, speaker: false, startedAt: 0 };
+    dmCall = ctx; callRender();
+    callTimeout(ctx, 30000, function () { callSend(peer, ctx.id, 'cancel'); callFinish(false); toast('⏱ Jawab nahi aaya'); });
+    if (!await callSend(peer, ctx.id, 'invite', { name: myLabel() })) {
+      callFinish(false); toast('📡 Call invite nahi bheji ja saki');
+    }
+  }
+  function callFinish(notifyPeer) {
+    var ctx = dmCall; if (!ctx) return;
+    callStopRing(); callClearTimer(); if (dmCallTicker) { clearInterval(dmCallTicker); dmCallTicker = null; }
+    if (notifyPeer) callSend(ctx.peer, ctx.id, 'hangup');
+    try { if (ctx.pc) { ctx.pc.ontrack = null; ctx.pc.onconnectionstatechange = null; ctx.pc.oniceconnectionstatechange = null; ctx.pc.close(); } } catch (e) {}
+    try { if (ctx.localStream) ctx.localStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
+    try { var audio = $('dm-call-remote'); if (audio) { audio.pause(); audio.srcObject = null; } } catch (e) {}
+    try { if (window.YaarNative && window.YaarNative.resetCallAudioRoute) window.YaarNative.resetCallAudioRoute(); } catch (e) {}
+    dmCall = null; callRender();
+  }
+  function callEnd() { if (!dmCall) return; callSend(dmCall.peer, dmCall.id, 'hangup'); callFinish(false); }
+  function callDecline() { if (!dmCall) return; callSend(dmCall.peer, dmCall.id, 'decline'); callFinish(false); }
+  function callToggleMute() {
+    if (!dmCall || !dmCall.localStream) return;
+    dmCall.muted = !dmCall.muted;
+    dmCall.localStream.getAudioTracks().forEach(function (t) { t.enabled = !dmCall.muted; }); callRender();
+  }
+  function callToggleSpeaker() {
+    if (!dmCall) return;
+    var next = !dmCall.speaker;
+    if (!callNativeRoute(next)) { toast('🔊 Speaker control native app mein available hai'); return; }
+    dmCall.speaker = next; callRender();
+  }
+  try {
+    document.addEventListener('visibilitychange', function () { if (document.hidden && dmCall) { callEnd(); } });
+    window.addEventListener('pagehide', function () { if (dmCall) callEnd(); });
+  } catch (e) {}
+
+  async function sendMsg(peerRaw, payload, withAvatar, waitAck) {
     var peer = normCode(peerRaw);
     if (!peer) { toast('⚠️ Code theek nahi'); return false; }
     if (!connected()) { toast('📡 Tower se connect nahi — message nahi gaya'); return false; }
@@ -3875,25 +4189,39 @@ function renderMembers() {
     var out = { c: S.code, n: _nm, k: (typeof myColor !== 'undefined' && myColor) ? myColor : S.color, ts: nowMs(), iv: e.iv, ct: e.ct };
     if (withAvatar && typeof myAvatar !== 'undefined') out.a = myAvatar;
     var topic = NSP + 'inbox-' + h36(peer) + '/' + midv;
-    try { mc().publish(topic, JSON.stringify(out), { qos: 1, retain: true }); }
-    catch (err) { toast('📡 bheja nahi ja saka'); return false; }
+    try {
+      if (waitAck) {
+        var ack = await new Promise(function (resolve) {
+          var done = false, timer = setTimeout(function () { if (!done) { done = true; resolve(false); } }, 6500);
+          try { mc().publish(topic, JSON.stringify(out), { qos: 1, retain: true }, function (err) {
+            if (done) return; done = true; clearTimeout(timer); resolve(!err);
+          }); } catch (e) { if (!done) { done = true; clearTimeout(timer); resolve(false); } }
+        });
+        if (!ack) return false;
+      } else {
+        mc().publish(topic, JSON.stringify(out), { qos: 1, retain: true });
+      }
+    } catch (err) { if (!waitAck) toast('📡 bheja nahi ja saka'); return false; }
     S.seen[midv] = 1;
     appendMsg(peer, { d: 'out', t: payload.t, x: payload.x, mid: midv, ts: nowMs(), u: payload.u, dv: payload.dv, dur: payload.dur, rq: payload.rq || null, rx: payload.rx || '' });
     save(); renderAll();
     return true;
   }
 
-  /* v40: notification ke "Reply" se aaya text -> wahi DM bhej do (E2E yahin hota hai) */
-  window.yaarQuickReply = function (codeRaw, text) {
+  /* v44: notification reply tabhi success report kare jab encrypted MQTT publish ACK ho. */
+  window.yaarQuickReply = async function (requestId, codeRaw, text) {
+    if (typeof text === 'undefined') { text = codeRaw; codeRaw = requestId; requestId = ''; }
+    var ok = false;
     try {
-      var code = normCode(codeRaw);
-      var t = String(text || '').trim();
-      if (!code || !t) return false;
-      if (!connected()) return false;
-      if (!S.friends[code]) return false;
-      sendMsg(code, { t: 'text', x: t.slice(0, 500) }, false);
-      return true;
-    } catch (e) { return false; }
+      var code = normCode(codeRaw), value = String(text || '').trim();
+      if (code && value && connected() && S.friends[code]) {
+        ok = await sendMsg(code, { t: 'text', x: value.slice(0, 500) }, false, true);
+      }
+    } catch (e) { ok = false; }
+    if (requestId) {
+      try { if (window.YaarNative && typeof window.YaarNative.replyResult === 'function') window.YaarNative.replyResult(String(requestId), !!ok); } catch (e) {}
+    }
+    return !!ok;
   };
 
   function appendMsg(peer, m) {
@@ -3918,6 +4246,7 @@ function renderMembers() {
     if (topic.indexOf(myInboxPrefix()) !== 0) {
       if (topic.indexOf(NSP + 'presence-') === 0) onPresence(topic, str);
       else if (topic.indexOf(NSP + 'typing-') === 0) onTyping(topic, str);
+      else if (topic.indexOf(myCallPrefix()) === 0) onCallMessage(topic, str);
       return;
     }
     if (!str) return;
@@ -4043,6 +4372,7 @@ function renderMembers() {
   function subscribeDm() {
     if (!connected()) return;
     var topics = [myInboxPrefix() + '#'];
+    if (!BGMODE) topics.push(myCallPrefix() + '#');
     Object.keys(S.friends).forEach(function (c) { topics.push(NSP + 'presence-' + h36(c)); topics.push(NSP + 'typing-' + h36(c)); });
 
     try { mc().subscribe(topics, { qos: 1 }, function () { subscribed = true; }); } catch (e) {}
@@ -4189,6 +4519,7 @@ function renderMembers() {
     var addb = $('dm-add-btn');
     if (addb) addb.style.display = (v === 'dm-view-inbox') ? 'grid' : 'none';
     var avb = $('dm-bar-av'); if (avb) avb.style.display = (v === 'dm-view-chat') ? 'block' : 'none';
+    var callb = $('dm-call-btn'); if (callb) callb.style.display = (v === 'dm-view-chat' && curChat && S.friends[curChat]) ? 'grid' : 'none';
     var title = $('dm-bar-title'), sub = $('dm-bar-sub');
     if (v === 'dm-view-add') { title.textContent = '➕ Add Friend'; sub.textContent = 'Code se dost joro — bas ek dafa'; }
     else if (v === 'dm-view-chat') { setChatBar(); }
@@ -4880,6 +5211,14 @@ function renderMembers() {
     if (btn2) btn2.onclick = function () { openSheet(); };
     var btn0 = $('dm-open-btn'); if (btn0) btn0.onclick = function () { openSheet(); };
     if (btn) btn.onclick = function () { openSheet(); };
+    var callBtn = $('dm-call-btn'); if (callBtn) callBtn.onclick = startVoiceCall;
+    var callAcceptBtn = $('dm-call-accept'); if (callAcceptBtn) callAcceptBtn.onclick = callAccept;
+    var callDeclineBtn = $('dm-call-decline'); if (callDeclineBtn) callDeclineBtn.onclick = callDecline;
+    var callCancelBtn = $('dm-call-cancel'), callEndBtn = $('dm-call-end');
+    if (callCancelBtn) callCancelBtn.onclick = callEnd;
+    if (callEndBtn) callEndBtn.onclick = callEnd;
+    var callMuteBtn = $('dm-call-mute'); if (callMuteBtn) callMuteBtn.onclick = callToggleMute;
+    var callSpeakerBtn = $('dm-call-speaker'); if (callSpeakerBtn) callSpeakerBtn.onclick = callToggleSpeaker;
     var ov = $('dm-ov'); if (ov) ov.onclick = closeSheet;
     var x = $('dm-close-btn'); if (x) x.onclick = closeSheet;
     var addb = $('dm-add-btn'); if (addb) addb.onclick = function () { $('dm-my-code').textContent = S.code; showView('dm-view-add'); };
