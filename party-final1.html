@@ -4055,6 +4055,11 @@ function renderMembers() {
     var stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
     if (dmCall !== ctx) { stream.getTracks().forEach(function (t) { t.stop(); }); return null; }
     ctx.localStream = stream; callNativeRoute(false);
+    try {
+      if (window.YaarNative && typeof window.YaarNative.startOngoingCall === 'function' && !window.YaarNative.startOngoingCall()) {
+        toast('⚠️ Background call service start nahi hui — call ke dauran app khuli rakho');
+      }
+    } catch (e) { toast('⚠️ Background call service start nahi hui — app khuli rakho'); }
     return stream;
   }
   async function callStartOffer(ctx) {
@@ -4155,6 +4160,7 @@ function renderMembers() {
     try { if (ctx.pc) { ctx.pc.ontrack = null; ctx.pc.onconnectionstatechange = null; ctx.pc.oniceconnectionstatechange = null; ctx.pc.close(); } } catch (e) {}
     try { if (ctx.localStream) ctx.localStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
     try { var audio = $('dm-call-remote'); if (audio) { audio.pause(); audio.srcObject = null; } } catch (e) {}
+    try { if (window.YaarNative && window.YaarNative.stopOngoingCall) window.YaarNative.stopOngoingCall(); } catch (e) {}
     try { if (window.YaarNative && window.YaarNative.resetCallAudioRoute) window.YaarNative.resetCallAudioRoute(); } catch (e) {}
     dmCall = null; callRender();
   }
@@ -4172,8 +4178,12 @@ function renderMembers() {
     dmCall.speaker = next; callRender();
   }
   try {
-    document.addEventListener('visibilitychange', function () { if (document.hidden && dmCall) { callEnd(); } });
-    window.addEventListener('pagehide', function () { if (dmCall) callEnd(); });
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden && dmCall && dmCall.state !== 'active') callEnd();
+    });
+    window.addEventListener('pagehide', function () {
+      if (dmCall && dmCall.state !== 'active') callEnd();
+    });
   } catch (e) {}
 
   async function sendMsg(peerRaw, payload, withAvatar, waitAck) {
