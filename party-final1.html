@@ -3953,13 +3953,26 @@ function renderMembers() {
   }
   function beep() {
     try {
+      // FIX v49: DM ring same as room chat (tuneMsg) - richer sound
+      if (typeof window.tuneMsg === 'function') { try { window.tuneMsg(); return; } catch(e){} }
       var A = window.AudioContext || window.webkitAudioContext; if (!A) return;
-      var c = new A(), o = c.createOscillator(), g = c.createGain();
-      o.type = 'sine'; o.frequency.value = 660;
-      g.gain.setValueAtTime(0, c.currentTime);
-      g.gain.linearRampToValueAtTime(.06, c.currentTime + .02);
-      g.gain.linearRampToValueAtTime(0, c.currentTime + .18);
-      o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + .2);
+      var c = new A();
+      function tp(f0,f1,dur,delay){
+        try{
+          var t = c.currentTime + (delay||0);
+          var o = c.createOscillator(), g = c.createGain();
+          o.type='sine';
+          o.frequency.setValueAtTime(Math.max(f0,1), t);
+          o.frequency.exponentialRampToValueAtTime(Math.max(f1,1), t+dur);
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(0.4, t+0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+          o.connect(g); g.connect(c.destination);
+          o.start(t); o.stop(t+dur+0.05);
+        }catch(e){}
+      }
+      tp(880,880,0.13,0);
+      tp(1318,1318,0.2,0.16);
     } catch (e) {}
   }
   function timeShort(ts) {
@@ -4484,13 +4497,34 @@ function renderMembers() {
       }
     } catch (e) {}
   }
-  function markRead(peer) { if (S.friends[peer]) { S.friends[peer].un = 0; S.friends[peer].lrt = nowMs(); save(); } }
+  function markRead(peer) {
+    // FIX v49: unread count fix - lrt = max(now, lastMsgTs+1s) so future-dated msgs also marked read
+    if (!S.friends[peer]) return;
+    try {
+      var lastTs = 0;
+      var arr = S.chats[peer] || [];
+      for (var i=0;i<arr.length;i++){ var t = arr[i].ts||0; if (t>lastTs) lastTs=t; }
+      var newLrt = Math.max(nowMs(), lastTs + 1000);
+      S.friends[peer].un = 0;
+      S.friends[peer].lrt = newLrt;
+      save();
+    } catch(e){ try { S.friends[peer].un=0; S.friends[peer].lrt=nowMs(); save(); } catch(e2){} }
+  }
   /* v28: unread ko messages se gino (do WebView ke state merge ke baad sahi rahe) */
+  /* FIX v49: future timestamp + undefined lrt handling - 10 new badge bug fix */
   function recountUn(peer) {
     try {
-      var f = S.friends[peer]; if (!f || typeof f.lrt === 'undefined') return;
+      var f = S.friends[peer];
+      if (!f) return;
+      if (typeof f.lrt === 'undefined') { f.lrt = 0; }
       var arr = S.chats[peer] || [], n = 0;
-      for (var i = 0; i < arr.length; i++) { var m = arr[i]; if (m && m.d === 'in' && (m.ts || 0) > f.lrt) n++; }
+      var now = nowMs();
+      for (var i = 0; i < arr.length; i++) {
+        var m = arr[i];
+        if (!m || m.d !== 'in') continue;
+        var ts = m.ts || 0;
+        if (ts > f.lrt && ts <= now + 60000) n++;
+      }
       f.un = n;
     } catch (e) {}
   }
