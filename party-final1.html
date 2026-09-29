@@ -3759,6 +3759,21 @@ function renderMembers() {
     if (!S.chats || typeof S.chats !== 'object') S.chats = {};
     if (!Array.isArray(S.reqs)) S.reqs = [];
     if (!S.seen || typeof S.seen !== 'object') S.seen = {};
+    // FIX v47: Remove any requests that are already friends (duplicate request bug)
+    try {
+      var _f = S.friends || {};
+      S.reqs = S.reqs.filter(function(r){ return r && r.code && !_f[r.code]; });
+      var _seenReq = {};
+      var _uniq = [];
+      for (var _i = S.reqs.length -1; _i >=0; _i--) {
+        var _r = S.reqs[_i];
+        if (!_r || !_r.code) continue;
+        if (_seenReq[_r.code]) continue;
+        _seenReq[_r.code]=1;
+        _uniq.unshift(_r);
+      }
+      S.reqs = _uniq;
+    } catch(e){}
     save();
   }
   function save() {
@@ -3808,6 +3823,23 @@ function renderMembers() {
       });
       (d.reqs || []).forEach(function (r) {
         if (!r || !r.code) return;
+        // FIX v47: If this code is already a friend, don't re-create request - move msgs to chat
+        if (S.friends[r.code]) {
+          var _reqMsgs = reqItems(r);
+          for (var _j=0; _j<_reqMsgs.length; _j++) {
+            var _m = _reqMsgs[_j];
+            if (!_m) continue;
+            if (!S.chats[r.code]) S.chats[r.code]=[];
+            if (_m.mid && S.chats[r.code].some(function(x){return x.mid===_m.mid;})) continue;
+            S.chats[r.code].push(_m);
+            ch = true;
+          }
+          if (S.chats[r.code]) {
+            S.chats[r.code].sort(function(a,b){return (a.ts||0)-(b.ts||0);});
+            S.chats[r.code] = S.chats[r.code].slice(-500);
+          }
+          return;
+        }
         var local = null;
         for (var i = 0; i < S.reqs.length; i++) if (S.reqs[i].code === r.code) { local = S.reqs[i]; break; }
         if (!local) {
@@ -3826,6 +3858,12 @@ function renderMembers() {
           ch = true;
         }
       });
+      // FIX v47: Final cleanup - remove any reqs that became friends during merge
+      try {
+        var _origLen = S.reqs.length;
+        S.reqs = S.reqs.filter(function(r){ return r && r.code && !S.friends[r.code]; });
+        if (S.reqs.length !== _origLen) ch = true;
+      } catch(e){}
       Object.keys(S.friends).forEach(recountUn);
       if (ch) { save(); renderAll(); }
     } catch (e) {}
@@ -4306,29 +4344,44 @@ function renderMembers() {
           return;
         }
         var known = !!S.friends[peer];
+        // FIX v47: If peer is already friend but still has a request entry, remove it immediately
+        if (known) {
+          try {
+            var _hadReq = false;
+            S.reqs = S.reqs.filter(function(r){ if (r && r.code===peer) { _hadReq=true; return false; } return true; });
+          } catch(e){}
+        }
         if (!known && (!body.t || body.t !== 'sys')) {
-          /* Pehli dafa request banao; accept hone tak aane wale har DM ko bhi sambhalo. */
-          var req = null;
-          for (var ri = 0; ri < S.reqs.length; ri++) if (S.reqs[ri].code === peer) { req = S.reqs[ri]; break; }
-          if (!req) {
-            req = { code: peer, name: p.n || peer, color: p.k || '#8b72ff', avatar: p.a || { type: 'letter' }, messages: [] };
-            S.reqs.push(req);
+          // FIX v47: Double-check after potential race - if became friend in meantime, treat as known
+          if (S.friends[peer]) {
+            known = true;
+          } else {
+            /* Pehli dafa request banao; accept hone tak aane wale har DM ko bhi sambhalo. */
+            var req = null;
+            for (var ri = 0; ri < S.reqs.length; ri++) if (S.reqs[ri].code === peer) { req = S.reqs[ri]; break; }
+            if (!req) {
+              req = { code: peer, name: p.n || peer, color: p.k || '#8b72ff', avatar: p.a || { type: 'letter' }, messages: [] };
+              S.reqs.push(req);
+            }
+            var reqMsg = { d: 'in', t: body.t || 'text', x: body.x || '', u: body.u || '', dv: body.dv || '',
+              dur: body.dur || 0, rq: body.rq || null, mid: body.mid || msgId, ts: body.ts || p.ts || nowMs() };
+            var reqList = reqItems(req);
+            if (!reqList.some(function (m) { return m && m.mid === reqMsg.mid; })) reqList.push(reqMsg);
+            req.messages = reqList.slice(-MAX_MSGS);
+            req.name = p.n || req.name || peer;
+            req.color = p.k || req.color || '#8b72ff';
+            req.avatar = p.a || req.avatar || { type: 'letter' };
+            req.ts = reqMsg.ts;
+            req.preview = (reqMsg.t === 'photo' ? '🖼️ Photo' : reqMsg.t === 'gif' ? '🎞️ GIF' : reqMsg.t === 'voice' ? '🎤 Voice message' : String(reqMsg.x || '')).slice(0, 80);
+            req.x = reqMsg.x; req.t = reqMsg.t; req.u = reqMsg.u; req.dv = reqMsg.dv; req.dur = reqMsg.dur; req.rq = reqMsg.rq; req.mid = reqMsg.mid;
+            ping(p.n || peer, body.x || '');
           }
-          var reqMsg = { d: 'in', t: body.t || 'text', x: body.x || '', u: body.u || '', dv: body.dv || '',
-            dur: body.dur || 0, rq: body.rq || null, mid: body.mid || msgId, ts: body.ts || p.ts || nowMs() };
-          var reqList = reqItems(req);
-          if (!reqList.some(function (m) { return m && m.mid === reqMsg.mid; })) reqList.push(reqMsg);
-          req.messages = reqList.slice(-MAX_MSGS);
-          req.name = p.n || req.name || peer;
-          req.color = p.k || req.color || '#8b72ff';
-          req.avatar = p.a || req.avatar || { type: 'letter' };
-          req.ts = reqMsg.ts;
-          req.preview = (reqMsg.t === 'photo' ? '🖼️ Photo' : reqMsg.t === 'gif' ? '🎞️ GIF' : reqMsg.t === 'voice' ? '🎤 Voice message' : String(reqMsg.x || '')).slice(0, 80);
-          req.x = reqMsg.x; req.t = reqMsg.t; req.u = reqMsg.u; req.dv = reqMsg.dv; req.dur = reqMsg.dur; req.rq = reqMsg.rq; req.mid = reqMsg.mid;
-          ping(p.n || peer, body.x || '');
-        } else {
+        }
+        if (known || (body.t && body.t === 'sys')) {
           if (!known) {   /* sys message se friend ban gaya */
             S.friends[peer] = S.friends[peer] || { name: p.n || peer, color: p.k || '#8b72ff', avatar: p.a || { type: 'letter' }, ts: nowMs() };
+            // FIX v47: sys se friend bana toh uski pending request hata do
+            try { S.reqs = S.reqs.filter(function(r){ return r && r.code !== peer; }); } catch(e){}
           }
           if (p.n && !isCodeName(p.n, peer)) S.friends[peer].name = String(p.n).slice(0, 20);
           if (p.k) S.friends[peer].color = p.k;
@@ -4574,6 +4627,12 @@ function renderMembers() {
   }
   function renderReqs() {
     var w = $('dm-req-wrap'), sec = $('dm-sec-req'); if (!w) return;
+    // FIX v47: Purge any req that is already friend before rendering (duplicate request bug)
+    try {
+      var _before = S.reqs.length;
+      S.reqs = S.reqs.filter(function(r){ return r && r.code && !S.friends[r.code]; });
+      if (S.reqs.length !== _before) save();
+    } catch(e){}
     w.innerHTML = '';
     if (sec) sec.style.display = S.reqs.length ? '' : 'none';
     S.reqs.forEach(function (r, i) {
@@ -4589,7 +4648,9 @@ function renderMembers() {
   }
   function acceptReq(i) {
     var r = S.reqs[i]; if (!r) return;
-    S.reqs.splice(i, 1);
+    var _code = r.code;
+    // FIX v47: Remove ALL requests for this code, not just this index
+    S.reqs = S.reqs.filter(function(x){ return x && x.code !== _code; });
     S.friends[r.code] = { name: r.name || r.code, color: r.color || '#8b72ff', avatar: r.avatar || { type: 'letter' }, ts: nowMs(), un: 0 };
     /* Request pending hone ke dauran aaye saare msgs chat me le aao. */
     reqItems(r).forEach(function (m) {
