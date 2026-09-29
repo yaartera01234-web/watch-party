@@ -3759,17 +3759,61 @@ function renderMembers() {
     if (!S.chats || typeof S.chats !== 'object') S.chats = {};
     if (!Array.isArray(S.reqs)) S.reqs = [];
     if (!S.seen || typeof S.seen !== 'object') S.seen = {};
-    // FIX v47: Remove any requests that are already friends (duplicate request bug)
+    // FIX v48: Normalize all old keys (WP1-XXXX-XXXX vs XXXXXXXX) + purge duplicate requests for APK cache
     try {
+      // Normalize friends keys
+      var _newFriends = {};
+      Object.keys(S.friends).forEach(function(k){
+        try {
+          var nk = normCode(k);
+          if (!nk || nk.length !== 8) { _newFriends[k] = S.friends[k]; return; }
+          if (!_newFriends[nk]) _newFriends[nk] = S.friends[k];
+          else {
+            // merge: keep newer ts, keep name if better
+            var a = _newFriends[nk], b = S.friends[k];
+            if ((b.ts||0) > (a.ts||0)) { a.ts = b.ts; if (b.name) a.name = b.name; if (b.color) a.color = b.color; if (b.avatar) a.avatar = b.avatar; }
+          }
+        } catch(e){ _newFriends[k] = S.friends[k]; }
+      });
+      S.friends = _newFriends;
+      // Normalize chats keys
+      var _newChats = {};
+      Object.keys(S.chats).forEach(function(k){
+        try {
+          var nk = normCode(k);
+          if (!nk) { _newChats[k] = S.chats[k]; return; }
+          if (!_newChats[nk]) _newChats[nk] = S.chats[k];
+          else {
+            var _have = {}; _newChats[nk].forEach(function(m){ if (m&&m.mid) _have[m.mid]=1; });
+            S.chats[k].forEach(function(m){ if (m&&m.mid&&!_have[m.mid]) _newChats[nk].push(m); });
+            _newChats[nk].sort(function(a,b){return (a.ts||0)-(b.ts||0);});
+            _newChats[nk] = _newChats[nk].slice(-500);
+          }
+        } catch(e){ _newChats[k] = S.chats[k]; }
+      });
+      S.chats = _newChats;
+      // Normalize reqs codes and purge friends
       var _f = S.friends || {};
-      S.reqs = S.reqs.filter(function(r){ return r && r.code && !_f[r.code]; });
+      var _normReqs = [];
+      S.reqs.forEach(function(r){
+        if (!r || !r.code) return;
+        try {
+          var nk = normCode(r.code);
+          if (nk) r.code = nk;
+        } catch(e){}
+        if (_f[r.code]) return; // already friend -> skip
+        _normReqs.push(r);
+      });
+      S.reqs = _normReqs;
+      // Dedup reqs by code
       var _seenReq = {};
       var _uniq = [];
       for (var _i = S.reqs.length -1; _i >=0; _i--) {
         var _r = S.reqs[_i];
         if (!_r || !_r.code) continue;
-        if (_seenReq[_r.code]) continue;
-        _seenReq[_r.code]=1;
+        var _ck = normCode(_r.code) || _r.code;
+        if (_seenReq[_ck]) continue;
+        _seenReq[_ck]=1;
         _uniq.unshift(_r);
       }
       S.reqs = _uniq;
@@ -4627,10 +4671,14 @@ function renderMembers() {
   }
   function renderReqs() {
     var w = $('dm-req-wrap'), sec = $('dm-sec-req'); if (!w) return;
-    // FIX v47: Purge any req that is already friend before rendering (duplicate request bug)
+    // FIX v48: Aggressive purge for APK - normalize and remove any req that is already friend
     try {
       var _before = S.reqs.length;
-      S.reqs = S.reqs.filter(function(r){ return r && r.code && !S.friends[r.code]; });
+      S.reqs = S.reqs.filter(function(r){
+        if (!r || !r.code) return false;
+        try { var nk = normCode(r.code); if (nk) r.code = nk; } catch(e){}
+        return !S.friends[r.code];
+      });
       if (S.reqs.length !== _before) save();
     } catch(e){}
     w.innerHTML = '';
