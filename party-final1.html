@@ -1396,6 +1396,26 @@ body { margin: 0 !important; padding: 0 !important; }
   filter: drop-shadow(0 1px 3px rgba(139,114,255,0.4)) !important;
 }
 
+
+/* Tablet fix - DM full screen on tablet too */
+@media (min-width: 600px) {
+  #dm-sheet {
+    max-width: 520px !important;
+    margin: 0 auto !important;
+    left: 0 !important; right: 0 !important;
+    width: 100% !important;
+  }
+  #dm-ov.on {
+    background: rgba(0,0,0,0.75) !important;
+    backdrop-filter: blur(8px) !important;
+  }
+}
+@media (min-width: 768px) {
+  #dm-sheet {
+    max-width: 600px !important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -4960,21 +4980,23 @@ function renderMembers() {
   function fitSheet() {
     try {
       var sh = $('dm-sheet'); if (!sh) return;
+      // Boss fix tablet: full-screen 100% not 90%
       var h = (window.innerHeight || document.documentElement.clientHeight || 0);
       if (!h || h < 260) h = (screen && screen.height) ? screen.height : 640;
-      var px = Math.max(300, Math.round(h * 0.90));
-      sh.style.height = px + 'px';
+      // For new full-screen design, use 100% height
+      sh.style.height = h + 'px';
+      sh.style.maxHeight = '100dvh';
       var bar = sh.querySelector ? sh.querySelector('.dm-bar') : null;
-      var bh = bar ? Math.round(bar.offsetHeight) : 52;
-      if (!bh || bh < 30 || bh > 120) bh = 52;
+      var bh = bar ? Math.round(bar.offsetHeight) : 58;
+      if (!bh || bh < 30 || bh > 120) bh = 58;
       ['dm-view-inbox', 'dm-view-add', 'dm-view-chat'].forEach(function (id) {
         var v = $(id); if (!v) return;
         v.style.top = '0px'; v.style.bottom = '0px'; v.style.left = '0px'; v.style.right = '0px';
-        v.style.width = '100%'; v.style.height = px + 'px'; v.style.minHeight = '0';
+        v.style.width = '100%'; v.style.height = h + 'px'; v.style.minHeight = '0';
         v.style.paddingTop = bh + 'px';
       });
       var th = $('dm-thread'); if (th) th.style.minHeight = '0';
-      try { sh.scrollLeft = 0; sh.scrollTop = 0; } catch (e) {}   /* P42: side-shift saaf */
+      try { sh.scrollLeft = 0; sh.scrollTop = 0; } catch (e) {}
     } catch (e) {}
   }
   try {
