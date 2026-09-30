@@ -911,7 +911,27 @@ main { gap: 11px; }
 #dm-thread { justify-content: flex-start; }
 #dm-thread::before { content: ''; flex: 0 0 0; margin-top: auto; }
 #dm-thread > *, #chat-messages > * { flex-shrink: 0; }
-#dm-thread, #chat-messages { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+#dm-thread, #chat-messages { 
+  overscroll-behavior: contain; 
+  -webkit-overflow-scrolling: touch; 
+  scroll-behavior: smooth;
+  transform: translateZ(0);
+  will-change: transform;
+  -webkit-transform: translateZ(0);
+}
+/* Instagram smooth: message pop animation */
+#dm-thread .msg-row, #chat-messages .msg {
+  animation: instaPop 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform: translateZ(0);
+  will-change: transform;
+  flex-shrink: 0;
+}
+@keyframes instaPop {
+  from { transform: scale(0.85) translateY(12px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+#dm-thread { padding-bottom: 30px; }
+#chat-messages { padding-bottom: 20px; }
 /* Touch-first scrolling: keep vertical gestures native and skip off-screen inbox paint. */
 #dm-list, #dm-thread { touch-action: pan-y; }
 #dm-req-wrap .dm-req { content-visibility: auto; contain-intrinsic-size: auto 60px; }
@@ -1583,8 +1603,16 @@ setInterval(() => {
 }, 1000);
 
 /* ---------- SYS + CHAT RENDER ---------- */
-function isNearBottom() { return chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight < 80; }
-function scrollChatDown() { chatBox.scrollTop = chatBox.scrollHeight; }
+function isNearBottom() { return chatBox.scrollHeight - chatBox.scrollTop - chatBox.clientHeight < 100; }
+function scrollChatDown() { 
+  var doSnap = function(){ try { chatBox.scrollTop = chatBox.scrollHeight + 250; } catch(e){} };
+  doSnap();
+  requestAnimationFrame(doSnap);
+  setTimeout(doSnap, 50);
+  setTimeout(doSnap, 150);
+  setTimeout(doSnap, 300);
+  setTimeout(function(){ chatBox.scrollTop = chatBox.scrollHeight + 300; }, 500);
+}
 chatBox.addEventListener('scroll', () => { if (isNearBottom()) newMsgBtn.classList.add('hidden'); });
 newMsgBtn.onclick = () => { scrollChatDown(); newMsgBtn.classList.add('hidden'); };
 function addSysMsg(text) {
