@@ -1312,6 +1312,35 @@ body { margin: 0 !important; padding: 0 !important; }
 #dm-thread .msg-row .msg { max-width: 100% !important; }
 #dm-thread .msg-row .msg .sender { font-size: 11px !important; font-weight: 700 !important; margin-bottom: 2px !important; opacity: 0.8 !important; }
 
+
+/* FIX same row bug - each msg separate row */
+#dm-thread {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+}
+#dm-thread .msg-row {
+  display: flex !important;
+  gap: 8px !important;
+  align-items: flex-end !important;
+  max-width: 85% !important;
+  width: fit-content !important;
+  flex-direction: row !important;
+}
+#dm-thread .msg-row.own {
+  align-self: flex-end !important;
+  flex-direction: row-reverse !important;
+  margin-left: auto !important;
+}
+#dm-thread .msg-row.other {
+  align-self: flex-start !important;
+  flex-direction: row !important;
+  margin-right: auto !important;
+}
+#dm-thread .msg-row .msg {
+  max-width: calc(100% - 42px) !important;
+}
+
 </style>
 </head>
 <body>
