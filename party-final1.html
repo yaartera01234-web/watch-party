@@ -1366,7 +1366,7 @@ body { margin: 0 !important; padding: 0 !important; }
 /* Hide E2E badge to save space - boss SS feedback */
 #dm-bar-e2e, .dm-e2e { display: none !important; }
 
-/* Pretty call icon - not local */
+/* Pretty call icon - not local - inbox me hide, chat me show */
 .dm-bar .dm-call-open, #dm-call-btn {
   width: 36px !important; height: 36px !important;
   border-radius: 50% !important;
@@ -1374,9 +1374,16 @@ body { margin: 0 !important; padding: 0 !important; }
   border: 1px solid rgba(255,255,255,0.12) !important;
   backdrop-filter: blur(12px) !important;
   color: #fff !important;
-  display: grid !important; place-items: center !important;
+  place-items: center !important;
   box-shadow: 0 2px 12px rgba(139,114,255,0.2) !important;
   transition: all 0.2s ease !important;
+}
+#dm-view-inbox .dm-call-open, #dm-view-inbox #dm-call-btn,
+#dm-view-add .dm-call-open, #dm-view-add #dm-call-btn {
+  display: none !important;
+}
+#dm-view-chat .dm-call-open, #dm-view-chat #dm-call-btn {
+  display: grid !important;
 }
 .dm-bar .dm-call-open:hover, #dm-call-btn:hover {
   background: linear-gradient(135deg, rgba(139,114,255,0.25), rgba(255,94,188,0.20)) !important;
