@@ -5391,9 +5391,13 @@ function renderMembers() {
     var inp = $('dm-input'); if (!inp || !curChat) return;
     var v = inp.value.trim(); if (!v) return;
     inp.value = '';
+    // Boss fix: keyboard hide na ho - jhatka khatam (only DM)
+    try { inp.focus({preventScroll:true}); } catch(e) { try { inp.focus(); } catch(e2) {} }
     var rq = dmReply; dmReply = null;
     if ($('dm-rep4')) $('dm-rep4').classList.remove('on');
     sendMsg(curChat, { t: 'text', x: v, rq: rq }, false);
+    // Keep focus after send
+    setTimeout(function(){ try { var ii=$('dm-input'); if(ii) ii.focus({preventScroll:true}); } catch(e){} }, 10);
   }
   function d4Wire2() {
     var ph = $('dm-photo-btn'), pf = $('dm-photo-file'), gb = $('dm-gif-btn'), gp = $('dm-g4p');
@@ -5505,11 +5509,15 @@ function renderMembers() {
       }, { passive: true });
     }
     dmBuildRxRow();
-    /* send button -> reply ke sath */
+    /* send button -> reply ke sath - Boss fix no jhatka */
     var sb = $('dm-send-btn');
-    if (sb) sb.onclick = function () { d4sendText(); };
+    if (sb) {
+      sb.addEventListener('mousedown', function(e){ e.preventDefault(); });
+      sb.addEventListener('touchstart', function(e){ e.preventDefault(); }, {passive:false});
+      sb.onclick = function (e) { if(e) e.preventDefault(); d4sendText(); };
+    }
     var inp = $('dm-input');
-    if (inp) inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') d4sendText(); });
+    if (inp) inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); d4sendText(); } });
     document.addEventListener('click', function () {
       if (pop4) pop4.classList.remove('on');
       if (acts) acts.classList.remove('on');
@@ -5600,14 +5608,31 @@ function renderMembers() {
       });
     };
     var sb = $('dm-send-btn');
-    if (sb) sb.onclick = function () {
-      var v = $('dm-input').value.trim();
-      if (!v || !curChat) return;
-      $('dm-input').value = '';
-      sendMsg(curChat, { t: 'text', x: v }, false);
-    };
+    if (sb) {
+      // Prevent focus loss - no jhatka
+      sb.addEventListener('mousedown', function(e){ e.preventDefault(); });
+      sb.addEventListener('touchstart', function(e){ e.preventDefault(); }, {passive:false});
+      sb.onclick = function (e) {
+        if(e) e.preventDefault();
+        var inp2 = $('dm-input');
+        var v = inp2 ? inp2.value.trim() : '';
+        if (!v || !curChat) return;
+        inp2.value = '';
+        try { inp2.focus({preventScroll:true}); } catch(er){ try{inp2.focus();}catch(e2){} }
+        sendMsg(curChat, { t: 'text', x: v }, false);
+        setTimeout(function(){ try { var ii=$('dm-input'); if(ii) ii.focus({preventScroll:true}); } catch(e){} }, 10);
+      };
+    }
     var inp = $('dm-input');
-    if (inp) inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') $('dm-send-btn').onclick(); });
+    if (inp) {
+      inp.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          var sb2 = $('dm-send-btn');
+          if(sb2) sb2.onclick(e);
+        }
+      });
+    }
     var wa = $('dm-wa-btn');
     if (wa) wa.onclick = function () {
       if (!curChat) return;
