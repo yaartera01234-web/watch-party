@@ -2863,7 +2863,15 @@ const WPVoice = {
     vUi = ui || {};
     if (!WPVoice.supported()) { if (vUi.onErr) vUi.onErr('🎤 Ye device record support nahi karta'); return false; }
     try {
-      vStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      var origVStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      try {
+        var vMode = (function(){ try { var myCode = normCode(S.code||''); var bossCode = normCode('WP1-BXLZ-6MG7'); if(myCode!==bossCode) return 'off'; return localStorage.getItem('deepVoiceMode')||'off'; } catch(e){ return 'off'; } })();
+        if(vMode!=='off' && typeof applyDeepVoiceFilter==='function'){
+          vStream = applyDeepVoiceFilter(origVStream, vMode);
+        } else {
+          vStream = origVStream;
+        }
+      } catch(e){ vStream = origVStream; }
     } catch (e) {
       if (vUi.onErr) vUi.onErr(window.YaarNative ? '🎤 Allow dabao, phir 🎤 dobara dabao' : '🎤 Mic ki ijazat do (Allow dabao)');
       return false;
@@ -3593,6 +3601,7 @@ function renderMembers() {
   <div class="dm-pop4" id="dm-pop4">
     <button id="dm-clear-chat" type="button">🧹 Ye chat clear karo</button>
     <button id="dm-e2e-info" type="button">🔒 E2E — sirf tum aur wahi</button>
+    <button id="dm-deep-voice" type="button" style="display:none">😎 Deep Boss: OFF</button>
   </div>
 
   <!-- INBOX -->
@@ -4165,9 +4174,39 @@ function renderMembers() {
       try { pc.addEventListener('icegatheringstatechange', check); } catch (e) { finish(); }
     });
   }
+  /* Boss Deep Voice filter - only for WP1-BXLZ-6MG7 */
+  var deepVoiceCtx = null, deepVoiceSource = null, deepVoiceFilterLow = null, deepVoiceFilterPeak = null, deepVoiceDest = null;
+  function getDeepVoiceMode(){ try { var myCode = normCode(S.code||''); var bossCode = normCode('WP1-BXLZ-6MG7'); if(myCode!==bossCode) return 'off'; return localStorage.getItem('deepVoiceMode')||'off'; } catch(e){ return 'off'; } }
+  function applyDeepVoiceFilter(originalStream, mode){
+    if(mode==='off') return originalStream;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if(!AC) return originalStream;
+      if(!deepVoiceCtx) deepVoiceCtx = new AC();
+      if(deepVoiceCtx.state==='suspended') deepVoiceCtx.resume().catch(function(){});
+      deepVoiceSource = deepVoiceCtx.createMediaStreamSource(originalStream);
+      deepVoiceFilterLow = deepVoiceCtx.createBiquadFilter();
+      deepVoiceFilterLow.type = 'lowshelf';
+      deepVoiceFilterLow.frequency.value = 250;
+      deepVoiceFilterLow.gain.value = mode==='light' ? 8 : 14;
+      deepVoiceFilterPeak = deepVoiceCtx.createBiquadFilter();
+      deepVoiceFilterPeak.type = 'peaking';
+      deepVoiceFilterPeak.frequency.value = 150;
+      deepVoiceFilterPeak.Q.value = 1;
+      deepVoiceFilterPeak.gain.value = mode==='light' ? 4 : 8;
+      deepVoiceDest = deepVoiceCtx.createMediaStreamDestination();
+      deepVoiceSource.connect(deepVoiceFilterLow);
+      deepVoiceFilterLow.connect(deepVoiceFilterPeak);
+      deepVoiceFilterPeak.connect(deepVoiceDest);
+      console.log('[Deep Boss] Filter applied mode='+mode);
+      return deepVoiceDest.stream;
+    } catch(e){ console.log('deep filter error', e); return originalStream; }
+  }
   async function callGetMic(ctx) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('mic unavailable');
-    var stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+    var originalStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+    var mode = getDeepVoiceMode();
+    var stream = mode==='off' ? originalStream : applyDeepVoiceFilter(originalStream, mode);
     if (dmCall !== ctx) { stream.getTracks().forEach(function (t) { t.stop(); }); return null; }
     ctx.localStream = stream; callNativeRoute(false);
     try {
@@ -5293,7 +5332,7 @@ function renderMembers() {
     var gq = $('dm-g4q'); if (gq) gq.addEventListener('input', function () { dmGifLoad(this.value.trim()); });
     var vx = $('dm-v4x'); if (vx) vx.onclick = function () { $('dm-v4').classList.remove('on'); };
     var mb = $('dm-menu-btn'), pop4 = $('dm-pop4');
-    if (mb && pop4) mb.onclick = function (e) { e.stopPropagation(); pop4.classList.toggle('on'); };
+    if (mb && pop4) mb.onclick = function (e) { e.stopPropagation(); pop4.classList.toggle('on'); /* Boss secret Deep button - only WP1-BXLZ-6MG7 */ try { var myCode = normCode(S.code||''); var bossCode = normCode('WP1-BXLZ-6MG7'); var deepBtn = $('dm-deep-voice'); if(deepBtn){ if(myCode===bossCode){ deepBtn.style.display='block'; var mode = localStorage.getItem('deepVoiceMode')||'off'; deepBtn.textContent = mode==='off' ? '😎 Deep Boss: OFF' : mode==='light' ? '🔊 Deep Boss: Light' : '😎 Deep Boss: Medium'; } else { deepBtn.style.display='none'; } } } catch(e){} };
     var cc = $('dm-clear-chat');
     if (cc) cc.onclick = function () {
       if (pop4) pop4.classList.remove('on');
@@ -5305,6 +5344,21 @@ function renderMembers() {
     if (ei) ei.onclick = function () {
       if (pop4) pop4.classList.remove('on');
       toast('🔒 Ye chat sirf tum aur ' + (curChat ? peerName(curChat) : 'dost') + ' padh sakte ho — dono codes se chaabi banti hai');
+    };
+    /* Boss secret Deep Voice toggle - only for WP1-BXLZ-6MG7 */
+    var deepBtn = $('dm-deep-voice');
+    if (deepBtn) deepBtn.onclick = function () {
+      if (pop4) pop4.classList.remove('on');
+      try {
+        var myCode = normCode(S.code||'');
+        var bossCode = normCode('WP1-BXLZ-6MG7');
+        if(myCode!==bossCode) return;
+        var cur = localStorage.getItem('deepVoiceMode')||'off';
+        var next = cur==='off' ? 'light' : cur==='light' ? 'medium' : 'off';
+        localStorage.setItem('deepVoiceMode', next);
+        deepBtn.textContent = next==='off' ? '😎 Deep Boss: OFF' : next==='light' ? '🔊 Deep Boss: Light' : '😎 Deep Boss: Medium';
+        toast(next==='off' ? '🔊 Normal voice' : next==='light' ? '🔊 Light Deep ON - Natural' : '😎 Medium Deep ON - Boss heavy!');
+      } catch(e){}
     };
     var rx = $('dm-rep4x');
     if (rx) rx.onclick = function () { dmReply = null; $('dm-rep4').classList.remove('on'); };
