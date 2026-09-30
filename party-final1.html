@@ -1295,6 +1295,23 @@ body { margin: 0 !important; padding: 0 !important; }
   100% { opacity:1; transform: scale(1) translateY(0); }
 }
 
+
+/* DP per message - keep visible like before */
+#dm-thread .msg-row { display: flex !important; gap: 8px !important; align-items: flex-end !important; }
+#dm-thread .msg-row.own { flex-direction: row-reverse !important; }
+#dm-thread .msg-row .avatar, #dm-thread .msg-row .av3 {
+  width: 34px !important; height: 34px !important; flex: 0 0 34px !important;
+  border-radius: 50% !important; overflow: hidden !important;
+  display: grid !important; place-items: center !important;
+  font-weight: 900 !important; font-size: 14px !important;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.1) !important;
+}
+#dm-thread .msg-row .avatar img, #dm-thread .msg-row .av3 img {
+  width: 100% !important; height: 100% !important; object-fit: cover !important; border-radius: 50% !important;
+}
+#dm-thread .msg-row .msg { max-width: 100% !important; }
+#dm-thread .msg-row .msg .sender { font-size: 11px !important; font-weight: 700 !important; margin-bottom: 2px !important; opacity: 0.8 !important; }
+
 </style>
 </head>
 <body>
