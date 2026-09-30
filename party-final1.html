@@ -558,15 +558,25 @@ main { gap: 11px; }
 #wp-dm-badge.on { display: grid; }
 #dm-add-from-search { margin-top: 10px; padding: 9px 14px; border-radius: 12px; border: 1px solid rgba(84,232,255,.45);
   background: linear-gradient(135deg, #ff5ebc, #8b72ff); color: #150c26; font-weight: 900; font-size: 12px; cursor: pointer; }
-.dm-ov { position: fixed; top:0;right:0;bottom:0;left:0; z-index: 81; background: rgba(0,0,0,.6); opacity: 0; pointer-events: none; transition: .2s; }
+.dm-ov { position: fixed; top:0;right:0;bottom:0;left:0; z-index: 81; background: rgba(0,0,0,.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); opacity: 0; pointer-events: none; transition: .3s; }
 .dm-ov.on { opacity: 1; pointer-events: auto; }
-#dm-sheet { position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 82; max-width: 520px; margin: 0 auto;
-  height: 86vh; display: flex; flex-direction: column; overflow: hidden; padding: 0;
-  border-radius: 20px; background: var(--wp-menu-bg, rgba(19,16,45,.985)); border: 1px solid rgba(255,255,255,.16);
-  box-shadow: 0 -14px 34px rgba(0,0,0,.6); transform: translateY(130%); transition: transform .25s ease; }
+#dm-sheet { 
+  position: fixed; inset: 0; z-index: 82; max-width: 520px; margin: 0 auto;
+  height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; padding: 0;
+  border-radius: 0; background: radial-gradient(ellipse at top, #1a1a2e 0%, #0f0b20 40%, #050507 100%);
+  border: 0; border-left: 1px solid rgba(255,255,255,0.06); border-right: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 0 80px rgba(0,0,0,0.8); 
+  transform: translateX(105%); transition: transform .32s cubic-bezier(0.32, 0.72, 0, 1);
+}
 #dm-sheet.on { transform: none; }
-.dm-bar { display: flex; align-items: center; gap: 9px; padding: 11px 12px; flex: 0 0 auto;
-  background: linear-gradient(90deg, rgba(139,114,255,.3), rgba(255,94,188,.2)); border-bottom: 1px solid rgba(255,255,255,.1); }
+#dm-sheet::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(circle at 20% 20%, rgba(139,114,255,0.08), transparent 40%),
+              radial-gradient(circle at 80% 80%, rgba(255,94,188,0.06), transparent 40%);
+}
+.dm-bar { display: flex; align-items: center; gap: 10px; padding: 14px 16px; flex: 0 0 auto;
+  background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
+  border-bottom: 1px solid rgba(255,255,255,0.06); position: relative; z-index: 2; }
 .dm-bar .bk { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; font-size: 13px; cursor: pointer;
   background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16); flex: 0 0 auto; }
 .dm-bar b { font-size: 13.5px; }
@@ -575,8 +585,9 @@ main { gap: 11px; }
   cursor: pointer; font-size: 15px; font-weight: 900; background: linear-gradient(135deg, #54e8ff, #8b72ff); color: #0d0716; flex: 0 0 auto; }
 .dm-e2e { font-size: 9.5px; padding: 3px 7px; border-radius: 999px; border: 1px solid rgba(52,211,153,.6);
   background: rgba(52,211,153,.14); color: #9ff5cf; font-weight: 700; margin-left: auto; flex: 0 0 auto; }
-.dm-view { position: absolute; top:0;right:0;bottom:0;left:0; padding-top: 52px; display: flex; flex-direction: column;
-  transform: translateX(102%); transition: transform .26s ease; background: var(--wp-menu-bg, rgba(19,16,45,.99)); }
+.dm-view { position: absolute; top:0;right:0;bottom:0;left:0; padding-top: 58px; display: flex; flex-direction: column;
+  transform: translateX(105%); transition: transform .32s cubic-bezier(0.32, 0.72, 0, 1); 
+  background: transparent; }
 .dm-view.on { transform: none; }
 .dm-view.first { transform: none; }
 .dm-search { padding: 9px 12px 6px; flex: 0 0 auto; }
@@ -594,8 +605,10 @@ main { gap: 11px; }
 .dm-req .btns3 button { padding: 7px 10px; border-radius: 10px; border: 0; font-size: 11px; font-weight: 800; cursor: pointer; }
 .dm-req .btns3 .y { background: linear-gradient(135deg, #54e8ff, #8b72ff); color: #0d0716; }
 .dm-req .btns3 .n { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.16); }
-.dm-row { display: flex; align-items: center; gap: 11px; padding: 10px; border-radius: 15px; margin-bottom: 7px; cursor: pointer;
-  background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.09); }
+.dm-row { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; margin-bottom: 8px; cursor: pointer;
+  background: rgba(255,255,255,0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); 
+  transition: all 0.2s ease; position: relative; }
+.dm-row:hover { background: rgba(255,255,255,0.06); border-color: rgba(139,114,255,0.15); transform: translateY(-1px); }
 .dm-row:active { background: rgba(255,255,255,.08); }
 .dm-row .av3 { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 16px;
   color: #160b22; flex: 0 0 auto; position: relative; overflow: visible; }
