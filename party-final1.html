@@ -562,7 +562,7 @@ main { gap: 11px; }
 .dm-ov.on { opacity: 1; pointer-events: auto; }
 #dm-sheet { 
   position: fixed; inset: 0; z-index: 82; max-width: 520px; margin: 0 auto;
-  height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; padding: 0;
+  height: 100%; height: 100dvh; height: 100vh; display: flex; flex-direction: column; overflow: hidden; padding: 0;
   border-radius: 0; background: radial-gradient(ellipse at top, #1a1a2e 0%, #0f0b20 40%, #050507 100%);
   border: 0; border-left: 1px solid rgba(255,255,255,0.06); border-right: 1px solid rgba(255,255,255,0.06);
   box-shadow: 0 0 80px rgba(0,0,0,0.8); 
@@ -659,7 +659,7 @@ main { gap: 11px; }
 .dm-m .bub4.sys { background: rgba(84,232,255,.12); border-color: rgba(84,232,255,.35); color: #cdefff; font-size: 11.5px; }
 .dm-wa { margin: 0 12px 10px; padding: 9px; border-radius: 12px; text-align: center; font-size: 11.5px; font-weight: 800; cursor: pointer;
   background: rgba(37,211,102,.14); border: 1px solid rgba(37,211,102,.45); color: #a7f3c4; flex: 0 0 auto; }
-.dm-inbar { display: flex; gap: 7px; padding: 9px 11px; border-top: 1px solid rgba(255,255,255,.09); flex: 0 0 auto; }
+.dm-inbar { display: flex; gap: 7px; padding: 10px 12px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid rgba(255,255,255,.09); flex: 0 0 auto; background: rgba(0,0,0,0.4); backdrop-filter: blur(20px); margin: 0; }
 .dm-inbar input { flex: 1; height: 34px; border-radius: 11px; padding: 0 11px; font-size: 12.5px; color: #fff;
   background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); outline: none; }
 .dm-inbar button { width: 38px; border-radius: 11px; border: 0; background: linear-gradient(135deg, #ff5ebc, #8b72ff); color: #150c26; font-weight: 900; cursor: pointer; }
@@ -943,7 +943,7 @@ main { gap: 11px; }
   from { transform: scale(0.85) translateY(12px); opacity: 0; }
   to { transform: scale(1) translateY(0); opacity: 1; }
 }
-#dm-thread { padding-bottom: 30px; }
+#dm-thread { padding-bottom: 12px; }
 #chat-messages { padding-bottom: 20px; }
 /* Touch-first scrolling: keep vertical gestures native and skip off-screen inbox paint. */
 #dm-list, #dm-thread { touch-action: pan-y; }
