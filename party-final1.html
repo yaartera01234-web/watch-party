@@ -5194,9 +5194,22 @@ function renderMembers() {
   var d4AtBottom = true, d4LastCount = {};
   function d4Snap() {
     var t = $('dm-thread'); if (!t) return;
-    t.scrollTop = t.scrollHeight;
-    requestAnimationFrame(function () { var x = $('dm-thread'); if (x) x.scrollTop = x.scrollHeight; });
-    setTimeout(function () { var x = $('dm-thread'); if (x && d4AtBottom) x.scrollTop = x.scrollHeight; }, 120);
+    // FIX: Half message hidden bug - scroll with extra offset + multiple retries for keyboard
+    var doSnap = function(){ 
+      try {
+        t.scrollTop = t.scrollHeight + 200;
+        // Also scroll parent if needed
+        var sheet = $('dm-sheet');
+        if(sheet) sheet.scrollTop = sheet.scrollHeight;
+      } catch(e){}
+    };
+    doSnap();
+    requestAnimationFrame(function () { var x = $('dm-thread'); if (x) { x.scrollTop = x.scrollHeight + 200; } });
+    setTimeout(function () { var x = $('dm-thread'); if (x) x.scrollTop = x.scrollHeight + 200; }, 80);
+    setTimeout(function () { var x = $('dm-thread'); if (x) x.scrollTop = x.scrollHeight + 200; }, 200);
+    setTimeout(function () { var x = $('dm-thread'); if (x) x.scrollTop = x.scrollHeight + 200; }, 400);
+    // For mobile keyboard open
+    setTimeout(function () { var x = $('dm-thread'); if (x) x.scrollTop = x.scrollHeight + 300; }, 600);
     d4AtBottom = true;
     d4Peek(false);
   }
