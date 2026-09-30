@@ -4360,7 +4360,7 @@ function renderMembers() {
     var _nm = myLabel();
     if (_nm && _nm !== 'Dost' && S.name !== _nm) { S.name = _nm; }
     var out = { c: S.code, n: _nm, k: (typeof myColor !== 'undefined' && myColor) ? myColor : S.color, ts: nowMs(), iv: e.iv, ct: e.ct };
-    if (withAvatar && typeof myAvatar !== 'undefined') out.a = myAvatar;
+    if (typeof myAvatar !== 'undefined') out.a = myAvatar; // FIX: always send avatar - first pic stuck bug
     var topic = NSP + 'inbox-' + h36(peer) + '/' + midv;
     try {
       if (waitAck) {
