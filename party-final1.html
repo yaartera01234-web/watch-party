@@ -1341,6 +1341,27 @@ body { margin: 0 !important; padding: 0 !important; }
   max-width: calc(100% - 42px) !important;
 }
 
+
+/* FIX DP right side for own messages - boss SS */
+#dm-thread .msg-row.own {
+  align-self: flex-end !important;
+  flex-direction: row !important;
+  margin-left: auto !important;
+  justify-content: flex-end !important;
+}
+#dm-thread .msg-row.other {
+  align-self: flex-start !important;
+  flex-direction: row !important;
+  margin-right: auto !important;
+  justify-content: flex-start !important;
+}
+#dm-thread .msg-row.own .avatar, #dm-thread .msg-row.own .av3 {
+  order: 2 !important;
+}
+#dm-thread .msg-row.own .msg {
+  order: 1 !important;
+}
+
 </style>
 </head>
 <body>
