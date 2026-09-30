@@ -1397,7 +1397,7 @@ body { margin: 0 !important; padding: 0 !important; }
 }
 
 
-/* Tablet fix - DM truly full-screen 100% on all devices */
+/* Tablet fix - DM truly full-screen 100% on all devices - no side peek */
 #dm-sheet {
   max-width: 100% !important;
   width: 100% !important;
@@ -1405,16 +1405,32 @@ body { margin: 0 !important; padding: 0 !important; }
   left: 0 !important; right: 0 !important;
   inset: 0 !important;
 }
+.dm-view {
+  width: 100% !important;
+  max-width: 100% !important;
+  left: 0 !important; right: 0 !important;
+  margin: 0 !important;
+  transform: translateX(110%) !important;
+}
+.dm-view.on {
+  transform: none !important;
+}
+.dm-view.first {
+  transform: none !important;
+}
 @media (min-width: 600px) {
   #dm-sheet {
     max-width: 100% !important;
     width: 100% !important;
     margin: 0 !important;
   }
-  #dm-view-inbox, #dm-view-chat, #dm-view-add {
+  #dm-view-inbox .dm-list, #dm-view-inbox .dm-search,
+  #dm-view-chat #dm-thread, #dm-view-chat .dm-inbar,
+  #dm-view-add .dm-addbox, #dm-view-add .dm-codecard {
     max-width: 520px !important;
-    margin: 0 auto !important;
-    left: 0 !important; right: 0 !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    width: 100% !important;
   }
   #dm-ov.on {
     background: rgba(0,0,0,0.75) !important;
