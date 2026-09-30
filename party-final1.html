@@ -2226,7 +2226,11 @@ function parseURL(url) {
   return { type: 'mp4', url: url };
 }
 function makeLabel(d) {
-  if (d.type === 'youtube') return 'YT: ' + (d.videoId || '');
+  if (d.type === 'youtube') {
+    // If title already fetched, use it, else show ID and fetch async
+    if (d.title) return d.title.slice(0, 50);
+    return 'YT: ' + (d.videoId || '');
+  }
   if (d.type === 'hls') return '📡 ' + (String(d.url || '').split('?')[0].split('/').pop() || 'HLS stream').slice(0, 28);
   try {
     const u = String(d.url || '').split('?')[0].split('/').pop() || '';
@@ -2234,6 +2238,18 @@ function makeLabel(d) {
     if (/\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(name)) return '🎵 ' + (name.slice(0, 28) || 'MP3 song');
     return '🎞 ' + (name.slice(0, 28) || 'MP4 video');
   } catch (e) { return '🎞 video'; }
+}
+// Fetch YouTube title via oEmbed and update playlist
+function fetchYouTubeTitle(videoId, callback) {
+  if (!videoId) return;
+  try {
+    fetch('https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=' + videoId + '&format=json')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && data.title) callback(data.title);
+      })
+      .catch(() => {});
+  } catch (e) {}
 }
 loadBtn.onclick = () => {
   const val = urlInput.value.trim();
@@ -2777,8 +2793,30 @@ function renderQueue(items, index) {
   items.forEach((it, i) => {
     const div = document.createElement('div');
     div.className = 'pl-item' + (i === index ? ' active' : '');
+    // Thumbnail for YouTube
+    if (it.type === 'youtube' && it.videoId) {
+      const thumb = document.createElement('div');
+      thumb.className = 'pl-thumb';
+      thumb.style.cssText = 'width:56px;height:36px;border-radius:8px;background:#1a1a2e;flex:0 0 56px;overflow:hidden;display:grid;place-items:center;position:relative;';
+      const img = document.createElement('img');
+      img.src = 'https://img.youtube.com/vi/' + it.videoId + '/mqdefault.jpg';
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+      img.loading = 'lazy';
+      thumb.appendChild(img);
+      // If title not yet fetched, fetch it
+      if (!it.title) {
+        fetchYouTubeTitle(it.videoId, (title) => {
+          it.title = title;
+          it.label = title;
+          try { pubQueue(); } catch(e) {}
+          renderQueue(items, index);
+        });
+      }
+      div.appendChild(thumb);
+    }
     const num = document.createElement('span'); num.className = 'pl-num'; num.textContent = (i === index ? '▶ ' : '') + (i + 1);
-    const lab = document.createElement('span'); lab.className = 'pl-label'; lab.textContent = it.label || it.videoId || 'video';
+    const lab = document.createElement('span'); lab.className = 'pl-label'; lab.textContent = it.title || it.label || it.videoId || 'video';
+    lab.style.cssText = 'flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;font-size:13px;';
     const by = document.createElement('span'); by.className = 'pl-by'; by.textContent = it.by || '';
     const x = document.createElement('button'); x.className = 'pl-x'; x.textContent = '❌';
     x.onclick = (e) => { e.stopPropagation(); queueRemove(i); };
