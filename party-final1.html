@@ -1397,24 +1397,31 @@ body { margin: 0 !important; padding: 0 !important; }
 }
 
 
-/* Tablet fix - DM full screen on tablet too */
+/* Tablet fix - DM truly full-screen 100% on all devices */
+#dm-sheet {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  left: 0 !important; right: 0 !important;
+  inset: 0 !important;
+}
 @media (min-width: 600px) {
   #dm-sheet {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+  #dm-view-inbox, #dm-view-chat, #dm-view-add {
     max-width: 520px !important;
     margin: 0 auto !important;
     left: 0 !important; right: 0 !important;
-    width: 100% !important;
   }
   #dm-ov.on {
     background: rgba(0,0,0,0.75) !important;
     backdrop-filter: blur(8px) !important;
   }
 }
-@media (min-width: 768px) {
-  #dm-sheet {
-    max-width: 600px !important;
-  }
-}
+
 
 </style>
 </head>
