@@ -5513,7 +5513,6 @@ function renderMembers() {
     var sb = $('dm-send-btn');
     if (sb) {
       sb.addEventListener('mousedown', function(e){ e.preventDefault(); });
-      sb.addEventListener('touchstart', function(e){ e.preventDefault(); }, {passive:false});
       sb.onclick = function (e) { if(e) e.preventDefault(); d4sendText(); };
     }
     var inp = $('dm-input');
@@ -5609,9 +5608,7 @@ function renderMembers() {
     };
     var sb = $('dm-send-btn');
     if (sb) {
-      // Prevent focus loss - no jhatka
       sb.addEventListener('mousedown', function(e){ e.preventDefault(); });
-      sb.addEventListener('touchstart', function(e){ e.preventDefault(); }, {passive:false});
       sb.onclick = function (e) {
         if(e) e.preventDefault();
         var inp2 = $('dm-input');
