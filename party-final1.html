@@ -4786,10 +4786,17 @@ function renderMembers() {
     callStopRing(); callClearTimer(); if (dmCallTicker) { clearInterval(dmCallTicker); dmCallTicker = null; }
     if (notifyPeer) callSend(ctx.peer, ctx.id, 'hangup');
     try { if (ctx.pc) { ctx.pc.ontrack = null; ctx.pc.onconnectionstatechange = null; ctx.pc.oniceconnectionstatechange = null; ctx.pc.close(); } } catch (e) {}
-    try { if (ctx.localStream) ctx.localStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
+    try { if (ctx.localStream) ctx.localStream.getTracks().forEach(function (t) { try{ t.enabled=false; }catch(e){} try{ t.stop(); }catch(e){} }); } catch (e) {}
+    try { ctx.localStream = null; } catch(e){}
+    try { ctx.pc = null; } catch(e){}
     try { var audio = $('dm-call-remote'); if (audio) { audio.pause(); audio.srcObject = null; } } catch (e) {}
     try { if (window.YaarNative && window.YaarNative.stopOngoingCall) window.YaarNative.stopOngoingCall(); } catch (e) {}
     try { if (window.YaarNative && window.YaarNative.resetCallAudioRoute) window.YaarNative.resetCallAudioRoute(); } catch (e) {}
+    // Boss fix: mic lock 2 hour - extra release after delay for WhatsApp/Snapchat
+    try {
+      setTimeout(function(){ try{ if(window.YaarNative && window.YaarNative.stopOngoingCall) window.YaarNative.stopOngoingCall(); }catch(e){} try{ if(window.YaarNative && window.YaarNative.resetCallAudioRoute) window.YaarNative.resetCallAudioRoute(); }catch(e){} }, 400);
+      setTimeout(function(){ try{ if(window.YaarNative && window.YaarNative.resetCallAudioRoute) window.YaarNative.resetCallAudioRoute(); }catch(e){} }, 1200);
+    } catch(e){}
     dmCall = null; callRender();
   }
   function callEnd() { if (!dmCall) return; callSend(dmCall.peer, dmCall.id, 'hangup'); callFinish(false); }
