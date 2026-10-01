@@ -1924,7 +1924,26 @@ function onMsg(topic, buf) {
   } else if (topic === TP.events) {
     let ev; try { ev = JSON.parse(str); } catch (e) { return; }
     if (!ev || dup(ev.mid)) return;
-    if (ev.t === 'join' && ev.from !== myId) { addSysMsg(ev.name + ' Joined Party 🎉'); tuneJoin(); }
+    if (ev.t === 'join' && ev.from !== myId) {
+      addSysMsg(ev.name + ' Joined Party 🎉'); tuneJoin();
+      // Boss fix: late joiner ko current song auto load karwao - re-publish state
+      try {
+        if (stateLocal && stateLocal.type && stateLocal.type !== 'none' && joined) {
+          // Thoda delay taake naya banda subscribe kar le
+          setTimeout(() => {
+            try {
+              if (stateLocal.playing && stateLocal.at) {
+                const nowT = Math.max(0, (stateLocal.time || 0) + (Date.now() - stateLocal.at) / 1000);
+                pubState({ type: stateLocal.type, url: stateLocal.url || '', videoId: stateLocal.videoId || '', time: nowT, playing: true });
+              } else {
+                pubState(stateLocal);
+              }
+              pubQueue();
+            } catch(e) {}
+          }, 1200);
+        }
+      } catch(e) {}
+    }
   } else if (topic.indexOf(ROOM + '/members/') === 0) {
     const id = topic.slice((ROOM + '/members/').length);
     if (!str) {
@@ -2081,12 +2100,18 @@ async function join() {
   var rmEl = $('wp-room-name'); if (rmEl) rmEl.textContent = shortRoom;   /* header ka room chip */
   renderMembers();
   renderQueue(queueLocal.items || [], queueLocal.index);
-  // late joiner catchup
-  const s = stateLocal;
-  if (s && s.type && s.type !== 'none') {
-    if (s.playing && s.at) s.time = Math.max(0, (s.time || 0) + (Date.now() - s.at) / 1000);
-    applyState(s);
-  }
+  // late joiner catchup - boss fix: wait for state if not yet received
+  const doCatchup = () => {
+    const s = stateLocal;
+    if (s && s.type && s.type !== 'none') {
+      if (s.playing && s.at) s.time = Math.max(0, (s.time || 0) + (Date.now() - s.at) / 1000);
+      applyState(s);
+    }
+  };
+  doCatchup();
+  // Agar state abhi tak nahi aayi (retain delay), to 1.5 sec baad dobara try
+  setTimeout(doCatchup, 1500);
+  setTimeout(doCatchup, 3500);
 }
 joinBtn.onclick = join;
 nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') join(); });
