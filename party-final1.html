@@ -1926,21 +1926,23 @@ function onMsg(topic, buf) {
     if (!ev || dup(ev.mid)) return;
     if (ev.t === 'join' && ev.from !== myId) {
       addSysMsg(ev.name + ' Joined Party 🎉'); tuneJoin();
-      // Boss fix: late joiner ko current song perfect timing pe load karwao
+      // Boss fix: late joiner perfect timing + no auto pause loop
       try {
+        // Reset pause flags so no auto pause publish after new join
+        try { localHoldUntil = 0; iPausedByMe = false; syncQuiet = Date.now() + 8000; suppressYT = true; suppressMP4 = true; setTimeout(()=>{suppressYT=false; suppressMP4=false;}, 4000); } catch(e) {}
         if (stateLocal && stateLocal.type && stateLocal.type !== 'none' && joined) {
           setTimeout(() => {
             try {
-              // Use actual current playback time, not old state + delta, for perfect sync
               let curT = 0;
               try { curT = localNow(); } catch(e) { curT = stateLocal.time || 0; }
               if (stateLocal.at) {
                 const calcT = Math.max(0, (stateLocal.time || 0) + (Date.now() - stateLocal.at) / 1000);
-                // Use max of calc and actual, to avoid behind timing
                 curT = Math.max(curT, calcT);
               }
               pubState({ type: stateLocal.type, url: stateLocal.url || '', videoId: stateLocal.videoId || '', time: curT, playing: true });
               pubQueue();
+              // Keep quiet for 8 sec after publish
+              try { syncQuiet = Date.now() + 8000; } catch(e) {}
             } catch(e) {}
           }, 1200);
         }
@@ -2102,16 +2104,16 @@ async function join() {
   var rmEl = $('wp-room-name'); if (rmEl) rmEl.textContent = shortRoom;   /* header ka room chip */
   renderMembers();
   renderQueue(queueLocal.items || [], queueLocal.index);
-  // late joiner catchup - boss fix: wait for state + no auto pause/agay peeche
+  // late joiner catchup - no auto pause/agay peeche - 8 sec quiet
   const doCatchup = () => {
     const s = stateLocal;
     if (s && s.type && s.type !== 'none') {
       try {
-        // Suppress sync publish for 5 sec after catchup - no loop
-        syncQuiet = Date.now() + 5000;
+        syncQuiet = Date.now() + 8000;
         suppressYT = true;
         suppressMP4 = true;
-        setTimeout(() => { suppressYT = false; suppressMP4 = false; }, 3000);
+        localHoldUntil = 0; iPausedByMe = false;
+        setTimeout(() => { suppressYT = false; suppressMP4 = false; }, 4000);
       } catch(e) {}
       if (s.playing && s.at) s.time = Math.max(0, (s.time || 0) + (Date.now() - s.at) / 1000);
       applyState(s);
