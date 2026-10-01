@@ -134,7 +134,7 @@ main { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 8px; m
   padding: 0; 
   display: flex; 
   flex-direction: column; 
-  max-height: 82px; /* collapsed */
+  max-height: 48px; /* collapsed - only header visible, no song peek */
   overflow: hidden;
   transition: max-height 0.35s cubic-bezier(0.32,0.72,0,1);
 }
@@ -145,6 +145,10 @@ main { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 8px; m
   font-size: 13px; font-weight: bold; color: #c4b5fd;
   margin-bottom: 0 !important;
   user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  min-height: 48px;
+  box-sizing: border-box;
 }
 .playlist-box .pl-head .arrow {
   margin-left: auto; width: 26px; height: 26px;
@@ -153,8 +157,9 @@ main { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 8px; m
   flex-shrink: 0;
 }
 .playlist-box.open .pl-head .arrow { transform: rotate(180deg); }
-.playlist-box #pl-list { overflow-y: auto; padding: 6px 8px; max-height: 300px; }
-.playlist-box #pl-clear { margin-left: 8px !important; }
+.playlist-box #pl-list { overflow-y: auto; padding: 6px 8px; max-height: 300px; opacity:0; pointer-events:none; transition: opacity 0.2s ease; }
+.playlist-box.open #pl-list { opacity:1; pointer-events:auto; }
+.playlist-box #pl-clear { margin-left: 8px !important; flex-shrink:0; }
 
 .pl-head { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: bold; color: #c4b5fd; margin-bottom: 6px; }
 .pl-head #pl-count { color: #4ade80; }
@@ -427,7 +432,7 @@ main { gap: 11px; }
   main { gap: 7px; }
   #now-playing { display: none; }
   .sync-row button { padding: 8px 12px; font-size: 12px; }
-  .playlist-box { max-height: 82px; overflow: hidden; }
+  .playlist-box { max-height: 48px; overflow: hidden; }
   .playlist-box.open { max-height: 380px; }
   .users-box { max-height: 40px; }
   #chat-messages { min-height: 110px; }
@@ -1590,7 +1595,8 @@ body { margin: 0 !important; padding: 0 !important; }
       </div>
       <div class="playlist-box" id="playlist-box">
         <div class="pl-head" onclick="document.getElementById('playlist-box').classList.toggle('open'); try{updatePlSub();}catch(e){}">
-          <span>📋 Playlist (<span id="pl-count">0</span>) <span id="pl-sub" style="font-size:10px;opacity:.75">▼ Tap to expand</span></span>
+          <span style="white-space:nowrap">📋 Playlist (<span id="pl-count">0</span>)</span>
+          <span id="pl-sub" style="font-size:10px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">▼ Tap to expand</span>
           <span class="arrow">▼</span>
           <button id="pl-clear" onclick="event.stopPropagation()" style="margin-left:8px">🗑 Saaf Karo</button>
         </div>
@@ -6433,8 +6439,7 @@ function updatePlSub(){
     var sub = document.getElementById('pl-sub');
     if(!box || !sub) return;
     var isOpen = box.classList.contains('open');
-    var cnt = (queueLocal && queueLocal.items) ? queueLocal.items.length : 0;
-    sub.textContent = (isOpen ? '▲ Tap to collapse' : '▼ Tap to expand') + (cnt ? ' • '+cnt+' songs' : '');
+    sub.textContent = isOpen ? '▲ Tap to collapse' : '▼ Tap to expand';
   }catch(e){}
 }
 try{
