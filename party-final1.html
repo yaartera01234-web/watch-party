@@ -2102,16 +2102,22 @@ async function join() {
   var rmEl = $('wp-room-name'); if (rmEl) rmEl.textContent = shortRoom;   /* header ka room chip */
   renderMembers();
   renderQueue(queueLocal.items || [], queueLocal.index);
-  // late joiner catchup - boss fix: wait for state if not yet received
+  // late joiner catchup - boss fix: wait for state + no auto pause/agay peeche
   const doCatchup = () => {
     const s = stateLocal;
     if (s && s.type && s.type !== 'none') {
+      try {
+        // Suppress sync publish for 5 sec after catchup - no loop
+        syncQuiet = Date.now() + 5000;
+        suppressYT = true;
+        suppressMP4 = true;
+        setTimeout(() => { suppressYT = false; suppressMP4 = false; }, 3000);
+      } catch(e) {}
       if (s.playing && s.at) s.time = Math.max(0, (s.time || 0) + (Date.now() - s.at) / 1000);
       applyState(s);
     }
   };
   doCatchup();
-  // Agar state abhi tak nahi aayi (retain delay), to 1.5 sec baad dobara try
   setTimeout(doCatchup, 1500);
   setTimeout(doCatchup, 3500);
 }
