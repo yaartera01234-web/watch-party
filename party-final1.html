@@ -1853,7 +1853,7 @@ function connectBroker(i) {
   try {
     client = mqtt.connect(BROKERS[i].url, {
       clientId: 'wp_' + myId + '_' + Math.random().toString(36).slice(2, 6),
-      clean: true, connectTimeout: 9000, reconnectPeriod: 2500,
+      clean: true, connectTimeout: 9000, reconnectPeriod: 2500, keepalive: 20,
       will: { topic: ROOM + '/members/' + myId, payload: '', qos: 1, retain: true }
     });
   } catch (e) { alert('\u274C Tower error! Dusra tower select karo! 🔄'); return; }
@@ -1920,14 +1920,14 @@ function publishPresence() {
   if (isBg()) return;                    /* v39: chhupi bg service khud ko online dikhaye hi na */
   pub(ROOM + '/members/' + myId, { name: myName, color: myColor, avatar: myAvatar, ts: Date.now() }, true);
 }
-setInterval(() => { if (joined && mqttUp) publishPresence(); }, 30000);
+setInterval(() => { if (joined && mqttUp) publishPresence(); }, 15000);
 setInterval(() => {
   if (!joined) return;
   const now = Date.now();
   let changed = false;
   Object.keys(membersCache).forEach((id) => {
     const u = membersCache[id];
-    if (u && u.ts && now - u.ts > 90000 && id !== myId) {
+    if (u && u.ts && now - u.ts > 35000 && id !== myId) {
       addSysMsg((u.name || 'Someone') + ' Left 👋'); tuneLeave();
       try { client.publish(ROOM + '/members/' + id, '', { qos: 1, retain: true }); } catch (e) {}
       delete membersCache[id];
@@ -1935,14 +1935,38 @@ setInterval(() => {
     }
   });
   if (changed) renderMembers();
-}, 15000);
+}, 8000);
+// Boss fix: foran left show - explicit leave event
+function publishLeaveNow() {
+  try {
+    if (!joined) return;
+    const leaveEv = { t: 'leave', name: myName, from: myId, mid: mid() };
+    pub(TP.events, leaveEv, false);
+    if (client && mqttUp) {
+      try { client.publish(ROOM + '/members/' + myId, '', { qos: 1, retain: true }); } catch(e){}
+    }
+  } catch(e){}
+}
 window.addEventListener('beforeunload', () => {
   try {
+    if (joined) publishLeaveNow();
     if (client && mqttUp && joined) {
       client.publish(ROOM + '/members/' + myId, '', { qos: 1, retain: true });
       client.end();
     }
   } catch (e) {}
+});
+window.addEventListener('pagehide', () => { try { if (joined) publishLeaveNow(); } catch(e){} });
+document.addEventListener('visibilitychange', () => {
+  try {
+    if (document.visibilityState === 'hidden' && joined) {
+      // don't publish leave on just tab switch, but if page is being discarded, the beforeunload/pagehide will handle
+      // we still update presence as offline quickly
+      if (client && mqttUp) {
+        try { pub(ROOM + '/members/' + myId, { name: myName, color: myColor, avatar: myAvatar, ts: Date.now() - 40000 }, true); } catch(e){}
+      }
+    }
+  } catch(e){}
 });
 
 /* ---------- 📩 MESSAGES ---------- */
@@ -1980,6 +2004,16 @@ function onMsg(topic, buf) {
   } else if (topic === TP.events) {
     let ev; try { ev = JSON.parse(str); } catch (e) { return; }
     if (!ev || dup(ev.mid)) return;
+    if (ev.t === 'leave' && ev.from !== myId) {
+      // Foran left - explicit leave event
+      if (membersCache[ev.from]) {
+        delete membersCache[ev.from];
+        renderMembers();
+      }
+      addSysMsg((ev.name || 'Someone') + ' Left 👋'); tuneLeave();
+      try { client.publish(ROOM + '/members/' + ev.from, '', { qos: 1, retain: true }); } catch(e){}
+      return;
+    }
     if (ev.t === 'join' && ev.from !== myId) {
       addSysMsg(ev.name + ' Joined Party 🎉'); tuneJoin();
       // Boss fix: late joiner perfect timing + no auto pause loop
@@ -3664,7 +3698,7 @@ if (picFile) picFile.addEventListener('change', (e) => {
 
 /* ---------- MEMBERS ---------- */
 function renderMembers() {
-  const list = Object.values(membersCache).filter((u) => !u.ts || Date.now() - u.ts <= 90000);
+  const list = Object.values(membersCache).filter((u) => !u.ts || Date.now() - u.ts <= 40000);
   userList.innerHTML = '';
   userCount.textContent = list.length;
   onlineCount.textContent = '🟢 ' + list.length + ' online';
