@@ -1960,7 +1960,23 @@ function onMsg(topic, buf) {
     } else {
       try {
         const u = JSON.parse(str);
-        if (u && u.name) { membersCache[id] = u; renderMembers(); }
+        if (u && u.name) {
+          // Boss fix: double/triple ID - same name but different ID (old session) -> remove old
+          try {
+            Object.keys(membersCache).forEach((oldId) => {
+              if (oldId !== id && membersCache[oldId] && membersCache[oldId].name === u.name) {
+                // If old entry is older than 10 sec, remove it (it's duplicate from quick rejoin)
+                const oldTs = membersCache[oldId].ts || 0;
+                const newTs = u.ts || Date.now();
+                if (newTs - oldTs < 120000) { // within 2 min -> duplicate
+                  delete membersCache[oldId];
+                  try { client.publish(ROOM + '/members/' + oldId, '', { qos: 1, retain: true }); } catch(e) {}
+                }
+              }
+            });
+          } catch(e) {}
+          membersCache[id] = u; renderMembers();
+        }
       } catch (e) {}
     }
   } else if (topic.indexOf(ROOM + '/typing/') === 0) {
