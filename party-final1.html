@@ -1926,18 +1926,20 @@ function onMsg(topic, buf) {
     if (!ev || dup(ev.mid)) return;
     if (ev.t === 'join' && ev.from !== myId) {
       addSysMsg(ev.name + ' Joined Party 🎉'); tuneJoin();
-      // Boss fix: late joiner ko current song auto load karwao - re-publish state
+      // Boss fix: late joiner ko current song perfect timing pe load karwao
       try {
         if (stateLocal && stateLocal.type && stateLocal.type !== 'none' && joined) {
-          // Thoda delay taake naya banda subscribe kar le
           setTimeout(() => {
             try {
-              if (stateLocal.playing && stateLocal.at) {
-                const nowT = Math.max(0, (stateLocal.time || 0) + (Date.now() - stateLocal.at) / 1000);
-                pubState({ type: stateLocal.type, url: stateLocal.url || '', videoId: stateLocal.videoId || '', time: nowT, playing: true });
-              } else {
-                pubState(stateLocal);
+              // Use actual current playback time, not old state + delta, for perfect sync
+              let curT = 0;
+              try { curT = localNow(); } catch(e) { curT = stateLocal.time || 0; }
+              if (stateLocal.at) {
+                const calcT = Math.max(0, (stateLocal.time || 0) + (Date.now() - stateLocal.at) / 1000);
+                // Use max of calc and actual, to avoid behind timing
+                curT = Math.max(curT, calcT);
               }
+              pubState({ type: stateLocal.type, url: stateLocal.url || '', videoId: stateLocal.videoId || '', time: curT, playing: true });
               pubQueue();
             } catch(e) {}
           }, 1200);
