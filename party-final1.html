@@ -2646,116 +2646,6 @@ function setPremiumMedia(data) {
   premiumVideoBadge.textContent = isYT ? '▶ YOUTUBE' : (data.type === 'hls' ? '📡 HLS STREAM' : '🎞 MP4 VIDEO');
   premiumVideoTitle.textContent = isYT ? 'YouTube · ' + (data.videoId || 'Video') : makeLabel(data).replace(/^(🎞|📡)\s*/, '');
 }
-/* ===== 🚫 AD-FREE YOUTUBE via Piped streams (Boss request) ===== */
-var PIPED_STREAM_INSTANCES = [
-  'https://api.piped.private.coffee',
-  'https://pipedapi.ducks.party',
-  'https://pipedapi.adminforge.de',
-  'https://api.piped.yt',
-  'https://pipedapi.kavin.rocks',
-  'https://pipedapi.moomoo.me',
-  'https://pipedapi.syncpundit.io',
-  'https://pipedapi.leptos.newpipe.dev',
-  'https://pipedapi.r4fo.com'
-];
-var pipedStreamCache = {};
-function getPipedStreamUrl(videoId) {
-  if (pipedStreamCache[videoId]) {
-    console.log('[AdFree] Cache hit', videoId, pipedStreamCache[videoId].quality);
-    return Promise.resolve(pipedStreamCache[videoId]);
-  }
-  // Parallel fetch - try all instances at once, first success wins (faster playlist)
-  var promises = PIPED_STREAM_INSTANCES.map(function(base){
-    var url = base + '/streams/' + encodeURIComponent(videoId);
-    return fetch(url).then(function(r){ if (!r.ok) throw new Error('http '+r.status); return r.json(); }).then(function(j){
-      if (!j) throw new Error('empty');
-      var best = null;
-      var allQualities = [];
-      if (j.videoStreams && j.videoStreams.length) {
-        j.videoStreams.forEach(function(s){ if (s.quality) allQualities.push(s.quality); });
-        // Boss: Prefer 720p or 480p (not 1080p) for faster + data save
-        var muxed = j.videoStreams.filter(function(s){ return s.mimeType && s.mimeType.indexOf('video/mp4')>-1 && s.videoOnly===false; });
-        if (muxed.length) {
-          // Sort by preference: 720p first, then 480p, then others lower, avoid 1080p+ unless no other
-          var pref = {'720p': 3, '480p': 2, '360p': 1, '1080p': 0};
-          muxed.sort(function(a,b){ 
-            var qa = a.quality||'', qb = b.quality||'';
-            var pa = pref[qa] !== undefined ? pref[qa] : (parseInt(qa.replace('p',''))>720 ? -1 : 0);
-            var pb = pref[qb] !== undefined ? pref[qb] : (parseInt(qb.replace('p',''))>720 ? -1 : 0);
-            if (pa !== pb) return pb - pa;
-            var na = parseInt(qa.replace('p',''))||0, nb = parseInt(qb.replace('p',''))||0;
-            return nb - na;
-          });
-          // Pick 720p if available, else 480p
-          var pick720 = muxed.find(function(s){ return s.quality==='720p'; });
-          var pick480 = muxed.find(function(s){ return s.quality==='480p'; });
-          best = pick720 || pick480 || muxed[0];
-        } else {
-          var withAudio = j.videoStreams.filter(function(s){ return s.videoOnly===false; });
-          if (withAudio.length) {
-            var pref2 = {'720p': 3, '480p': 2, '360p': 1, '1080p': 0};
-            withAudio.sort(function(a,b){ 
-              var qa = a.quality||'', qb = b.quality||'';
-              var pa = pref2[qa] !== undefined ? pref2[qa] : (parseInt(qa.replace('p',''))>720 ? -1 : 0);
-              var pb = pref2[qb] !== undefined ? pref2[qb] : (parseInt(qb.replace('p',''))>720 ? -1 : 0);
-              if (pa !== pb) return pb - pa;
-              var na = parseInt(qa.replace('p',''))||0, nb = parseInt(qb.replace('p',''))||0;
-              return nb - na;
-            });
-            var p720 = withAudio.find(function(s){ return s.quality==='720p'; });
-            var p480 = withAudio.find(function(s){ return s.quality==='480p'; });
-            best = p720 || p480 || withAudio[0];
-          }
-        }
-      }
-      if (best && best.url) {
-        var res = { type: 'mp4', url: best.url, quality: best.quality, allQualities: allQualities, fromPiped: true, origId: videoId, hls: j.hls || null, instance: base };
-        console.log('[AdFree] Found quality', best.quality, 'from', base, 'all:', allQualities.join(','));
-        pipedStreamCache[videoId] = res;
-        return res;
-      }
-      if (j.hls) {
-        var res2 = { type: 'hls', url: j.hls, quality: 'HLS', allQualities: allQualities, fromPiped: true, origId: videoId, instance: base };
-        pipedStreamCache[videoId] = res2;
-        return res2;
-      }
-      throw new Error('no stream');
-    });
-  });
-  // Return first successful, or all fail
-  return new Promise(function(resolve, reject){
-    var failed = 0;
-    var errors = [];
-    promises.forEach(function(p){
-      p.then(function(res){ 
-        // First success wins - resolve immediately
-        resolve(res);
-      }).catch(function(e){
-        failed++;
-        errors.push(e);
-        if (failed === promises.length) {
-          reject(new Error('all piped failed: '+errors.map(function(er){return er.message;}).join(',')));
-        }
-      });
-    });
-  });
-}
-// Prefetch next song in playlist for faster next tap
-function prefetchNextInQueue() {
-  try {
-    if (!queueLocal || !queueLocal.items || !queueLocal.items.length) return;
-    var nextIdx = (queueLocal.index || 0) + 1;
-    if (nextIdx >= queueLocal.items.length) return;
-    var next = queueLocal.items[nextIdx];
-    if (next && next.type === 'youtube' && next.videoId) {
-      if (!pipedStreamCache[next.videoId]) {
-        console.log('[AdFree] Prefetching next:', next.videoId);
-        getPipedStreamUrl(next.videoId).then(function(){ console.log('[AdFree] Prefetch done', next.videoId); }).catch(function(){});
-      }
-    }
-  } catch(e){}
-}
-
 function loadVideoLocal(data, autoplay) {
   destroyHLS();
   hlsAudioMode = false;
@@ -2767,74 +2657,6 @@ function loadVideoLocal(data, autoplay) {
   premiumPlayerMenu.classList.add('hidden');
   clearTimeout(premiumHideTimer);
   if (data.type === 'youtube') {
-    // Try ad-free via Piped first
-    try {
-      var vid = data.videoId;
-      nowPlaying.textContent = '🚫 Ads hatane ki koshish... Piped se ad-free stream la raha...';
-      getPipedStreamUrl(vid).then(function(piped){
-        // Play as MP4/HLS instead of YouTube iframe - no ads!
-        console.log('[AdFree] Piped success', piped);
-        if (piped.type === 'hls') {
-          // Play HLS
-          if (ytPlayer && ytPlayer.pauseVideo) { suppressYT = true; ytPlayer.pauseVideo(); setTimeout(function(){suppressYT=false;},800); }
-          ytDiv.classList.add('hidden');
-          mp4.classList.remove('hidden');
-          mp4.controls = false;
-          premiumVideoUI.classList.remove('hidden');
-          premiumVideoUI.classList.remove('youtube-native');
-          setPremiumMedia({type:'hls', url:piped.url, videoId: vid});
-          nowPlaying.textContent = '🚫 Ad-Free YouTube (Piped HLS) ▶ ' + vid;
-          // Load HLS
-          mp4.removeAttribute('src'); mp4.load();
-          if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-            hls = new Hls({enableWorker:true});
-            hls.loadSource(piped.url);
-            hls.attachMedia(mp4);
-            hls.on(Hls.Events.MANIFEST_PARSED, function(){ if (autoplay) mp4.play().catch(function(){}); });
-          } else if (mp4.canPlayType('application/vnd.apple.mpegurl')) {
-            mp4.src = piped.url;
-            if (autoplay) mp4.play().catch(function(){});
-          }
-          currentType = 'hls';
-          // For sync, treat as mp4
-        } else {
-          // MP4 direct
-          if (ytPlayer && ytPlayer.pauseVideo) { suppressYT = true; ytPlayer.pauseVideo(); setTimeout(function(){suppressYT=false;},800); }
-          ytDiv.classList.add('hidden');
-          mp4.classList.remove('hidden');
-          mp4.controls = false;
-          premiumVideoUI.classList.remove('hidden');
-          premiumVideoUI.classList.remove('youtube-native');
-          setPremiumMedia({type:'mp4', url:piped.url, videoId: vid});
-          suppressMP4 = true;
-          mp4.src = piped.url;
-          if (autoplay) mp4.play().catch(function(){});
-          setTimeout(function(){suppressMP4=false;},1000);
-          nowPlaying.textContent = '🚫 Ad-Free YouTube (Piped MP4 '+ (piped.quality||'') +') ▶ ' + vid;
-          currentType = 'mp4';
-        }
-      }).catch(function(err){
-        console.log('[AdFree] Piped failed, fallback to YouTube iframe (so songs play)', err);
-        // Fallback to YouTube iframe so that songs still play even if ad-free fails
-        mp4.pause();
-        mp4.classList.add('hidden');
-        ytDiv.classList.remove('hidden');
-        premiumVideoUI.classList.add('hidden');
-        premiumVideoUI.classList.add('youtube-native');
-        setPremiumMedia(data);
-        if (ytReady && ytPlayer && ytPlayer.loadVideoById) {
-          suppressYT = true;
-          ytPlayer.loadVideoById(data.videoId);
-          setTimeout(function(){ suppressYT = false; }, 1500);
-        } else {
-          pendingYTVideo = data.videoId;
-        }
-        nowPlaying.textContent = '▶ YouTube (Piped ad-free fail, fallback) ▶ ' + data.videoId + ' — 720p/480p try kiya tha';
-      });
-      return; // Don't continue to original YouTube logic immediately
-    } catch(e) {
-      console.log('[AdFree] error', e);
-    }
     mp4.pause();
     mp4.classList.add('hidden');
     ytDiv.classList.remove('hidden');
@@ -3132,8 +2954,6 @@ function renderQueue(items, index) {
     list.innerHTML = '<div class="pl-empty">Koi song queue me nahi — link paste kar ke ➕ Queue dabao 🎶</div>';
     return;
   }
-  // Prefetch next song for faster tap (ad-free)
-  try { setTimeout(function(){ if (typeof prefetchNextInQueue === 'function') prefetchNextInQueue(); }, 800); } catch(e){}
   items.forEach((it, i) => {
     const div = document.createElement('div');
     div.className = 'pl-item' + (i === index ? ' active' : '');
