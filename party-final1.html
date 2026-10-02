@@ -5243,6 +5243,8 @@ function renderMembers() {
     }
   } catch (e) {}
 
+  // Boss fix: gesture back se exit na ho - history API (bina build)
+  var _wpHistoryHandling = false;
   function openSheet() {
     var ov = $('dm-ov'), sh = $('dm-sheet');
     if (!sh) return;
@@ -5252,9 +5254,31 @@ function renderMembers() {
     sh.classList.add('on');
     fitSheet(); setTimeout(fitSheet, 90);
     subscribeDm(); pubPresence(); renderAll();
+    // Push history so gesture back goes to room, not exit
+    if (!_wpHistoryHandling) {
+      try { history.pushState({wp:'dm', view:'dm-view-inbox'}, '', '#dm-inbox'); } catch(e){}
+    }
   }
   function closeSheet() {
     var ov = $('dm-ov'), sh = $('dm-sheet');
+    // If UI close and history is dm, use history.back() so popstate handles it
+    if (!_wpHistoryHandling) {
+      try {
+        var st = history.state;
+        if (st && st.wp === 'dm') {
+          _wpHistoryHandling = true;
+          history.back();
+          setTimeout(function(){ _wpHistoryHandling = false; }, 300);
+          setTimeout(function(){
+            var ov2 = $('dm-ov'), sh2 = $('dm-sheet');
+            if (ov2) ov2.classList.remove('on');
+            if (sh2) sh2.classList.remove('on');
+          }, 350);
+          if (curChat) { markRead(curChat); renderAll(); }
+          return;
+        }
+      } catch(e){}
+    }
     if (ov) ov.classList.remove('on');
     if (sh) sh.classList.remove('on');
     if (curChat) { markRead(curChat); renderAll(); }
@@ -5311,12 +5335,22 @@ function renderMembers() {
     }, 20000);
   })();
 
-  function showView(v) {
+  function showView(v, noHistory) {
     ['dm-view-inbox', 'dm-view-add', 'dm-view-chat'].forEach(function (k) {
       var e = $(k); if (!e) return;
       e.classList.remove('on'); e.classList.remove('first');
     });
     var t = $(v); if (t) t.classList.add('on');
+    // Push history for gesture back (unless called from popstate)
+    if (!noHistory && !_wpHistoryHandling) {
+      try {
+        var curSt = history.state;
+        // Only push if view actually changed
+        if (!curSt || curSt.view !== v) {
+          history.pushState({wp:'dm', view:v}, '', '#'+v);
+        }
+      } catch(e){}
+    }
     /* P44: chat view khula hai? -> header ko Insta Vanish look (inbox/add pe purana) */
     var shC = $('dm-sheet'); if (shC) shC.classList.toggle('dm-chat', v === 'dm-view-chat');
     /* P42: pichhle view ka jhuka hua scroll yaad na rahe (warna content khisak jata hai) */
@@ -5336,6 +5370,43 @@ function renderMembers() {
     else { title.textContent = '💬 Messages'; if(sub){ sub.textContent=''; sub.style.display='none'; } }
     try { fitSheet(); } catch (e) {}
   }
+
+  // Gesture back fix - handle browser back button
+  (function(){
+    try {
+      // Initial room state
+      history.replaceState({wp:'room'}, '', location.href);
+    } catch(e){}
+    window.addEventListener('popstate', function(ev){
+      var st = ev.state;
+      var sh = $('dm-sheet');
+      var isOpen = sh && sh.classList.contains('on');
+      _wpHistoryHandling = true;
+      try {
+        if (!st || st.wp === 'room') {
+          // Back to room - close DM sheet
+          if (isOpen) {
+            var ov = $('dm-ov');
+            if (ov) ov.classList.remove('on');
+            if (sh) sh.classList.remove('on');
+            if (curChat) { markRead(curChat); renderAll(); }
+          }
+        } else if (st.wp === 'dm') {
+          // DM navigation
+          if (!isOpen) {
+            var ov2 = $('dm-ov'); if (ov2) ov2.classList.add('on');
+            if (sh) sh.classList.add('on');
+            subscribeDm(); pubPresence(); renderAll();
+          }
+          if (st.view) {
+            showView(st.view, true); // noHistory=true to avoid loop
+            if (st.view === 'dm-view-inbox') { curChat = null; renderAll(); }
+          }
+        }
+      } catch(e){ console.log('popstate err', e); }
+      setTimeout(function(){ _wpHistoryHandling = false; }, 150);
+    });
+  })();
 
   /* ---------------- render ---------------- */
   function unreadTotal() {
@@ -6079,7 +6150,18 @@ function renderMembers() {
     var ov = $('dm-ov'); if (ov) ov.onclick = closeSheet;
     var x = $('dm-close-btn'); if (x) x.onclick = closeSheet;
     var addb = $('dm-add-btn'); if (addb) addb.onclick = function () { $('dm-my-code').textContent = S.code; showView('dm-view-add'); };
-    var back = $('dm-bar-back'); if (back) back.onclick = function () { curChat = null; showView('dm-view-inbox'); renderAll(); };
+    var back = $('dm-bar-back'); if (back) back.onclick = function () {
+      // Use history.back() so gesture and arrow same behavior
+      try {
+        var st = history.state;
+        if (st && st.wp === 'dm' && st.view === 'dm-view-chat') {
+          _wpHistoryHandling = false; // allow popstate to handle
+          history.back();
+          return;
+        }
+      } catch(e){}
+      curChat = null; showView('dm-view-inbox'); renderAll();
+    };
     var q = $('dm-q'); if (q) q.addEventListener('input', renderChats);
 
     /* mic (voice message) */
