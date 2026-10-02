@@ -645,7 +645,7 @@ main { gap: 11px; }
 .dm-search input { width: 100%; height: 34px; border-radius: 11px; padding: 0 12px; font-size: 12.5px; color: #fff;
   background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); outline: none; }
 .dm-list { flex: 1; overflow-y: auto; padding: 2px 10px 14px; }
-.dm-sec { font-size: 10.5px; font-weight: 800; letter-spacing: .4px; color: #a9a6c8; margin: 10px 4px 7px; text-transform: uppercase; }
+.dm-sec { font-size: 12px; font-weight: 800; letter-spacing: 1.2px; color: #A78BFA; margin: 10px 4px 7px; text-transform: uppercase; }
 .dm-req { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 15px; margin-bottom: 8px;
   background: rgba(255,94,188,.09); border: 1px solid rgba(255,94,188,.35); }
 .dm-req .av3 { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 15px; color: #160b22; flex: 0 0 auto; overflow: hidden; }
@@ -1192,12 +1192,12 @@ body { margin: 0 !important; padding: 0 !important; }
   font-size: 13.5px !important;
 }
 
-/* Inbox - CHATS label */
+/* Inbox - CHATS label - V1 bright */
 #dm-view-inbox .dm-sec, .dm-sec {
-  color: rgba(255,255,255,0.30) !important;
-  font-size: 10.5px !important;
-  font-weight: 700 !important;
-  letter-spacing: 1px !important;
+  color: #A78BFA !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: 1.2px !important;
   text-transform: uppercase !important;
   padding: 12px 6px 6px !important;
 }
@@ -4177,10 +4177,12 @@ function renderMembers() {
   <div class="dm-bar">
     <div class="bk" id="dm-bar-back" style="display:none">←</div>
     <div class="bar-av" id="dm-bar-av" style="display:none"></div>
-    <div class="dm-bar-title-wrap" id="dm-bar-title-wrap"><b id="dm-bar-title">💬 Messages</b><s id="dm-bar-sub">Room ke bagair — seedha dost se baat</s></div>
+    <div class="dm-bar-title-wrap" id="dm-bar-title-wrap"><b id="dm-bar-title">💬 Messages</b><s id="dm-bar-sub" style="display:none"></s></div>
     <button class="add2 dm-call-open" id="dm-call-btn" type="button" aria-label="Voice call" title="Voice call" style="display:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.79a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.89.34 1.83.58 2.79.7A2 2 0 0 1 22 16.92Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="dm-e2e" id="dm-bar-e2e" style="display:none !important">🔒 E2E</div>
-    <div class="add2" id="dm-add-btn">＋</div>
+    <div class="add2" id="dm-add-btn" title="Add Friends" style="display:grid; place-items:center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14" stroke-width="2.5"/><line x1="22" y1="11" x2="16" y2="11" stroke-width="2.5"/></svg>
+    </div>
     <div class="add2" id="dm-menu-btn">⋮</div>
     <div class="add2" id="dm-close-btn" style="background:rgba(255,255,255,.12);color:#fff">✕</div>
   </div>
@@ -5266,6 +5268,7 @@ function renderMembers() {
     var title = $('dm-bar-title'), sub = $('dm-bar-sub');
     if (title) title.textContent = peerName(curChat);
     if (sub) {
+      sub.style.display='block';
       var on = dmIsOnline(curChat);
       sub.innerHTML = '<span class="dot4' + (on ? ' on' : '') + '"></span>' + (on ? 'Online' : 'Offline') + ' · 🔒 E2E';
     }
@@ -5327,9 +5330,9 @@ function renderMembers() {
     var avb = $('dm-bar-av'); if (avb) avb.style.display = (v === 'dm-view-chat') ? 'block' : 'none';
     var callb = $('dm-call-btn'); if (callb) callb.style.display = (v === 'dm-view-chat' && curChat && S.friends[curChat]) ? 'grid' : 'none';
     var title = $('dm-bar-title'), sub = $('dm-bar-sub');
-    if (v === 'dm-view-add') { title.textContent = '➕ Add Friend'; sub.textContent = 'Code se dost joro — bas ek dafa'; }
+    if (v === 'dm-view-add') { title.textContent = '➕ Add Friend'; if(sub){ sub.textContent=''; sub.style.display='none'; } }
     else if (v === 'dm-view-chat') { setChatBar(); }
-    else { title.textContent = '💬 Messages'; sub.textContent = 'Room ke bagair — seedha dost se baat'; }
+    else { title.textContent = '💬 Messages'; if(sub){ sub.textContent=''; sub.style.display='none'; } }
     try { fitSheet(); } catch (e) {}
   }
 
