@@ -2660,42 +2660,86 @@ var PIPED_STREAM_INSTANCES = [
 ];
 var pipedStreamCache = {};
 function getPipedStreamUrl(videoId) {
-  if (pipedStreamCache[videoId]) return Promise.resolve(pipedStreamCache[videoId]);
-  var tryIdx = 0;
-  function tryNext() {
-    if (tryIdx >= PIPED_STREAM_INSTANCES.length) return Promise.reject(new Error('all piped failed'));
-    var base = PIPED_STREAM_INSTANCES[tryIdx++];
+  if (pipedStreamCache[videoId]) {
+    console.log('[AdFree] Cache hit', videoId, pipedStreamCache[videoId].quality);
+    return Promise.resolve(pipedStreamCache[videoId]);
+  }
+  // Parallel fetch - try all instances at once, first success wins (faster playlist)
+  var promises = PIPED_STREAM_INSTANCES.map(function(base){
     var url = base + '/streams/' + encodeURIComponent(videoId);
     return fetch(url).then(function(r){ if (!r.ok) throw new Error('http '+r.status); return r.json(); }).then(function(j){
       if (!j) throw new Error('empty');
-      // Prefer muxed MP4 with audio, else HLS
       var best = null;
+      var allQualities = [];
       if (j.videoStreams && j.videoStreams.length) {
-        // Find muxed (has audio) mp4, highest quality
+        j.videoStreams.forEach(function(s){ if (s.quality) allQualities.push(s.quality); });
+        // Prefer muxed MP4 with audio, highest quality first
         var muxed = j.videoStreams.filter(function(s){ return s.mimeType && s.mimeType.indexOf('video/mp4')>-1 && s.videoOnly===false; });
         if (muxed.length) {
-          muxed.sort(function(a,b){ return (b.quality ? parseInt(b.quality) : 0) - (a.quality ? parseInt(a.quality) : 0); });
+          muxed.sort(function(a,b){ 
+            var qa = parseInt((a.quality||'').replace('p',''))||0;
+            var qb = parseInt((b.quality||'').replace('p',''))||0;
+            return qb - qa; 
+          });
           best = muxed[0];
         } else {
-          // fallback to any with audio
           var withAudio = j.videoStreams.filter(function(s){ return s.videoOnly===false; });
-          if (withAudio.length) best = withAudio[0];
+          if (withAudio.length) {
+            withAudio.sort(function(a,b){ 
+              var qa = parseInt((a.quality||'').replace('p',''))||0;
+              var qb = parseInt((b.quality||'').replace('p',''))||0;
+              return qb - qa; 
+            });
+            best = withAudio[0];
+          }
         }
       }
       if (best && best.url) {
-        var res = { type: 'mp4', url: best.url, quality: best.quality, fromPiped: true, origId: videoId, hls: j.hls || null };
+        var res = { type: 'mp4', url: best.url, quality: best.quality, allQualities: allQualities, fromPiped: true, origId: videoId, hls: j.hls || null, instance: base };
+        console.log('[AdFree] Found quality', best.quality, 'from', base, 'all:', allQualities.join(','));
         pipedStreamCache[videoId] = res;
         return res;
       }
       if (j.hls) {
-        var res2 = { type: 'hls', url: j.hls, fromPiped: true, origId: videoId };
+        var res2 = { type: 'hls', url: j.hls, quality: 'HLS', allQualities: allQualities, fromPiped: true, origId: videoId, instance: base };
         pipedStreamCache[videoId] = res2;
         return res2;
       }
       throw new Error('no stream');
-    }).catch(function(e){ return tryNext(); });
-  }
-  return tryNext();
+    });
+  });
+  // Return first successful, or all fail
+  return new Promise(function(resolve, reject){
+    var failed = 0;
+    var errors = [];
+    promises.forEach(function(p){
+      p.then(function(res){ 
+        // First success wins - resolve immediately
+        resolve(res);
+      }).catch(function(e){
+        failed++;
+        errors.push(e);
+        if (failed === promises.length) {
+          reject(new Error('all piped failed: '+errors.map(function(er){return er.message;}).join(',')));
+        }
+      });
+    });
+  });
+}
+// Prefetch next song in playlist for faster next tap
+function prefetchNextInQueue() {
+  try {
+    if (!queueLocal || !queueLocal.items || !queueLocal.items.length) return;
+    var nextIdx = (queueLocal.index || 0) + 1;
+    if (nextIdx >= queueLocal.items.length) return;
+    var next = queueLocal.items[nextIdx];
+    if (next && next.type === 'youtube' && next.videoId) {
+      if (!pipedStreamCache[next.videoId]) {
+        console.log('[AdFree] Prefetching next:', next.videoId);
+        getPipedStreamUrl(next.videoId).then(function(){ console.log('[AdFree] Prefetch done', next.videoId); }).catch(function(){});
+      }
+    }
+  } catch(e){}
 }
 
 function loadVideoLocal(data, autoplay) {
@@ -3067,6 +3111,8 @@ function renderQueue(items, index) {
     list.innerHTML = '<div class="pl-empty">Koi song queue me nahi — link paste kar ke ➕ Queue dabao 🎶</div>';
     return;
   }
+  // Prefetch next song for faster tap (ad-free)
+  try { setTimeout(function(){ if (typeof prefetchNextInQueue === 'function') prefetchNextInQueue(); }, 800); } catch(e){}
   items.forEach((it, i) => {
     const div = document.createElement('div');
     div.className = 'pl-item' + (i === index ? ' active' : '');
