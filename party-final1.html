@@ -390,11 +390,14 @@ main { gap: 11px; }
 #react-tray.show { display:flex; }
 #react-tray button { width:34px; height:34px; border:0; border-radius:50%; background:transparent; font-size:20px; line-height:1; cursor:pointer; transition:transform .12s; }
 #react-tray button:hover { transform:scale(1.2); background:rgba(255,255,255,.12); }
-#gif-btn { background:none; border:1px solid rgba(255,255,255,.25); border-radius:14px; color:#f9a8d4; font-size:11px; font-weight:900; letter-spacing:.5px; padding:2px 10px; margin-left:4px; cursor:pointer; }
-#gif-btn:hover { background:rgba(244,114,182,.18); }
-#pic-btn { background:none; border:1px solid rgba(84,232,255,.45); border-radius:14px; color:#a9ecff; font-size:15px; font-weight:900; padding:2px 9px; margin-left:4px; cursor:pointer; line-height:1; }
-#pic-btn:hover { background:rgba(84,232,255,.16); }
+/* Instagram colorful icons - boss request */
+#gif-btn { background:linear-gradient(135deg,#f472b6,#a78bfa); border:none; border-radius:12px; color:#fff; font-size:11px; font-weight:900; letter-spacing:.5px; padding:5px 12px; margin-left:4px; cursor:pointer; box-shadow:0 3px 12px rgba(244,114,182,0.32); }
+#gif-btn:hover { filter:brightness(1.12); transform:translateY(-1px) }
+#pic-btn { background:linear-gradient(135deg,#f59e0b 0%,#ec4899 50%,#8b5cf6 100%); border:none; border-radius:12px; color:#fff; font-size:15px; font-weight:900; padding:5px 12px; margin-left:4px; cursor:pointer; line-height:1; box-shadow:0 3px 12px rgba(236,72,153,0.32); }
+#pic-btn:hover { filter:brightness(1.12); transform:translateY(-1px) }
 #pic-btn:disabled { opacity:.45; cursor:default; }
+#mic-btn { background:linear-gradient(135deg,#06b6d4 0%,#3b82f6 50%,#8b5cf6 100%); border:none; border-radius:12px; color:#fff; font-size:15px; font-weight:900; padding:5px 12px; margin-left:4px; cursor:pointer; line-height:1; box-shadow:0 3px 12px rgba(59,130,246,0.32); }
+#mic-btn:hover { filter:brightness(1.12); transform:translateY(-1px) }
 .chat-photo img { max-width:220px; max-height:300px; border-radius:12px; display:block; cursor:pointer; }
 .chat-photo .ph-load { font-size:12px; opacity:.85; padding:4px 2px; }
 #gif-panel { position:absolute; left:0; right:0; bottom:100%; z-index:60; height:300px; max-height:none; display:flex; flex-direction:column; background:var(--wp-menu-bg, rgba(13,10,32,.98)); border:1px solid rgba(255,255,255,.16); border-radius:16px 16px 0 0; box-shadow:0 -12px 30px rgba(0,0,0,.5); overflow:hidden; }
@@ -712,7 +715,7 @@ main { gap: 11px; }
 
 /* ---------- DM VOICE ---------- */
 .dm-inbar { flex-wrap: wrap; }
-.dm-inbar #dm-mic-btn { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); color: #fff; font-size: 15px; }
+.dm-inbar #dm-mic-btn { background:linear-gradient(135deg,#06b6d4 0%,#3b82f6 50%,#8b5cf6 100%); border: none; color: #fff; font-size: 15px; box-shadow:0 3px 12px rgba(59,130,246,0.32) }
 .dm-m .bub4.v4 { padding: 5px 10px 5px 5px; display: flex; align-items: center; gap: 8px; min-width: 160px; }
 .v4b { width: 32px; height: 32px; border-radius: 50%; border: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;
   background: linear-gradient(135deg, #22d3ee, #8b5cf6); color: #fff; font-size: 12px; flex-shrink: 0; }
@@ -806,9 +809,10 @@ main { gap: 11px; }
 .dm-rep4 s { display: block; font-size: 11.5px; color: #cfd6ff; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dm-rep4 button { width: 26px; height: 26px; border-radius: 9px; border: 1px solid rgba(255,255,255,.18);
   background: rgba(255,255,255,.08); color: #fff; cursor: pointer; }
-#dm-photo-btn, #dm-gif-btn { width: 38px; border-radius: 11px; border: 1px solid rgba(255,255,255,.16);
-  background: rgba(255,255,255,.07); color: #fff; font-size: 15px; cursor: pointer; flex: 0 0 auto; }
-#dm-gif-btn { font-size: 11px; font-weight: 900; letter-spacing: .4px; }
+#dm-photo-btn, #dm-gif-btn { width: 38px; border-radius: 11px; border: none; color: #fff; font-size: 15px; cursor: pointer; flex: 0 0 auto; box-shadow:0 3px 12px rgba(0,0,0,0.18) }
+#dm-photo-btn { background:linear-gradient(135deg,#f59e0b 0%,#ec4899 50%,#8b5cf6 100%); }
+#dm-gif-btn { background:linear-gradient(135deg,#f472b6,#a78bfa); font-size: 11px; font-weight: 900; letter-spacing: .4px; }
+#dm-mic-btn { width: 38px; border-radius: 11px; border: none; background:linear-gradient(135deg,#06b6d4 0%,#3b82f6 50%,#8b5cf6 100%); color: #fff; font-size: 15px; cursor: pointer; flex: 0 0 auto; box-shadow:0 3px 12px rgba(0,0,0,0.18) }
 .dm-g4p { display: none; position: absolute; left: 0; right: 0; bottom: 0; z-index: 26; height: 58%;
   background: rgba(12,8,24,.985); border-top: 1px solid rgba(255,255,255,.14); flex-direction: column; }
 .dm-g4p.on { display: flex; }
@@ -1069,9 +1073,11 @@ main { gap: 11px; }
   color: #fff; font-size: 13px; padding: 0 4px; }
 #dm-view-chat .dm-inbar input::placeholder { color: rgba(255,255,255,.55); }
 #dm-view-chat #dm-photo-btn, #dm-view-chat #dm-gif-btn, #dm-view-chat #dm-mic-btn {
-  width: auto; min-width: 26px; height: 28px; padding: 0 6px; border: 0 !important; background: transparent !important;
-  color: #fff; font-size: 15px; border-radius: 14px; flex: 0 0 auto; }
-#dm-view-chat #dm-gif-btn { font-size: 11px; font-weight: 900; letter-spacing: .4px; }
+  width: auto; min-width: 32px; height: 32px; padding: 0 8px; border: 0 !important; color: #fff; font-size: 14px; border-radius: 12px; flex: 0 0 auto; display:grid; place-items:center;
+}
+#dm-view-chat #dm-photo-btn { background:linear-gradient(135deg,#f59e0b 0%,#ec4899 50%,#8b5cf6 100%) !important; box-shadow:0 2px 10px rgba(236,72,153,0.28) }
+#dm-view-chat #dm-mic-btn { background:linear-gradient(135deg,#06b6d4 0%,#3b82f6 50%,#8b5cf6 100%) !important; box-shadow:0 2px 10px rgba(59,130,246,0.28) }
+#dm-view-chat #dm-gif-btn { background:linear-gradient(135deg,#f472b6,#a78bfa) !important; font-size: 11px; font-weight: 900; letter-spacing: .4px; box-shadow:0 2px 10px rgba(244,114,182,0.28) }
 #dm-view-chat #dm-send-btn { width: 40px; height: 40px; border-radius: 50%; border: 0; flex: 0 0 40px; font-size: 16px;
   background: linear-gradient(135deg, #a855f7, #22d3ee); color: #0a0616; }
 /* reply preview (input ke upar) bhi isi rang me */
