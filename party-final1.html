@@ -2646,6 +2646,54 @@ function setPremiumMedia(data) {
   premiumVideoBadge.textContent = isYT ? '▶ YOUTUBE' : (data.type === 'hls' ? '📡 HLS STREAM' : '🎞 MP4 VIDEO');
   premiumVideoTitle.textContent = isYT ? 'YouTube · ' + (data.videoId || 'Video') : makeLabel(data).replace(/^(🎞|📡)\s*/, '');
 }
+/* ===== 🚫 AD-FREE YOUTUBE via Piped streams (Boss request) ===== */
+var PIPED_STREAM_INSTANCES = [
+  'https://api.piped.private.coffee',
+  'https://pipedapi.ducks.party',
+  'https://pipedapi.adminforge.de',
+  'https://api.piped.yt',
+  'https://pipedapi.kavin.rocks'
+];
+var pipedStreamCache = {};
+function getPipedStreamUrl(videoId) {
+  if (pipedStreamCache[videoId]) return Promise.resolve(pipedStreamCache[videoId]);
+  var tryIdx = 0;
+  function tryNext() {
+    if (tryIdx >= PIPED_STREAM_INSTANCES.length) return Promise.reject(new Error('all piped failed'));
+    var base = PIPED_STREAM_INSTANCES[tryIdx++];
+    var url = base + '/streams/' + encodeURIComponent(videoId);
+    return fetch(url).then(function(r){ if (!r.ok) throw new Error('http '+r.status); return r.json(); }).then(function(j){
+      if (!j) throw new Error('empty');
+      // Prefer muxed MP4 with audio, else HLS
+      var best = null;
+      if (j.videoStreams && j.videoStreams.length) {
+        // Find muxed (has audio) mp4, highest quality
+        var muxed = j.videoStreams.filter(function(s){ return s.mimeType && s.mimeType.indexOf('video/mp4')>-1 && s.videoOnly===false; });
+        if (muxed.length) {
+          muxed.sort(function(a,b){ return (b.quality ? parseInt(b.quality) : 0) - (a.quality ? parseInt(a.quality) : 0); });
+          best = muxed[0];
+        } else {
+          // fallback to any with audio
+          var withAudio = j.videoStreams.filter(function(s){ return s.videoOnly===false; });
+          if (withAudio.length) best = withAudio[0];
+        }
+      }
+      if (best && best.url) {
+        var res = { type: 'mp4', url: best.url, quality: best.quality, fromPiped: true, origId: videoId, hls: j.hls || null };
+        pipedStreamCache[videoId] = res;
+        return res;
+      }
+      if (j.hls) {
+        var res2 = { type: 'hls', url: j.hls, fromPiped: true, origId: videoId };
+        pipedStreamCache[videoId] = res2;
+        return res2;
+      }
+      throw new Error('no stream');
+    }).catch(function(e){ return tryNext(); });
+  }
+  return tryNext();
+}
+
 function loadVideoLocal(data, autoplay) {
   destroyHLS();
   hlsAudioMode = false;
@@ -2657,6 +2705,74 @@ function loadVideoLocal(data, autoplay) {
   premiumPlayerMenu.classList.add('hidden');
   clearTimeout(premiumHideTimer);
   if (data.type === 'youtube') {
+    // Try ad-free via Piped first
+    try {
+      var vid = data.videoId;
+      nowPlaying.textContent = '🚫 Ads hatane ki koshish... Piped se ad-free stream la raha...';
+      getPipedStreamUrl(vid).then(function(piped){
+        // Play as MP4/HLS instead of YouTube iframe - no ads!
+        console.log('[AdFree] Piped success', piped);
+        if (piped.type === 'hls') {
+          // Play HLS
+          if (ytPlayer && ytPlayer.pauseVideo) { suppressYT = true; ytPlayer.pauseVideo(); setTimeout(function(){suppressYT=false;},800); }
+          ytDiv.classList.add('hidden');
+          mp4.classList.remove('hidden');
+          mp4.controls = false;
+          premiumVideoUI.classList.remove('hidden');
+          premiumVideoUI.classList.remove('youtube-native');
+          setPremiumMedia({type:'hls', url:piped.url, videoId: vid});
+          nowPlaying.textContent = '🚫 Ad-Free YouTube (Piped HLS) ▶ ' + vid;
+          // Load HLS
+          mp4.removeAttribute('src'); mp4.load();
+          if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+            hls = new Hls({enableWorker:true});
+            hls.loadSource(piped.url);
+            hls.attachMedia(mp4);
+            hls.on(Hls.Events.MANIFEST_PARSED, function(){ if (autoplay) mp4.play().catch(function(){}); });
+          } else if (mp4.canPlayType('application/vnd.apple.mpegurl')) {
+            mp4.src = piped.url;
+            if (autoplay) mp4.play().catch(function(){});
+          }
+          currentType = 'hls';
+          // For sync, treat as mp4
+        } else {
+          // MP4 direct
+          if (ytPlayer && ytPlayer.pauseVideo) { suppressYT = true; ytPlayer.pauseVideo(); setTimeout(function(){suppressYT=false;},800); }
+          ytDiv.classList.add('hidden');
+          mp4.classList.remove('hidden');
+          mp4.controls = false;
+          premiumVideoUI.classList.remove('hidden');
+          premiumVideoUI.classList.remove('youtube-native');
+          setPremiumMedia({type:'mp4', url:piped.url, videoId: vid});
+          suppressMP4 = true;
+          mp4.src = piped.url;
+          if (autoplay) mp4.play().catch(function(){});
+          setTimeout(function(){suppressMP4=false;},1000);
+          nowPlaying.textContent = '🚫 Ad-Free YouTube (Piped MP4 '+ (piped.quality||'') +') ▶ ' + vid;
+          currentType = 'mp4';
+        }
+      }).catch(function(err){
+        console.log('[AdFree] Piped failed, fallback to YouTube iframe', err);
+        // Fallback to original YouTube iframe (with ads)
+        mp4.pause();
+        mp4.classList.add('hidden');
+        ytDiv.classList.remove('hidden');
+        premiumVideoUI.classList.add('hidden');
+        premiumVideoUI.classList.add('youtube-native');
+        setPremiumMedia(data);
+        if (ytReady && ytPlayer && ytPlayer.loadVideoById) {
+          suppressYT = true;
+          ytPlayer.loadVideoById(data.videoId);
+          setTimeout(function(){ suppressYT = false; }, 1500);
+        } else {
+          pendingYTVideo = data.videoId;
+        }
+        nowPlaying.textContent = '▶ YouTube (fallback, ads may show) ▶ ' + data.videoId;
+      });
+      return; // Don't continue to original YouTube logic immediately
+    } catch(e) {
+      console.log('[AdFree] error', e);
+    }
     mp4.pause();
     mp4.classList.add('hidden');
     ytDiv.classList.remove('hidden');
