@@ -2652,7 +2652,11 @@ var PIPED_STREAM_INSTANCES = [
   'https://pipedapi.ducks.party',
   'https://pipedapi.adminforge.de',
   'https://api.piped.yt',
-  'https://pipedapi.kavin.rocks'
+  'https://pipedapi.kavin.rocks',
+  'https://pipedapi.moomoo.me',
+  'https://pipedapi.syncpundit.io',
+  'https://pipedapi.leptos.newpipe.dev',
+  'https://pipedapi.r4fo.com'
 ];
 var pipedStreamCache = {};
 function getPipedStreamUrl(videoId) {
@@ -2752,22 +2756,15 @@ function loadVideoLocal(data, autoplay) {
           currentType = 'mp4';
         }
       }).catch(function(err){
-        console.log('[AdFree] Piped failed, fallback to YouTube iframe', err);
-        // Fallback to original YouTube iframe (with ads)
+        console.log('[AdFree] All Piped instances failed for ad-free', err);
+        // Boss wants ALL ad-free, no YouTube fallback with ads
         mp4.pause();
         mp4.classList.add('hidden');
-        ytDiv.classList.remove('hidden');
+        ytDiv.classList.add('hidden');
         premiumVideoUI.classList.add('hidden');
-        premiumVideoUI.classList.add('youtube-native');
-        setPremiumMedia(data);
-        if (ytReady && ytPlayer && ytPlayer.loadVideoById) {
-          suppressYT = true;
-          ytPlayer.loadVideoById(data.videoId);
-          setTimeout(function(){ suppressYT = false; }, 1500);
-        } else {
-          pendingYTVideo = data.videoId;
-        }
-        nowPlaying.textContent = '▶ YouTube (fallback, ads may show) ▶ ' + data.videoId;
+        noVideo.classList.remove('hidden');
+        noVideo.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px;text-align:center"><div style="font-size:40px">🚫</div><div style="font-size:14px;font-weight:800">Ad-Free stream nahi mila</div><div style="font-size:12px;color:#c4b5fd">Ye video Piped pe available nahi — dusra YouTube link try karo ya thodi der baad try karo<br><small>Video ID: '+data.videoId+'</small></div><div style="font-size:11px;color:#aaa">Sab videos ad-free hi chalenge, YouTube ads wala player nahi chalega (aapki request)</div></div>';
+        nowPlaying.textContent = '🚫 Ad-Free failed — ' + data.videoId + ' — dusra link try karo';
       });
       return; // Don't continue to original YouTube logic immediately
     } catch(e) {
