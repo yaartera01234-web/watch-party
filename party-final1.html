@@ -2814,15 +2814,22 @@ function loadVideoLocal(data, autoplay) {
           currentType = 'mp4';
         }
       }).catch(function(err){
-        console.log('[AdFree] All Piped instances failed for ad-free', err);
-        // Boss wants ALL ad-free, no YouTube fallback with ads
+        console.log('[AdFree] Piped failed, fallback to YouTube iframe (so songs play)', err);
+        // Fallback to YouTube iframe so that songs still play even if ad-free fails
         mp4.pause();
         mp4.classList.add('hidden');
-        ytDiv.classList.add('hidden');
+        ytDiv.classList.remove('hidden');
         premiumVideoUI.classList.add('hidden');
-        noVideo.classList.remove('hidden');
-        noVideo.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px;text-align:center"><div style="font-size:40px">🚫</div><div style="font-size:14px;font-weight:800">Ad-Free stream nahi mila</div><div style="font-size:12px;color:#c4b5fd">Ye video Piped pe available nahi — dusra YouTube link try karo ya thodi der baad try karo<br><small>Video ID: '+data.videoId+'</small></div><div style="font-size:11px;color:#aaa">Sab videos ad-free hi chalenge, YouTube ads wala player nahi chalega (aapki request)</div></div>';
-        nowPlaying.textContent = '🚫 Ad-Free failed — ' + data.videoId + ' — dusra link try karo';
+        premiumVideoUI.classList.add('youtube-native');
+        setPremiumMedia(data);
+        if (ytReady && ytPlayer && ytPlayer.loadVideoById) {
+          suppressYT = true;
+          ytPlayer.loadVideoById(data.videoId);
+          setTimeout(function(){ suppressYT = false; }, 1500);
+        } else {
+          pendingYTVideo = data.videoId;
+        }
+        nowPlaying.textContent = '▶ YouTube (Piped ad-free fail, fallback) ▶ ' + data.videoId + ' — 720p/480p try kiya tha';
       });
       return; // Don't continue to original YouTube logic immediately
     } catch(e) {
