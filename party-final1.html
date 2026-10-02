@@ -49,8 +49,8 @@ main { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 8px; m
 #url-input { flex: 1; padding: 12px 16px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.08); color: #fff; font-size: 14px; outline: none; min-width: 0; }
 #url-input:focus { border-color: #a78bfa; }
 #url-input::placeholder { color: #888; }
-#load-btn { padding: 12px 18px; border: none; border-radius: 12px; font-weight: bold; color: #fff; cursor: pointer; background: linear-gradient(90deg, #22c55e, #16a34a); white-space: nowrap; }
-#load-btn:hover { filter: brightness(1.15); }
+#load-btn { padding: 12px 18px; border: 1px solid rgba(26,208,122,0.32); border-radius: 13px; font-weight: 800; color: #fff; cursor: pointer; background: linear-gradient(90deg, #1AD07A 0%, #0ABF6A 100%); white-space: nowrap; box-shadow: 0 4px 14px rgba(26,208,122,0.28); display:inline-flex; align-items:center; gap:6px }
+#load-btn:hover { filter: brightness(1.12); transform: translateY(-1px) }
 .player-wrap { flex: none; height: 198px; background: #000; border-radius: 16px; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.12); }
 #yt-player, #mp4-player { width: 100%; height: 100%; position: absolute; top:0;right:0;bottom:0;left:0; }
 #mp4-player { object-fit: contain; background: #000; }
@@ -124,8 +124,8 @@ main { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 8px; m
 #sync-btn { padding: 9px 18px; border: none; border-radius: 10px; font-weight: bold; font-size: 13px; color: #fff; cursor: pointer; background: linear-gradient(90deg, #f59e0b, #ef4444); white-space: nowrap; }
 #sync-btn:hover { filter: brightness(1.15); }
 .sync-hint { font-size: 11px; color: #8b8bad; }
-#queue-btn { padding: 12px 16px; border: none; border-radius: 12px; font-weight: bold; color: #fff; cursor: pointer; background: linear-gradient(90deg, #8b5cf6, #6366f1); white-space: nowrap; }
-#queue-btn:hover { filter: brightness(1.15); }
+#queue-btn { padding: 12px 16px; border: none; border-radius: 13px; font-weight: 800; color: #fff; cursor: pointer; background: linear-gradient(90deg, #FF5AA8 0%, #B46BFF 100%); white-space: nowrap; box-shadow: 0 4px 14px rgba(255,90,168,0.28); display:inline-flex; align-items:center; gap:6px }
+#queue-btn:hover { filter: brightness(1.12); transform: translateY(-1px) }
 .playlist-box { 
   flex-shrink: 0; 
   background: rgba(0,0,0,0.3); 
@@ -332,8 +332,8 @@ main { gap: 11px; }
   box-shadow: 0 8px 22px rgba(0,0,0,0.13) inset;
 }
 #url-input:focus { border-color: rgba(168,139,250,0.82); box-shadow: 0 0 0 3px rgba(139,114,255,0.13); }
-#load-btn { background: linear-gradient(110deg, #20d86d, #16a85a); }
-#queue-btn { background: linear-gradient(110deg, #956bff, #5d67e9); }
+#load-btn { background: linear-gradient(90deg, #1AD07A 0%, #0ABF6A 100%) !important; }
+#queue-btn { background: linear-gradient(90deg, #FF5AA8 0%, #B46BFF 100%) !important; }
 .player-wrap {
   border-radius: 21px;
   border-color: rgba(255,255,255,0.16);
@@ -517,12 +517,18 @@ main { gap: 11px; }
 .wp-room-chip span:not(.ic) { overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 380px) { .wp-room-chip { font-size: 11px; padding: 3px 9px; margin: 0 6px; max-width: 34vw; } }
 
-/* ===== 🔍 YouTube search popup (stage-12) ===== */
-#wp-search-btn { padding: 12px 13px; border: none; border-radius: 12px; font-weight: bold; color: #fff;
-  cursor: pointer; font-size: 14px; flex: 0 0 auto; white-space: nowrap;
-  background: linear-gradient(90deg, var(--wp-acc1, #ff6ec4), var(--wp-acc2, #7873f5));
-  box-shadow: 0 9px 22px rgba(99,73,255,0.20); }
-#wp-search-btn:hover { filter: brightness(1.15); }
+/* ===== 🔍 YouTube search popup (stage-12) - Reference colors + YT Search icon === */
+#wp-search-btn { 
+  padding: 0; width:46px; height:42px; flex:0 0 46px;
+  border: 1.5px solid #3A365F; border-radius: 13px; font-weight: 800; color: #C4B5FD;
+  cursor: pointer; font-size: 14px; white-space: nowrap; display:grid; place-items:center;
+  background: #252240; box-shadow: 0 4px 14px rgba(0,0,0,0.22); position:relative;
+}
+#wp-search-btn:hover { filter: brightness(1.15); transform: translateY(-1px); border-color:#4A4670 }
+#wp-search-btn .yt-badge{
+  position:absolute; right:-5px; bottom:-5px; width:16px; height:16px; background:#FF0000; border-radius:50%;
+  display:grid; place-items:center; font-size:8px; color:#fff; border:1.5px solid #1E1B36; font-weight:900;
+}
 #wp-ssheet { display: flex; flex-direction: column; overflow: hidden; max-height: 84vh; z-index: 81; padding: 12px; }
 #wp-ssheet .wss-head { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
 #wp-ssheet .wss-head b { font-size: 13.5px; }
@@ -1552,7 +1558,7 @@ body { margin: 0 !important; padding: 0 !important; }
         <input id="url-input" type="text" placeholder="YouTube / MP4 / MP3 link paste karo..." autocomplete="off" />
         <button id="load-btn" title="Play — sab ke screen pe sync">▶ Play</button>
         <button id="queue-btn">➕ Queue</button>
-        <button id="wp-search-btn" title="YouTube search (Piped)">🔍</button>
+        <button id="wp-search-btn" title="YouTube search (Piped)">🔍<span class="yt-badge">YT</span></button>
       </div>
       <div class="player-wrap">
         <div class="mini-info">
