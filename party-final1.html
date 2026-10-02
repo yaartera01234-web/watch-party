@@ -392,13 +392,13 @@ main { gap: 11px; }
 #react-tray.show { display:flex; }
 #react-tray button { width:34px; height:34px; border:0; border-radius:50%; background:transparent; font-size:20px; line-height:1; cursor:pointer; transition:transform .12s; }
 #react-tray button:hover { transform:scale(1.2); background:rgba(255,255,255,.12); }
-/* Instagram colorful icons - boss request */
-#gif-btn { background:linear-gradient(135deg,#f472b6,#a78bfa); border:none; border-radius:12px; color:#fff; font-size:11px; font-weight:900; letter-spacing:.5px; padding:6px 12px; margin-left:2px; cursor:pointer; box-shadow:0 3px 12px rgba(244,114,182,0.32); }
+/* Instagram colorful icons - boss request - Flaticon AI mic + image */
+#gif-btn { background:linear-gradient(135deg,#f472b6,#a78bfa); border:none; border-radius:12px; color:#fff; font-size:11px; font-weight:900; letter-spacing:.5px; padding:6px 12px; margin-left:2px; cursor:pointer; box-shadow:0 3px 12px rgba(244,114,182,0.32); display:inline-grid; place-items:center }
 #gif-btn:hover { filter:brightness(1.12); transform:translateY(-1px) }
-#pic-btn { background:linear-gradient(135deg,#f59e0b 0%,#ec4899 50%,#8b5cf6 100%); border:none; border-radius:12px; color:#fff; font-size:14px; font-weight:900; padding:6px 10px; margin-left:2px; cursor:pointer; line-height:1; box-shadow:0 3px 12px rgba(236,72,153,0.32); }
+#pic-btn { background:linear-gradient(135deg,#f59e0b 0%,#ec4899 50%,#8b5cf6 100%); border:none; border-radius:12px; color:#fff; padding:6px 10px; margin-left:2px; cursor:pointer; box-shadow:0 3px 12px rgba(236,72,153,0.32); display:inline-grid; place-items:center; width:38px; height:32px }
 #pic-btn:hover { filter:brightness(1.12); transform:translateY(-1px) }
 #pic-btn:disabled { opacity:.45; cursor:default; }
-#mic-btn { background:linear-gradient(135deg,#06b6d4 0%,#3b82f6 50%,#8b5cf6 100%); border:none; border-radius:12px; color:#fff; font-size:14px; font-weight:900; padding:6px 10px; margin-left:2px; cursor:pointer; line-height:1; box-shadow:0 3px 12px rgba(59,130,246,0.32); }
+#mic-btn { background:linear-gradient(135deg,#06b6d4 0%,#3b82f6 50%,#8b5cf6 100%); border:none; border-radius:12px; color:#fff; padding:6px 10px; margin-left:2px; cursor:pointer; box-shadow:0 3px 12px rgba(59,130,246,0.32); display:inline-grid; place-items:center; width:42px; height:32px }
 #mic-btn:hover { filter:brightness(1.12); transform:translateY(-1px) }
 @media(max-width:600px){
   #gif-btn{padding:5px 10px; font-size:10px}
@@ -1667,8 +1667,12 @@ body { margin: 0 !important; padding: 0 !important; }
           <button class="emoji" data-e="😮">😮</button>
           <button class="emoji" data-e="👍">👍</button>
           <button id="gif-btn" type="button" title="GIF bhejo">GIF</button>
-          <button id="pic-btn" type="button" title="Gallery se photo bhejo">🖼️</button>
-          <button id="mic-btn" type="button" title="Voice message bhejo">🎤</button>
+          <button id="pic-btn" type="button" title="Gallery se photo bhejo">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H4V5h16v14zM8 10.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM20 18l-5.5-6.5L8 19l-2.5-3L4 18V5h16v13z"/></svg>
+          </button>
+          <button id="mic-btn" type="button" title="Voice message bhejo">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" fill="currentColor"/><path d="M19 11v1a7 7 0 0 1-14 0v-1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 18v3M8 21h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><g fill="currentColor"><path d="M18 2l1 1.5L21 4l-2 .5L18 6l-1-1.5L15 4l2-.5L18 2z"/><path d="M20.5 5l.6.9.9.6-.9.6-.6.9-.6-.9-.9-.6.9-.6.6-.9z"/><path d="M15 7l.8 1.2L17 9l-1.2.8L15 11l-.8-1.2L13 9l1.2-.8L15 7z"/></g></svg>
+          </button>
         </div>
         <input id="pic-file" type="file" accept="image/*" style="display:none" />
         <div id="rec-bar" class="hidden"><span class="rec-dot"></span><b id="rec-time">0:00 / 1:00</b><button id="rec-cancel" type="button">✕</button><button id="rec-send" type="button">➤</button></div>
@@ -4271,9 +4275,9 @@ function renderMembers() {
     <div class="dm-inbar">
       <div id="dm-rec-bar" class="hidden"><span class="rdot"></span><b id="dm-rec-time">0:00 / 1:00</b><button id="dm-rec-cancel" type="button">✕</button><button id="dm-rec-send" type="button">➤</button></div>
       <div class="ig4pill">
-        <button id="dm-photo-btn" type="button" title="Photo bhejo">🖼️</button>
+        <button id="dm-photo-btn" type="button" title="Photo bhejo"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H4V5h16v14zM8 10.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM20 18l-5.5-6.5L8 19l-2.5-3L4 18V5h16v13z"/></svg></button>
         <button id="dm-gif-btn" type="button" title="GIF bhejo">GIF</button>
-        <button id="dm-mic-btn" type="button" title="Voice message bhejo">🎤</button>
+        <button id="dm-mic-btn" type="button" title="Voice message bhejo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" fill="currentColor"/><path d="M19 11v1a7 7 0 0 1-14 0v-1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 18v3M8 21h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><g fill="currentColor"><path d="M18 2l1 1.5L21 4l-2 .5L18 6l-1-1.5L15 4l2-.5L18 2z"/><path d="M20.5 5l.6.9.9.6-.9.6-.6.9-.6-.9-.9-.6.9-.6.6-.9z"/><path d="M15 7l.8 1.2L17 9l-1.2.8L15 11l-.8-1.2L13 9l1.2-.8L15 7z"/></g></svg></button>
         <input id="dm-input" placeholder="Message likho..." maxlength="500" autocomplete="off">
       </div>
       <button id="dm-send-btn">➤</button>
