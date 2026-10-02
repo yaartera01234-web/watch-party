@@ -5371,11 +5371,15 @@ function renderMembers() {
     try { fitSheet(); } catch (e) {}
   }
 
-  // Gesture back fix - handle browser back button
+  // Gesture back fix - handle browser back button + background minimize
   (function(){
     try {
-      // Initial room state
-      history.replaceState({wp:'room'}, '', location.href);
+      // Initial room state - DOUBLE push so back never exits, always goes to room
+      history.replaceState({wp:'room', idx:0}, '', location.href);
+      // Push extra room entry so first back stays in app
+      setTimeout(function(){
+        try { history.pushState({wp:'room', idx:1}, '', location.href); } catch(e){}
+      }, 500);
     } catch(e){}
     function isPlayingNow(){
       try {
@@ -5399,11 +5403,35 @@ function renderMembers() {
     }
     function activateMiniPopup(){
       try {
-        // Phone mini player
+        // Force mini player - works on every device (not just phone portrait)
+        var pw = document.querySelector('.player-wrap');
+        if (pw) {
+          pw.classList.add('mini');
+          pw.classList.remove('expanded-phone');
+        }
+        document.body.classList.add('pc-mini-on');
+        pcMiniOn = true;
+        pcUserExpanded = false;
         if (typeof pcSetMini === 'function') {
-          pcUserExpanded = false;
-          pcSetMini(true);
-          if (typeof updateMiniInfo === 'function') updateMiniInfo();
+          // Call original but force after
+          try { pcSetMini(true); } catch(e){}
+          // Force again in case PCQ blocked
+          if (pw) pw.classList.add('mini');
+          document.body.classList.add('pc-mini-on');
+          pcMiniOn = true;
+        }
+        if (typeof updateMiniInfo === 'function') {
+          try { updateMiniInfo(); } catch(e){}
+          // Force update even on desktop
+          try {
+            var tb = document.getElementById('mini-title'), sb = document.getElementById('mini-sub');
+            if (tb) {
+              var title = '';
+              try { title = pcTitle(); } catch(e){ title = '🎵 Background mein chal raha hai'; }
+              tb.textContent = title;
+            }
+            if (sb) sb.textContent = '🎵 Tap karo: wapas room mein';
+          } catch(e){}
         }
         // Also try to show notification / toast
         if (typeof toast === 'function') {
@@ -5430,34 +5458,42 @@ function renderMembers() {
           // Trying to exit beyond room - if song playing, minimize instead of exit
           if (isPlayingNow()) {
             // Prevent exit - push room state again and minimize
-            try { history.pushState({wp:'room', minimized:true}, '', location.href); } catch(e){}
+            try { history.pushState({wp:'room', minimized:true, idx:99}, '', location.href); } catch(e){}
             activateMiniPopup();
-            // Also push minimized state for next back
-            console.log('[Back] Room back with song playing -> minimize popup active, background mein chal raha');
+            console.log('[Back] Null -> minimize popup active, background mein chal raha');
           } else {
-            // No song - allow normal? But prevent exit and show confirm
+            // No song - prevent accidental exit
             if (isOpen) {
               var ov = $('dm-ov');
               if (ov) ov.classList.remove('on');
               if (sh) sh.classList.remove('on');
               if (curChat) { markRead(curChat); renderAll(); }
-              try { history.pushState({wp:'room'}, '', location.href); } catch(e){}
+              try { history.pushState({wp:'room', idx:1}, '', location.href); } catch(e){}
             } else {
-              // Song not playing and trying to exit - push room again to prevent accidental exit
-              try { history.pushState({wp:'room'}, '', location.href); } catch(e){}
-              if (typeof toast === 'function') toast('↩️ Back dabane se exit nahi — gaana chalao to minimize hoga');
+              try { history.pushState({wp:'room', idx:1}, '', location.href); } catch(e){}
+              if (typeof toast === 'function') toast('↩️ Back se exit nahi — gaana chalao to minimize hoga');
             }
           }
         } else if (st.wp === 'room') {
-          // Back to room - close DM sheet, if minimized flag then activate mini
+          // Back to room - could be from DM or from room itself (double push)
           if (isOpen) {
             var ov = $('dm-ov');
             if (ov) ov.classList.remove('on');
             if (sh) sh.classList.remove('on');
             if (curChat) { markRead(curChat); renderAll(); }
           }
-          if (st.minimized && isPlayingNow()) {
+          // If song playing and back pressed in room -> minimize popup active
+          if (isPlayingNow()) {
             activateMiniPopup();
+            // Re-push so next back also minimizes, not exit
+            try { history.pushState({wp:'room', minimized:true, idx: (st.idx||0)+1}, '', location.href); } catch(e){}
+            console.log('[Back] Room back with song -> minimize active, background');
+          } else {
+            // No song, but still prevent exit by ensuring history has room
+            if (!st.minimized) {
+              // If this is the base room state (idx 0), push another to keep stack
+              try { history.pushState({wp:'room', idx:1}, '', location.href); } catch(e){}
+            }
           }
         } else if (st.wp === 'dm') {
           // DM navigation
