@@ -526,8 +526,8 @@ main { gap: 11px; }
 }
 #wp-search-btn:hover { filter: brightness(1.15); transform: translateY(-1px); border-color:#4A4670 }
 #wp-search-btn .yt-badge{
-  position:absolute; right:-5px; bottom:-5px; width:16px; height:16px; background:#FF0000; border-radius:50%;
-  display:grid; place-items:center; font-size:8px; color:#fff; border:1.5px solid #1E1B36; font-weight:900;
+  position:absolute; right:-5px; bottom:-5px; width:16px; height:16px; background:#fff; border-radius:50%;
+  display:grid; place-items:center; font-size:9px; color:#000; border:1.5px solid #1E1B36; font-weight:900;
 }
 #wp-ssheet { display: flex; flex-direction: column; overflow: hidden; max-height: 84vh; z-index: 81; padding: 12px; }
 #wp-ssheet .wss-head { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
@@ -1558,7 +1558,7 @@ body { margin: 0 !important; padding: 0 !important; }
         <input id="url-input" type="text" placeholder="YouTube / MP4 / MP3 link paste karo..." autocomplete="off" />
         <button id="load-btn" title="Play — sab ke screen pe sync">▶ Play</button>
         <button id="queue-btn">➕ Queue</button>
-        <button id="wp-search-btn" title="YouTube search (Piped)">🔍<span class="yt-badge">YT</span></button>
+        <button id="wp-search-btn" title="YouTube search (Piped)"><span style="background:#FF0000; color:#fff; border-radius:4px; padding:2px 5px; font-size:11px; font-weight:900; display:inline-flex; align-items:center; justify-content:center">▶</span><span class="yt-badge">🔍</span></button>
       </div>
       <div class="player-wrap">
         <div class="mini-info">
