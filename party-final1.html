@@ -5377,19 +5377,87 @@ function renderMembers() {
       // Initial room state
       history.replaceState({wp:'room'}, '', location.href);
     } catch(e){}
+    function isPlayingNow(){
+      try {
+        if (typeof currentType === 'undefined') return false;
+        if (currentType === 'none') return false;
+        if (currentType === 'mp3' || currentType === 'mp4' || currentType === 'hls') {
+          var mp = document.getElementById('mp4-player');
+          if (mp && !mp.paused) return true;
+        }
+        if (currentType === 'youtube') {
+          // YouTube playing check
+          if (typeof ytPlayer !== 'undefined' && ytPlayer && ytPlayer.getPlayerState) {
+            var st = ytPlayer.getPlayerState();
+            if (st === 1) return true; // playing
+          }
+        }
+        // If any media loaded, consider playing for background feature
+        if (currentType !== 'none') return true;
+      } catch(e){}
+      return false;
+    }
+    function activateMiniPopup(){
+      try {
+        // Phone mini player
+        if (typeof pcSetMini === 'function') {
+          pcUserExpanded = false;
+          pcSetMini(true);
+          if (typeof updateMiniInfo === 'function') updateMiniInfo();
+        }
+        // Also try to show notification / toast
+        if (typeof toast === 'function') {
+          toast('🎵 Background mein chal raha hai — minimize active!');
+        }
+        // Keep playing - ensure not paused
+        var mp = document.getElementById('mp4-player');
+        if (mp && mp.paused && (currentType === 'mp3' || currentType === 'mp4' || currentType === 'hls')) {
+          mp.play().catch(function(){});
+        }
+        // For YouTube, keep playing
+        if (typeof ytPlayer !== 'undefined' && ytPlayer && ytPlayer.playVideo && currentType === 'youtube') {
+          try { ytPlayer.playVideo(); } catch(e){}
+        }
+      } catch(e){ console.log('mini popup err', e); }
+    }
     window.addEventListener('popstate', function(ev){
       var st = ev.state;
       var sh = $('dm-sheet');
       var isOpen = sh && sh.classList.contains('on');
       _wpHistoryHandling = true;
       try {
-        if (!st || st.wp === 'room') {
-          // Back to room - close DM sheet
+        if (!st) {
+          // Trying to exit beyond room - if song playing, minimize instead of exit
+          if (isPlayingNow()) {
+            // Prevent exit - push room state again and minimize
+            try { history.pushState({wp:'room', minimized:true}, '', location.href); } catch(e){}
+            activateMiniPopup();
+            // Also push minimized state for next back
+            console.log('[Back] Room back with song playing -> minimize popup active, background mein chal raha');
+          } else {
+            // No song - allow normal? But prevent exit and show confirm
+            if (isOpen) {
+              var ov = $('dm-ov');
+              if (ov) ov.classList.remove('on');
+              if (sh) sh.classList.remove('on');
+              if (curChat) { markRead(curChat); renderAll(); }
+              try { history.pushState({wp:'room'}, '', location.href); } catch(e){}
+            } else {
+              // Song not playing and trying to exit - push room again to prevent accidental exit
+              try { history.pushState({wp:'room'}, '', location.href); } catch(e){}
+              if (typeof toast === 'function') toast('↩️ Back dabane se exit nahi — gaana chalao to minimize hoga');
+            }
+          }
+        } else if (st.wp === 'room') {
+          // Back to room - close DM sheet, if minimized flag then activate mini
           if (isOpen) {
             var ov = $('dm-ov');
             if (ov) ov.classList.remove('on');
             if (sh) sh.classList.remove('on');
             if (curChat) { markRead(curChat); renderAll(); }
+          }
+          if (st.minimized && isPlayingNow()) {
+            activateMiniPopup();
           }
         } else if (st.wp === 'dm') {
           // DM navigation
