@@ -5393,150 +5393,49 @@ function renderMembers() {
     try { fitSheet(); } catch (e) {}
   }
 
-  // Gesture back fix - handle browser back button + background minimize - FINAL v2
+  // Simple back fix - DM back -> room, Room back -> exit (boss: minimize popup kaafi hai)
   (function(){
-    var _roomPushCount = 0;
-    function pushRoomState(minimized){
-      try {
-        _roomPushCount++;
-        history.pushState({wp:'room', idx:_roomPushCount, minimized:!!minimized, t:Date.now()}, '', location.href);
-      } catch(e){}
-    }
+    var _wpHistoryHandling = false;
     try {
-      // Initial room state - DOUBLE immediate push so back never exits
-      history.replaceState({wp:'room', idx:0, t:Date.now()}, '', location.href);
-      pushRoomState(false); // idx 1
-      pushRoomState(false); // idx 2 - extra safety
+      history.replaceState({wp:'room'}, '', location.href);
     } catch(e){}
-    function isPlayingNow(){
-      try {
-        if (typeof currentType === 'undefined') return false;
-        if (currentType === 'none') return false;
-        if (currentType === 'mp3' || currentType === 'mp4' || currentType === 'hls') {
-          var mp = document.getElementById('mp4-player');
-          if (mp) return true;
-        }
-        if (currentType === 'youtube') return true;
-        if (currentType !== 'none') return true;
-      } catch(e){}
-      return false;
-    }
-    function activateMiniPopup(){
-      try {
-        var pw = document.querySelector('.player-wrap');
-        var tb = document.getElementById('mini-title');
-        var sb = document.getElementById('mini-sub');
-        if (pw) {
-          pw.classList.add('mini');
-          pw.classList.remove('expanded-phone');
-        }
-        document.body.classList.add('pc-mini-on');
-        pcMiniOn = true;
-        pcUserExpanded = false;
-        if (tb) {
-          try {
-            var title = '';
-            if (typeof pcTitle === 'function') title = pcTitle();
-            tb.textContent = title || '🎵 Party On - Background mein chal raha hai';
-          } catch(e){ tb.textContent = '🎵 Party On'; }
-        }
-        if (sb) sb.textContent = '🎵 Tap karo: wapas room mein | Background active';
-        var mp = document.getElementById('mp4-player');
-        if (mp) {
-          if (mp.paused && (currentType === 'mp3' || currentType === 'mp4' || currentType === 'hls')) {
-            mp.play().catch(function(){});
-          }
-          mp.setAttribute('playsinline','');
-        }
-        if (typeof ytPlayer !== 'undefined' && ytPlayer && ytPlayer.playVideo && currentType === 'youtube') {
-          try { ytPlayer.playVideo(); } catch(e){}
-        }
-        if (typeof toast === 'function') {
-          toast('🎵 Party On - Background mein chal raha hai! Minimize active!');
-        }
-        console.log('[Mini] Party On popup forced active');
-      } catch(e){ console.log('mini popup err', e); }
-    }
     window.addEventListener('popstate', function(ev){
       var st = ev.state;
-      var sh = $('dm-sheet');
+      var sh = document.getElementById('dm-sheet');
       var isOpen = sh && sh.classList.contains('on');
       _wpHistoryHandling = true;
       try {
-        if (!st) {
-          // Null = trying to exit - make it minimize feel
-          try {
-            pcUserExpanded = false;
-            if (typeof pcSetMini === 'function') pcSetMini(true);
-            var pw2 = document.querySelector('.player-wrap');
-            if (pw2) { pw2.classList.add('mini'); pw2.classList.remove('expanded-phone'); }
-            document.body.classList.add('pc-mini-on');
-            pcMiniOn = true;
-            if (typeof toast === 'function') toast('🎵 Party On - Background active!');
-            console.log('[Back] Null -> minimize feel');
-          } catch(e){}
-          pushRoomState(true);
-        } else if (st.wp === 'room') {
+        if (!st || st.wp === 'room') {
+          // Back to room or exit attempt - close DM if open, else allow exit
           if (isOpen) {
-            var ov = $('dm-ov');
+            var ov = document.getElementById('dm-ov');
             if (ov) ov.classList.remove('on');
             if (sh) sh.classList.remove('on');
-            if (curChat) { markRead(curChat); renderAll(); }
-            pushRoomState(false);
+            // Push room again so next back exits cleanly
+            try { history.pushState({wp:'room'}, '', location.href); } catch(e){}
           } else {
-            // Boss: Back button ko minimize feel karwa do - simple - same as pc-collapse button
-            try {
-              pcUserExpanded = false;
-              // Exact same as minimize button: $('pc-collapse').onclick
-              if (typeof pcSetMini === 'function') pcSetMini(true);
-              // Force Party On popup even if PCQ check fails (desktop bhi)
-              var pw = document.querySelector('.player-wrap');
-              if (pw) { pw.classList.add('mini'); pw.classList.remove('expanded-phone'); }
-              document.body.classList.add('pc-mini-on');
-              pcMiniOn = true;
-              var tb = document.getElementById('mini-title');
-              var sb = document.getElementById('mini-sub');
-              if (tb) tb.textContent = '🎵 Party On - Background mein';
-              if (sb) sb.textContent = 'Background active - tap to expand';
-              if (typeof updateMiniInfo === 'function') {
-                try { updateMiniInfo(); } catch(e){}
-              }
-              if (typeof toast === 'function') toast('🎵 Party On - Minimize active! Background mein chal raha');
-              console.log('[Back] Room back -> SAME AS MINIMIZE BUTTON - Party On popup');
-            } catch(e){ console.log('minimize err', e); }
-            // Keep song playing in background
-            try {
-              var mp = document.getElementById('mp4-player');
-              if (mp && mp.paused) { try{ mp.play(); }catch(e){} }
-              if (typeof ytPlayer !== 'undefined' && ytPlayer && ytPlayer.playVideo) { try{ ytPlayer.playVideo(); }catch(e){} }
-            } catch(e){}
-            pushRoomState(true);
+            // Room back -> exit (no push, allow browser to exit)
+            console.log('[Back] Room back -> exit');
           }
         } else if (st.wp === 'dm') {
           if (!isOpen) {
-            var ov2 = $('dm-ov'); if (ov2) ov2.classList.add('on');
+            var ov2 = document.getElementById('dm-ov'); if (ov2) ov2.classList.add('on');
             if (sh) sh.classList.add('on');
-            subscribeDm(); pubPresence(); renderAll();
           }
           if (st.view) {
-            showView(st.view, true);
-            if (st.view === 'dm-view-inbox') { curChat = null; renderAll(); }
+            // Show view without pushing history
+            var _old = _wpHistoryHandling;
+            _wpHistoryHandling = true;
+            try { showView(st.view, true); if (st.view === 'dm-view-inbox') curChat = null; } catch(e){}
+            _wpHistoryHandling = _old;
           }
         }
       } catch(e){ console.log('popstate err', e); }
       setTimeout(function(){ _wpHistoryHandling = false; }, 150);
     });
-    document.addEventListener('visibilitychange', function(){
-      if (document.hidden && isPlayingNow()) {
-        console.log('[Background] Page hidden but song continues');
-        var mp = document.getElementById('mp4-player');
-        if (mp && mp.paused && (currentType === 'mp3' || currentType === 'mp4' || currentType === 'hls')) {
-          setTimeout(function(){ try{ mp.play(); }catch(e){} }, 100);
-        }
-      }
-    });
   })();
 
+  /* ---------------- render ---------------- */
   /* ---------------- render ---------------- */
   /* ---------------- render ---------------- */
   function unreadTotal() {
