@@ -1601,7 +1601,7 @@ body { margin: 0 !important; padding: 0 !important; }
           <div class="premium-video-top"><span id="premium-video-badge" class="premium-video-badge">▶ VIDEO</span><span id="premium-video-title">Watch Party Premium</span><button id="premium-video-menu" class="premium-video-menu">•••</button></div>
           <div id="premium-player-menu" class="hidden"><button id="premium-pip-btn">🖼️ Picture-in-Picture</button></div>
           <div class="premium-video-center"><button id="premium-video-big-play">▶</button></div>
-          <div class="premium-video-bottom"><div id="premium-video-progress" class="premium-video-progress"><div id="premium-video-fill" class="premium-video-fill"></div><div id="premium-video-dot" class="premium-video-dot"></div></div><div class="premium-video-controls"><button id="premium-video-play" class="premium-video-control">▶</button><button id="premium-video-back" class="premium-video-control">↶</button><button id="premium-video-forward" class="premium-video-control">↷</button><span id="premium-video-time">00:00 / 00:00</span><span class="premium-video-spacer"></span><select id="premium-video-quality" class="hidden" title="YouTube quality"><option value="default">⚙ Auto</option></select><button id="mpv-open-btn" class="premium-video-control" title="Open in native MPV 0.23.0 (yuroyami) - har mobile pe chalta hai, ad-free" style="font-size:10px; background:linear-gradient(135deg,#a78bfa,#ff5ebc);">📱MPV</button><button id="premium-video-mute" class="premium-video-control">🔊</button><button id="premium-video-fullscreen" class="premium-video-control">⛶</button></div></div>
+          <div class="premium-video-bottom"><div id="premium-video-progress" class="premium-video-progress"><div id="premium-video-fill" class="premium-video-fill"></div><div id="premium-video-dot" class="premium-video-dot"></div></div><div class="premium-video-controls"><button id="premium-video-play" class="premium-video-control">▶</button><button id="premium-video-back" class="premium-video-control">↶</button><button id="premium-video-forward" class="premium-video-control">↷</button><span id="premium-video-time">00:00 / 00:00</span><span class="premium-video-spacer"></span><select id="premium-video-quality" class="hidden" title="YouTube quality"><option value="default">⚙ Auto</option></select><button id="premium-video-mute" class="premium-video-control">🔊</button><button id="premium-video-fullscreen" class="premium-video-control">⛶</button></div></div>
         </div>
         <div id="no-video">
           <div class="big-emoji">🍿</div>
@@ -1791,7 +1791,6 @@ const urlInput = $('url-input'), loadBtn = $('load-btn');
 const ytDiv = $('yt-player'), mp4 = $('mp4-player'), mp3Player = $('mp3-player'), premiumVideoUI = $('premium-video-ui'), noVideo = $('no-video');
 const mp3Title = $('mp3-title'), mp3Artist = $('mp3-artist'), mp3Play = $('mp3-play'), mp3Back = $('mp3-back'), mp3Forward = $('mp3-forward'), mp3Progress = $('mp3-progress'), mp3Fill = $('mp3-fill'), mp3Dot = $('mp3-dot'), mp3Current = $('mp3-current'), mp3Total = $('mp3-total');
 const premiumVideoBadge = $('premium-video-badge'), premiumVideoTitle = $('premium-video-title'), premiumVideoPlay = $('premium-video-play'), premiumVideoBigPlay = $('premium-video-big-play'), premiumVideoBack = $('premium-video-back'), premiumVideoForward = $('premium-video-forward'), premiumVideoMute = $('premium-video-mute'), premiumVideoFullscreen = $('premium-video-fullscreen'), premiumVideoProgress = $('premium-video-progress'), premiumVideoFill = $('premium-video-fill'), premiumVideoDot = $('premium-video-dot'), premiumVideoTime = $('premium-video-time'), premiumVideoQuality = $('premium-video-quality');
-const mpvOpenBtn = $('mpv-open-btn');
 const playerWrap = document.querySelector('.player-wrap'), premiumPlayerMenu = $('premium-player-menu'), premiumPipBtn = $('premium-pip-btn');
 let lastYTQualityLevels = '';
 let premiumHideTimer = null;
@@ -2647,67 +2646,7 @@ function setPremiumMedia(data) {
   premiumVideoBadge.textContent = isYT ? '▶ YOUTUBE' : (data.type === 'hls' ? '📡 HLS STREAM' : '🎞 MP4 VIDEO');
   premiumVideoTitle.textContent = isYT ? 'YouTube · ' + (data.videoId || 'Video') : makeLabel(data).replace(/^(🎞|📡)\s*/, '');
 }
-/* ===== 📱 yuroyami MPV 0.23.0 - HTML mein (har mobile pe chalta hai) + Piped ad-free ===== */
-// Boss: HTML mein karna hai - yuroyami MPV 0.23.0 wala jo har mobile pe chalta hai
-// HTML5 player jo MPV jaisa behave kare + native bridge agar Android app mein ho
-var yuroyamiMpv = {
-  version: '0.23.0',
-  lib: 'libmpvKt 0.3.0',
-  isNative: false,
-  bridge: null,
-  init: function(){
-    try {
-      var w = window;
-      // Syncplay Mobile 0.23.0 bridge detection - multiple names
-      if (w.AndroidMpvBridge && typeof w.AndroidMpvBridge.openMpv === 'function') { this.bridge = w.AndroidMpvBridge; this.isNative = true; }
-      else if (w.AndroidMpvBridge && typeof w.AndroidMpvBridge.playFile === 'function') { this.bridge = w.AndroidMpvBridge; this.isNative = true; }
-      else if (w.Android && typeof w.Android.openMpv === 'function') { this.bridge = w.Android; this.isNative = true; }
-      else if (w.MpvBridge && typeof w.MpvBridge.open === 'function') { this.bridge = w.MpvBridge; this.isNative = true; }
-      // Check for Capacitor bridge from Watch-Party-Mpv
-      else if (w.Capacitor && w.Capacitor.Plugins && w.Capacitor.Plugins.MpvPlayer) { this.bridge = w.Capacitor.Plugins.MpvPlayer; this.isNative = true; }
-      console.log('[MPV] yuroyami 0.23.0 bridge:', this.isNative ? 'FOUND' : 'HTML5 fallback (works on every mobile)');
-    } catch(e){ console.log('[MPV] init fail', e); }
-    return this.isNative;
-  },
-  open: function(url, title){
-    try {
-      if (!this.bridge) return false;
-      // Try different API styles used in 0.23.0
-      if (this.bridge.openMpv) { this.bridge.openMpv(url, title||''); return true; }
-      if (this.bridge.playFile) { this.bridge.playFile(url); return true; }
-      if (this.bridge.loadFile) { this.bridge.loadFile({url:url}); return true; }
-      if (this.bridge.open) { this.bridge.open(url); return true; }
-      // Capacitor plugin style
-      if (this.bridge.play) { this.bridge.play({url:url, title:title||''}); return true; }
-    } catch(e){ console.log('[MPV] open failed', e); }
-    return false;
-  },
-  // HTML5 fallback - MPV-like player that works on every mobile
-  html5Options: {
-    hwdec: 'auto', // hardware decoding
-    vo: 'gpu', // gpu rendering
-    cache: 'yes',
-    demuxerMaxBytes: '150M',
-    // Works on every mobile - universal config
-  }
-};
-yuroyamiMpv.init();
-function isNativeMpvAvailable(){ return yuroyamiMpv.isNative; }
-function openInNativeMpv(url, title){
-  if (yuroyamiMpv.isNative) {
-    var ok = yuroyamiMpv.open(url, title);
-    if (ok) console.log('[MPV] Opened in yuroyami 0.23.0 native:', url);
-    return ok;
-  }
-  return false;
-}
-// HTML5 MPV player - har mobile pe chalta hai (like 0.23.0 universal APK)
-function createMpvHtml5Player(url, title){
-  // This is pure HTML5 but with MPV 0.23.0 config - works everywhere
-  console.log('[MPV] HTML5 player (yuroyami 0.23.0 style) playing:', url);
-  return true;
-}
-
+/* ===== 🚫 AD-FREE YOUTUBE via Piped streams (Boss request) ===== */
 var PIPED_STREAM_INSTANCES = [
   'https://api.piped.private.coffee',
   'https://pipedapi.ducks.party',
@@ -2828,25 +2767,7 @@ function loadVideoLocal(data, autoplay) {
   premiumPlayerMenu.classList.add('hidden');
   clearTimeout(premiumHideTimer);
   if (data.type === 'youtube') {
-    // yuroyami MPV 0.23.0 - har mobile pe chalta hai, permanent ad-free solution (HTML mein)
-    try {
-      if (isNativeMpvAvailable()) {
-        var ytUrl = 'https://www.youtube.com/watch?v=' + data.videoId;
-        // Try native MPV first (yt-dlp inside, no ads, works on every mobile)
-        if (openInNativeMpv(ytUrl, data.label||data.videoId)) {
-          nowPlaying.textContent = '📱 Native MPV 0.23.0 (yuroyami) ▶ ' + data.videoId + ' — har mobile pe chalta hai!';
-          // Keep web player hidden, native will handle
-          mp4.pause(); mp4.classList.add('hidden');
-          ytDiv.classList.add('hidden');
-          premiumVideoUI.classList.add('hidden');
-          noVideo.classList.add('hidden');
-          // Prefetch next for speed
-          try { prefetchNextInQueue(); } catch(e){}
-          return;
-        }
-      }
-    } catch(e){ console.log('[MPV] native check failed', e); }
-    // Try ad-free via Piped first (web fallback)
+    // Try ad-free via Piped first
     try {
       var vid = data.videoId;
       nowPlaying.textContent = '🚫 Ads hatane ki koshish... Piped se ad-free stream la raha...';
@@ -3074,34 +2995,6 @@ premiumVideoMute.onclick = premiumToggleMute;
 premiumVideoQuality.onchange = () => { if (currentType === 'youtube' && ytReady && ytPlayer && ytPlayer.setPlaybackQuality) { try { ytPlayer.setPlaybackQuality(premiumVideoQuality.value); } catch (e) {} setTimeout(updateYouTubeQualityOptions, 250); } };
 premiumVideoProgress.onclick = premiumSeekClick;
 premiumVideoFullscreen.onclick = () => { const wrap = document.querySelector('.player-wrap'); if (document.fullscreenElement) document.exitFullscreen(); else if (wrap.requestFullscreen) wrap.requestFullscreen(); else if (wrap.webkitRequestFullscreen) wrap.webkitRequestFullscreen(); };
-
-if (mpvOpenBtn) mpvOpenBtn.onclick = function(){
-  try {
-    var cur = null;
-    if (typeof currentMedia !== 'undefined' && currentMedia) cur = currentMedia;
-    else if (typeof queueLocal !== 'undefined' && queueLocal.items && queueLocal.index>=0) cur = queueLocal.items[queueLocal.index];
-    var url = cur ? (cur.url || (cur.videoId ? 'https://www.youtube.com/watch?v='+cur.videoId : '')) : (document.getElementById('url-input') ? document.getElementById('url-input').value : '');
-    if (!url) { if (typeof toast === 'function') toast('❌ Koi video nahi — pehle link lagao'); return; }
-    if (yuroyamiMpv.isNative) {
-      yuroyamiMpv.open(url, cur ? cur.label : '');
-      if (typeof toast === 'function') toast('📱 MPV 0.23.0 (yuroyami) mein khola — har mobile pe chalta hai! 🚫 ad-free');
-    } else {
-      // HTML5 MPV fallback - works on every mobile (yuroyami 0.23.0 style)
-      if (typeof toast === 'function') toast('📱 MPV 0.23.0 HTML5 player — har mobile pe chalta hai! Piped ad-free');
-      // Try intent for external MPV apps (is.xyz.mpv etc)
-      try {
-        var intentUrl = 'intent:'+url+'#Intent;action=android.intent.action.VIEW;type=video/*;S.title='+(cur?cur.label:'')+';end';
-        // Only try intent if user explicitly wants external
-        console.log('[MPV] HTML5 mode, intent fallback:', intentUrl);
-      } catch(e){}
-      // Play via Piped in HTML5 video (ad-free) - already handled by loadVideoLocal
-      if (cur && cur.videoId) {
-        // Trigger reload to get Piped stream
-        loadVideoLocal({type:'youtube', videoId: cur.videoId, label: cur.label||cur.videoId}, true);
-      }
-    }
-  } catch(e){ console.log('[MPV] btn fail', e); }
-};
 $('premium-video-menu').onclick = (e) => { e.stopPropagation(); if (isCustomVideoMode()) { premiumPlayerMenu.classList.toggle('hidden'); showPremiumControls(); } else addSysMsg('YouTube ka PiP official player controls se use karo'); };
 premiumPipBtn.onclick = async (e) => {
   e.stopPropagation();
