@@ -5442,21 +5442,19 @@ function renderMembers() {
       _wpHistoryHandling = true;
       try {
         if (!st) {
-          if (isPlayingNow()) {
-            pushRoomState(true);
-            activateMiniPopup();
-            console.log('[Back] Null state with song -> force mini, prevent exit');
-          } else {
-            pushRoomState(false);
-            if (isOpen) {
-              var ov = $('dm-ov');
-              if (ov) ov.classList.remove('on');
-              if (sh) sh.classList.remove('on');
-              if (curChat) { markRead(curChat); renderAll(); }
-            } else {
-              if (typeof toast === 'function') toast('↩️ Back se exit nahi — gaana chalao to Party On minimize hoga');
-            }
-          }
+          // Null = trying to exit - make it minimize feel
+          try {
+            pcUserExpanded = false;
+            if (typeof pcSetMini === 'function') pcSetMini(true);
+            var pw2 = document.querySelector('.player-wrap');
+            if (pw2) { pw2.classList.add('mini'); pw2.classList.remove('expanded-phone'); }
+            document.body.classList.add('pc-mini-on');
+            pcMiniOn = true;
+            if (typeof toast === 'function') toast('🎵 Party On - Background active!');
+            console.log('[Back] Null -> minimize feel');
+          } catch(e){}
+          pushRoomState(true);
+        }
         } else if (st.wp === 'room') {
           if (isOpen) {
             var ov = $('dm-ov');
@@ -5465,13 +5463,33 @@ function renderMembers() {
             if (curChat) { markRead(curChat); renderAll(); }
             pushRoomState(false);
           } else {
-            if (isPlayingNow()) {
-              activateMiniPopup();
-              pushRoomState(true);
-              console.log('[Back] Room back with song -> Party On active, background');
-            } else {
-              if (_roomPushCount < 5) pushRoomState(false);
-            }
+            // Boss: Back button ko minimize feel karwa do - simple - same as pc-collapse button
+            try {
+              pcUserExpanded = false;
+              // Exact same as minimize button: $('pc-collapse').onclick
+              if (typeof pcSetMini === 'function') pcSetMini(true);
+              // Force Party On popup even if PCQ check fails (desktop bhi)
+              var pw = document.querySelector('.player-wrap');
+              if (pw) { pw.classList.add('mini'); pw.classList.remove('expanded-phone'); }
+              document.body.classList.add('pc-mini-on');
+              pcMiniOn = true;
+              var tb = document.getElementById('mini-title');
+              var sb = document.getElementById('mini-sub');
+              if (tb) tb.textContent = '🎵 Party On - Background mein';
+              if (sb) sb.textContent = 'Background active - tap to expand';
+              if (typeof updateMiniInfo === 'function') {
+                try { updateMiniInfo(); } catch(e){}
+              }
+              if (typeof toast === 'function') toast('🎵 Party On - Minimize active! Background mein chal raha');
+              console.log('[Back] Room back -> SAME AS MINIMIZE BUTTON - Party On popup');
+            } catch(e){ console.log('minimize err', e); }
+            // Keep song playing in background
+            try {
+              var mp = document.getElementById('mp4-player');
+              if (mp && mp.paused) { try{ mp.play(); }catch(e){} }
+              if (typeof ytPlayer !== 'undefined' && ytPlayer && ytPlayer.playVideo) { try{ ytPlayer.playVideo(); }catch(e){} }
+            } catch(e){}
+            pushRoomState(true);
           }
         } else if (st.wp === 'dm') {
           if (!isOpen) {
