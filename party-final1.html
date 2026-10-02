@@ -2673,24 +2673,38 @@ function getPipedStreamUrl(videoId) {
       var allQualities = [];
       if (j.videoStreams && j.videoStreams.length) {
         j.videoStreams.forEach(function(s){ if (s.quality) allQualities.push(s.quality); });
-        // Prefer muxed MP4 with audio, highest quality first
+        // Boss: Prefer 720p or 480p (not 1080p) for faster + data save
         var muxed = j.videoStreams.filter(function(s){ return s.mimeType && s.mimeType.indexOf('video/mp4')>-1 && s.videoOnly===false; });
         if (muxed.length) {
+          // Sort by preference: 720p first, then 480p, then others lower, avoid 1080p+ unless no other
+          var pref = {'720p': 3, '480p': 2, '360p': 1, '1080p': 0};
           muxed.sort(function(a,b){ 
-            var qa = parseInt((a.quality||'').replace('p',''))||0;
-            var qb = parseInt((b.quality||'').replace('p',''))||0;
-            return qb - qa; 
+            var qa = a.quality||'', qb = b.quality||'';
+            var pa = pref[qa] !== undefined ? pref[qa] : (parseInt(qa.replace('p',''))>720 ? -1 : 0);
+            var pb = pref[qb] !== undefined ? pref[qb] : (parseInt(qb.replace('p',''))>720 ? -1 : 0);
+            if (pa !== pb) return pb - pa;
+            var na = parseInt(qa.replace('p',''))||0, nb = parseInt(qb.replace('p',''))||0;
+            return nb - na;
           });
-          best = muxed[0];
+          // Pick 720p if available, else 480p
+          var pick720 = muxed.find(function(s){ return s.quality==='720p'; });
+          var pick480 = muxed.find(function(s){ return s.quality==='480p'; });
+          best = pick720 || pick480 || muxed[0];
         } else {
           var withAudio = j.videoStreams.filter(function(s){ return s.videoOnly===false; });
           if (withAudio.length) {
+            var pref2 = {'720p': 3, '480p': 2, '360p': 1, '1080p': 0};
             withAudio.sort(function(a,b){ 
-              var qa = parseInt((a.quality||'').replace('p',''))||0;
-              var qb = parseInt((b.quality||'').replace('p',''))||0;
-              return qb - qa; 
+              var qa = a.quality||'', qb = b.quality||'';
+              var pa = pref2[qa] !== undefined ? pref2[qa] : (parseInt(qa.replace('p',''))>720 ? -1 : 0);
+              var pb = pref2[qb] !== undefined ? pref2[qb] : (parseInt(qb.replace('p',''))>720 ? -1 : 0);
+              if (pa !== pb) return pb - pa;
+              var na = parseInt(qa.replace('p',''))||0, nb = parseInt(qb.replace('p',''))||0;
+              return nb - na;
             });
-            best = withAudio[0];
+            var p720 = withAudio.find(function(s){ return s.quality==='720p'; });
+            var p480 = withAudio.find(function(s){ return s.quality==='480p'; });
+            best = p720 || p480 || withAudio[0];
           }
         }
       }
