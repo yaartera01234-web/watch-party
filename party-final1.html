@@ -5246,42 +5246,28 @@ function renderMembers() {
   // Boss fix: gesture back se exit na ho - history API (bina build)
   var _wpHistoryHandling = false;
   function openSheet() {
-    var ov = $('dm-ov'), sh = $('dm-sheet');
-    if (!sh) return;
-    var ts = document.getElementById('wp-sheet'); if (ts) ts.className = 'wp-sheet';
-    var ss = document.getElementById('wp-ssheet'); if (ss) ss.className = 'wp-sheet';
-    if (ov) ov.classList.add('on');
-    sh.classList.add('on');
-    fitSheet(); setTimeout(fitSheet, 90);
-    subscribeDm(); pubPresence(); renderAll();
-    // Push history so gesture back goes to room, not exit
-    if (!_wpHistoryHandling) {
-      try { history.pushState({wp:'dm', view:'dm-view-inbox'}, '', '#dm-inbox'); } catch(e){}
-    }
+    try {
+      var ov = $('dm-ov'), sh = $('dm-sheet');
+      if (!sh) return;
+      var ts = document.getElementById('wp-sheet'); if (ts) ts.className = 'wp-sheet';
+      var ss = document.getElementById('wp-ssheet'); if (ss) ss.className = 'wp-sheet';
+      if (ov) ov.classList.add('on');
+      if (sh) sh.classList.add('on');
+      fitSheet(); setTimeout(fitSheet, 90);
+      subscribeDm(); pubPresence(); renderAll();
+      // Push for gesture back
+      try { history.pushState({wp:'dm', view:'dm-view-inbox'}, '', '#dm'); } catch(e){}
+      console.log('[DM] openSheet ok');
+    } catch(e){ console.log('openSheet err', e); }
   }
   function closeSheet() {
-    var ov = $('dm-ov'), sh = $('dm-sheet');
-    // If UI close and history is dm, use history.back() so popstate handles it
-    if (!_wpHistoryHandling) {
-      try {
-        var st = history.state;
-        if (st && st.wp === 'dm') {
-          _wpHistoryHandling = true;
-          history.back();
-          setTimeout(function(){ _wpHistoryHandling = false; }, 300);
-          setTimeout(function(){
-            var ov2 = $('dm-ov'), sh2 = $('dm-sheet');
-            if (ov2) ov2.classList.remove('on');
-            if (sh2) sh2.classList.remove('on');
-          }, 350);
-          if (curChat) { markRead(curChat); renderAll(); }
-          return;
-        }
-      } catch(e){}
-    }
-    if (ov) ov.classList.remove('on');
-    if (sh) sh.classList.remove('on');
-    if (curChat) { markRead(curChat); renderAll(); }
+    try {
+      var ov = $('dm-ov'), sh = $('dm-sheet');
+      if (ov) ov.classList.remove('on');
+      if (sh) sh.classList.remove('on');
+      if (curChat) { markRead(curChat); renderAll(); }
+      console.log('[DM] closeSheet ok');
+    } catch(e){ console.log('closeSheet err', e); }
   }
   /* ---------------- DM v2.4: chat header (naam + online) + typing ---------------- */
   var dmTypTimer = null, dmLastType = 0;
