@@ -1184,7 +1184,7 @@ body.pc-mini-on .sync-row { display: none !important; }
 @keyframes dm-call-wave { from { height: 7px; opacity: .65; } to { height: 28px; opacity: 1; } }
 @media(max-height:700px) { .dm-call-avatar-ring { width: 130px; height: 130px; margin-bottom: 17px; } #dm-call-avatar .dm-call-avatar-inner { width: 92px; height: 92px; font-size: 36px; } .dm-call-center { padding-bottom: 8px; } .dm-call-controls { padding-bottom: 22px; gap: 20px; } .dm-call-action { width: 56px; height: 56px; } .dm-call-decline { width: 64px; height: 64px; } .dm-call-wave { margin-top: 12px; } }
 
-/* FINAL FIX: DM full page no bottom space - boss WP1-BXLZ-6MG7 */
+/* FINAL FIX: DM full page no bottom space - boss WP1-8TQN-YTM9 */
 #dm-sheet {
   height: 100% !important;
   height: 100dvh !important;
@@ -3480,7 +3480,7 @@ const WPVoice = {
     try {
       var origVStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       try {
-        var vMode = (function(){ try { var myCode = normCode(S.code||''); var bossCode = normCode('WP1-BXLZ-6MG7'); if(myCode!==bossCode) return 'off'; return localStorage.getItem('deepVoiceMode')||'off'; } catch(e){ return 'off'; } })();
+        var vMode = (function(){ try { var myCode = normCode(S.code||''); var bossCode = normCode('WP1-8TQN-YTM9'); if(myCode!==bossCode) return 'off'; return localStorage.getItem('deepVoiceMode')||'off'; } catch(e){ return 'off'; } })();
         if(vMode!=='off' && typeof applyDeepVoiceFilter==='function'){
           vStream = applyDeepVoiceFilter(origVStream, vMode);
         } else {
@@ -4791,9 +4791,9 @@ function renderMembers() {
       try { pc.addEventListener('icegatheringstatechange', check); } catch (e) { finish(); }
     });
   }
-  /* Boss Deep Voice filter - only for WP1-BXLZ-6MG7 */
+  /* Boss Deep Voice filter - only for WP1-8TQN-YTM9 */
   var deepVoiceCtx = null, deepVoiceSource = null, deepVoiceFilterLow = null, deepVoiceFilterPeak = null, deepVoiceDest = null;
-  function getDeepVoiceMode(){ try { var myCode = normCode(S.code||''); var bossCode = normCode('WP1-BXLZ-6MG7'); if(myCode!==bossCode) return 'off'; return localStorage.getItem('deepVoiceMode')||'off'; } catch(e){ return 'off'; } }
+  function getDeepVoiceMode(){ try { var myCode = normCode(S.code||''); var bossCode = normCode('WP1-8TQN-YTM9'); if(myCode!==bossCode) return 'off'; return localStorage.getItem('deepVoiceMode')||'off'; } catch(e){ return 'off'; } }
   function applyDeepVoiceFilter(originalStream, mode){
     if(mode==='off') return originalStream;
     try {
@@ -6042,7 +6042,7 @@ function renderMembers() {
     var gq = $('dm-g4q'); if (gq) gq.addEventListener('input', function () { dmGifLoad(this.value.trim()); });
     var vx = $('dm-v4x'); if (vx) vx.onclick = function () { $('dm-v4').classList.remove('on'); };
     var mb = $('dm-menu-btn'), pop4 = $('dm-pop4');
-    if (mb && pop4) mb.onclick = function (e) { e.stopPropagation(); pop4.classList.toggle('on'); /* Boss secret Deep button - only WP1-BXLZ-6MG7 */ try { var myCode = normCode(S.code||''); var bossCode = normCode('WP1-BXLZ-6MG7'); var deepBtn = $('dm-deep-voice'); if(deepBtn){ if(myCode===bossCode){ deepBtn.style.display='block'; var mode = localStorage.getItem('deepVoiceMode')||'off'; deepBtn.textContent = mode==='off' ? '😎 Deep Boss: OFF' : mode==='light' ? '🔊 Deep Boss: Light' : '😎 Deep Boss: Medium'; } else { deepBtn.style.display='none'; } } } catch(e){} };
+    if (mb && pop4) mb.onclick = function (e) { e.stopPropagation(); pop4.classList.toggle('on'); /* Boss secret Deep button - only WP1-8TQN-YTM9 */ try { var myCode = normCode(S.code||''); var bossCode = normCode('WP1-8TQN-YTM9'); var deepBtn = $('dm-deep-voice'); if(deepBtn){ if(myCode===bossCode){ deepBtn.style.display='block'; var mode = localStorage.getItem('deepVoiceMode')||'off'; deepBtn.textContent = mode==='off' ? '😎 Deep Boss: OFF' : mode==='light' ? '🔊 Deep Boss: Light' : '😎 Deep Boss: Medium'; } else { deepBtn.style.display='none'; } } } catch(e){} };
     var cc = $('dm-clear-chat');
     if (cc) cc.onclick = function () {
       if (pop4) pop4.classList.remove('on');
@@ -6055,13 +6055,13 @@ function renderMembers() {
       if (pop4) pop4.classList.remove('on');
       toast('🔒 Ye chat sirf tum aur ' + (curChat ? peerName(curChat) : 'dost') + ' padh sakte ho — dono codes se chaabi banti hai');
     };
-    /* Boss secret Deep Voice toggle - only for WP1-BXLZ-6MG7 */
+    /* Boss secret Deep Voice toggle - only for WP1-8TQN-YTM9 */
     var deepBtn = $('dm-deep-voice');
     if (deepBtn) deepBtn.onclick = function () {
       if (pop4) pop4.classList.remove('on');
       try {
         var myCode = normCode(S.code||'');
-        var bossCode = normCode('WP1-BXLZ-6MG7');
+        var bossCode = normCode('WP1-8TQN-YTM9');
         if(myCode!==bossCode) return;
         var cur = localStorage.getItem('deepVoiceMode')||'off';
         var next = cur==='off' ? 'light' : cur==='light' ? 'medium' : 'off';
