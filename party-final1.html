@@ -224,7 +224,7 @@ main { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 8px; m
 .sys-msg { align-self: center; font-size: 12px; color: #fcd34d; background: rgba(252,211,77,0.1); padding: 4px 14px; border-radius: 20px; text-align: center; }
 #typing-indicator { font-size: 12px; color: #4ade80; padding: 2px 14px; flex-shrink: 0; font-style: italic; }
 #new-msg-btn { align-self: center; margin: 4px; padding: 5px 16px; border-radius: 20px; border: none; background: var(--wp-acc, #a78bfa); color: #fff; font-size: 12px; cursor: pointer; flex-shrink: 0; }
-.chat-input-bar { flex-shrink: 0; border-top: 1px solid rgba(255,255,255,0.08); padding: 8px 10px 10px; overflow:hidden }
+.chat-input-bar { flex-shrink: 0; border-top: 1px solid rgba(255,255,255,0.08); padding: 8px 10px 10px; overflow:visible }  /* FIX: GIF panel + emoji box bar ke UPAR khulte hain — overflow:hidden unhe clip kar deta tha */
 .emoji-row { display: flex; gap: 6px; margin-bottom: 8px; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; padding-bottom:2px }
 .emoji-row::-webkit-scrollbar{display:none}
 .emoji-row .emoji, .emoji-row #gif-btn, .emoji-row #pic-btn, .emoji-row #mic-btn { flex:0 0 auto }
@@ -3389,17 +3389,45 @@ async function sendGif(small, full) {
   if (w) pub(TP.chat, w, false);
   gifPanel.classList.add('hidden');
 }
-window.wpSendGif = function (u) { sendGif(u, u); };
+window.wpSendGif = function (u) {
+  /* keyboard (Gboard) se aaya GIF: DM khuli ho to DM me, warna room chat me */
+  try {
+    var sheet = document.getElementById('dm-sheet');
+    var cv = document.getElementById('dm-view-chat');
+    var dmOpen = !!(sheet && sheet.classList.contains('on') && cv && cv.classList.contains('on'));
+    if (dmOpen && window.DM && typeof window.DM._gif === 'function' &&
+        typeof window.DM._curChat === 'function' && window.DM._curChat()) {
+      window.DM._gif(u);
+      try { if (typeof toast === 'function') toast('🎬 GIF bhej diya'); } catch (e) {}
+      return;
+    }
+  } catch (e) {}
+  sendGif(u, u);
+};
 function gifFitPanel() {
   var cs = document.querySelector('.chat-side');
   var h = cs ? cs.getBoundingClientRect().height : 420;
   gifPanel.style.height = Math.max(200, Math.min(h - 96, 420)) + 'px';
 }
 $('gif-btn').onclick = () => {
-  closeEmojiInput();
-  closeReactTray();
-  const hid = gifPanel.classList.toggle('hidden');
-  if (!hid) { gifFitPanel(); gifSetTab(gifTab); }
+  try { closeEmojiInput(); } catch (e) {}
+  try { closeReactTray(); } catch (e) {}
+  try {
+    const hid = gifPanel.classList.toggle('hidden');
+    if (!hid) {
+      try { gifFitPanel(); } catch (e) {}
+      try { gifSetTab(gifTab); } catch (e) {}
+      /* safety: panel har surat me bar ke UPAR saaf nazar aaye */
+      try {
+        gifPanel.style.position = 'absolute';
+        gifPanel.style.bottom = '100%';
+        gifPanel.style.zIndex = '60';
+        gifPanel.style.display = 'flex';
+      } catch (e) {}
+    } else {
+      try { gifPanel.style.display = ''; } catch (e) {}
+    }
+  } catch (e) {}
 };
 $('gif-close').onclick = () => gifPanel.classList.add('hidden');
 $('gif-tab-trend').onclick = () => gifSetTab('trend');
@@ -6309,6 +6337,7 @@ function renderMembers() {
     _open: function (c) { openChat(c); },
     _photo: function (f) { return dmSendPhoto(f); },
     _gif: function (u) { return sendMsg(curChat, { t: 'gif', x: u }, false); },
+    _curChat: function () { return curChat || ''; },
     _thread: function () { return $('dm-thread'); },
     _replyLast: function () { var a2 = S.chats[curChat] || []; if (a2.length) d4setReply(a2[a2.length - 1]); },
     _list: function () { renderChats(); var w = $('dm-chat-wrap'); return w ? w.innerHTML : ''; },
