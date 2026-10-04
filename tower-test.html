@@ -40,6 +40,9 @@
   <div id="lib0">📚 jsDelivr</div><div id="lib1">📚 cdnjs</div><div id="lib2">📚 unpkg</div>
 </div>
 
+<div class="lib" id="diag">
+  <div id="dg0">🌐 Internet</div><div id="dg1">🕐 Waqt</div><div id="dg2">📡 WebSocket</div>
+</div>
 <div id="list"></div>
 <div class="big" id="big">⏳ Test chal raha hai...</div>
 <button id="again">🔄 Dobara test karo</button>
@@ -101,7 +104,25 @@ function set(t, cls, ic, st, ms) {
   var c = document.getElementById('ms-'+t.id); if (c) c.innerHTML = ms || '';
 }
 
+/* 🌐 internet + waqt + websocket support check */
+function diag() {
+  var d0 = document.getElementById('dg0'), d1 = document.getElementById('dg1'), d2 = document.getElementById('dg2');
+  var now = new Date();
+  if (d1) d1.textContent = '🕐 ' + now.toLocaleTimeString();
+  if (d2) { if (typeof WebSocket !== 'undefined') { d2.className = 'ok'; d2.textContent = '📡 WebSocket OK'; } else { d2.className = 'bad'; d2.textContent = '📡 WebSocket NAHI'; } }
+  var started = Date.now();
+  var img = new Image();
+  img.onload = img.onerror = function () { if (d0) { d0.className = 'ok'; d0.textContent = '🌐 Internet OK (' + (Date.now() - started) + 'ms)'; } };
+  setTimeout(function () { if (d0 && d0.className !== 'ok') { d0.className = 'bad'; d0.textContent = '🌐 Internet dheema/band'; } }, 6000);
+  img.src = 'https://www.google.com/favicon.ico?cb=' + Date.now();
+}
 function testTower(t) {
+  return testOnce(t, 1).then(function (ok) {
+    if (ok) return true;
+    return testOnce(t, 2);      /* ek dafa aur koshish */
+  });
+}
+function testOnce(t, n) {
   return new Promise(function (res) {
     var t0 = Date.now(), done = false;
     var cl = null;
@@ -109,7 +130,14 @@ function testTower(t) {
       if (done) return; done = true;
       var ms = Date.now() - t0;
       try { if (cl) cl.end(true); } catch (e) {}
-      set(t, ok ? 'ok' : 'bad', ok ? '🟢' : '🔴', ok ? ('<b>CHAL RAHA HAI</b> — ' + (note||'')) : ('<b>nahi chala</b> — ' + (note||'')), ms + ' ms');
+      if (ok) {
+        set(t, 'ok', '🟢', '<b>CHAL RAHA HAI</b> — ' + (note||'') + ' (koshish ' + n + ')', ms + ' ms');
+      } else {
+        var prev = (window.__lastErr && window.__lastErr[t.id]) || '';
+        window.__lastErr = window.__lastErr || {};
+        window.__lastErr[t.id] = (note||'');
+        set(t, 'bad', '🔴', '<b>nahi chala</b> — pakra: <b>' + (note||'') + '</b>' + (prev ? '<br>pehli koshish: ' + prev : '') + (n === 1 ? '<br><small style="opacity:.75">dobara koshish kar raha...</small>' : ''), ms + ' ms');
+      }
       res(ok);
     }
     var to = setTimeout(function(){ fin(false, 'timeout (9 sec)'); }, 9500);
@@ -140,6 +168,8 @@ function testTower(t) {
 }
 
 function run() {
+  window.__lastErr = {};
+  diag();
   var list = document.getElementById('list');
   list.innerHTML = TOWERS.map(tpl).join('');
   var big = document.getElementById('big');
