@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>📻 Tower Test — kaunsa tower chal raha hai</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; min-height:100dvh; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    color:#fff; background: radial-gradient(ellipse at top, #241a44 0%, #120b26 45%, #06040f 100%); padding:16px 14px 30px; }
+  h1 { font-size:19px; margin:6px 0 2px; text-align:center; }
+  .sub { text-align:center; color:#b9aee6; font-size:12.5px; margin-bottom:14px; line-height:1.6; }
+  .row { display:flex; align-items:center; gap:11px; padding:13px 13px; border-radius:16px; margin-bottom:9px;
+    background:linear-gradient(160deg, rgba(60,37,100,.55), rgba(24,15,48,.75)); border:1px solid rgba(255,255,255,.12); }
+  .row.ok  { border-color: rgba(74,222,128,.55); box-shadow:0 0 18px rgba(74,222,128,.18); }
+  .row.bad { border-color: rgba(251,113,133,.45); }
+  .ic { font-size:22px; width:30px; text-align:center; flex:0 0 auto; }
+  .mid { flex:1 1 auto; min-width:0; }
+  .nm { font-size:14px; font-weight:800; }
+  .st { font-size:11.5px; color:#c3b9e6; margin-top:3px; line-height:1.45; }
+  .ms { font-size:11px; color:#9c8ac2; flex:0 0 auto; text-align:right; max-width:86px; line-height:1.35; }
+  .big { margin:16px 0 6px; padding:15px; border-radius:18px; text-align:center; font-size:14px; font-weight:800; line-height:1.6;
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.14); }
+  button { width:100%; padding:15px; border-radius:16px; border:0; margin-top:12px; cursor:pointer;
+    font-size:15px; font-weight:900; color:#08192a; background:linear-gradient(135deg,#a9e6ff,#63c8ff); }
+  .note { margin-top:14px; font-size:11.5px; color:#a99ed0; line-height:1.75; background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.09); border-radius:14px; padding:12px 13px; }
+  .lib { display:flex; gap:8px; margin-bottom:12px; }
+  .lib div { flex:1 1 0; text-align:center; font-size:11px; padding:9px 4px; border-radius:12px;
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:#c3b9e6; }
+  .lib div.ok { border-color:rgba(74,222,128,.5); color:#b6f7cf; }
+  .lib div.bad { border-color:rgba(251,113,133,.4); color:#ffc2cb; }
+</style>
+</head>
+<body>
+<h1>📻 Tower Test</h1>
+<div class="sub">Ye page aap ke <b>apne network</b> se check karta hai ke kaunsa tower chalta hai.<br>Har tower par asli connection banta hai, message bhejta aur wapas leta hai.</div>
+
+<div class="lib" id="lib">
+  <div id="lib0">📚 jsDelivr</div><div id="lib1">📚 cdnjs</div><div id="lib2">📚 unpkg</div>
+</div>
+
+<div id="list"></div>
+<div class="big" id="big">⏳ Test chal raha hai...</div>
+<button id="again">🔄 Dobara test karo</button>
+
+<div class="note">
+  <b>Kaise parhna hai:</b><br>
+  🟢 <b>Green</b> = ye tower aap ke network par <b>chal raha hai</b> — app me yahi select karo (sab dost bhi wahi).<br>
+  🔴 <b>Red</b> = aap ke network par band hai (ya tower down) — use mat karo.<br><br>
+  <b>Yaad rakho:</b> party me sab doston ko <b>ek hi tower</b> select karna hai, warna room alag ho jayega.
+</div>
+
+<script>
+/* ---- mqtt lib: 3 CDN fallback (same jaisa app me hai) ---- */
+var CDNS = [
+  'https://cdn.jsdelivr.net/npm/mqtt/dist/mqtt.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.16.0/mqtt.min.js',
+  'https://unpkg.com/mqtt/dist/mqtt.min.js'
+];
+function loadLib() {
+  return new Promise(function (res) {
+    if (typeof mqtt !== 'undefined') return res({ ok: true, which: 'pehle se loaded' });
+    var i = 0, tried = [];
+    (function next() {
+      if (i >= CDNS.length) return res({ ok: false, tried: tried });
+      var s = document.createElement('script');
+      s.src = CDNS[i];
+      s.onload = function () {
+        var el = document.getElementById('lib' + i);
+        if (el) el.className = 'ok';
+        if (typeof mqtt !== 'undefined') res({ ok: true, which: CDNS[i] });
+        else { tried.push(CDNS[i]); i++; next(); }
+      };
+      s.onerror = function () {
+        var el = document.getElementById('lib' + i);
+        if (el) el.className = 'bad';
+        tried.push(CDNS[i]); i++; next();
+      };
+      document.head.appendChild(s);
+    })();
+  });
+}
+
+var TOWERS = [
+  { id:'emqx',      nm:'EMQX (app ka default)', url:'wss://broker.emqx.io:8084/mqtt' },
+  { id:'hivemq',    nm:'HiveMQ',               url:'wss://broker.hivemq.com:8884/mqtt' },
+  { id:'mosquitto', nm:'Mosquitto',            url:'wss://test.mosquitto.org:8081/mqtt' },
+  { id:'eclipse',   nm:'Eclipse (port 443)',   url:'wss://mqtt.eclipseprojects.io/mqtt' }
+];
+
+function tpl(t) {
+  return '<div class="row" id="row-'+t.id+'"><div class="ic">⏳</div><div class="mid"><div class="nm">'+t.nm+'</div>' +
+         '<div class="st" id="st-'+t.id+'">intezar...</div></div><div class="ms" id="ms-'+t.id+'"></div></div>';
+}
+function set(t, cls, ic, st, ms) {
+  var r = document.getElementById('row-'+t.id);
+  if (r) r.className = 'row ' + cls;
+  var a = r && r.querySelector('.ic'); if (a) a.textContent = ic;
+  var b = document.getElementById('st-'+t.id); if (b) b.innerHTML = st;
+  var c = document.getElementById('ms-'+t.id); if (c) c.innerHTML = ms || '';
+}
+
+function testTower(t) {
+  return new Promise(function (res) {
+    var t0 = Date.now(), done = false;
+    var cl = null;
+    function fin(ok, note) {
+      if (done) return; done = true;
+      var ms = Date.now() - t0;
+      try { if (cl) cl.end(true); } catch (e) {}
+      set(t, ok ? 'ok' : 'bad', ok ? '🟢' : '🔴', ok ? ('<b>CHAL RAHA HAI</b> — ' + (note||'')) : ('<b>nahi chala</b> — ' + (note||'')), ms + ' ms');
+      res(ok);
+    }
+    var to = setTimeout(function(){ fin(false, 'timeout (9 sec)'); }, 9500);
+    try {
+      cl = mqtt.connect(t.url, {
+        clientId: 'wptest_' + Math.random().toString(36).slice(2, 9),
+        clean: true, connectTimeout: 8000, reconnectPeriod: 0, keepalive: 20
+      });
+    } catch (e) { clearTimeout(to); return fin(false, 'connect shuru nahi hua'); }
+    cl.on('connect', function () {
+      var topic = 'YaarParty786/towertest/' + Math.random().toString(36).slice(2, 8);
+      cl.subscribe(topic, { qos: 1 }, function (err) {
+        if (err) { clearTimeout(to); return fin(false, 'subscribe fail'); }
+        var got = false;
+        cl.on('message', function () { got = true; });
+        cl.publish(topic, 'ping', { qos: 1 }, function () {
+          var t1 = Date.now();
+          var poll = setInterval(function () {
+            if (got) { clearInterval(poll); clearTimeout(to); fin(true, 'connect + message dono OK'); }
+            else if (Date.now() - t1 > 2500) { clearInterval(poll); clearTimeout(to); fin(false, 'jur gaya magar message wapas nahi aaya'); }
+          }, 120);
+        });
+      });
+    });
+    cl.on('error', function (e) { clearTimeout(to); fin(false, String((e && e.message) || e).slice(0, 48)); });
+    cl.on('close', function () { if (!done) { clearTimeout(to); fin(false, 'connection band ho gaya'); } });
+  });
+}
+
+function run() {
+  var list = document.getElementById('list');
+  list.innerHTML = TOWERS.map(tpl).join('');
+  var big = document.getElementById('big');
+  big.textContent = '⏳ Test chal raha hai... (ek ek tower, 10-10 second)';
+  loadLib().then(function (L) {
+    if (!L.ok) {
+      big.style.borderColor = 'rgba(251,113,133,.5)';
+      big.textContent = '❌ MQTT library load nahi hui — internet check karo, phir dobara dabao';
+      return;
+    }
+    var okc = 0, i = 0;
+    (function step() {
+      if (i >= TOWERS.length) {
+        if (okc > 0) {
+          big.style.borderColor = 'rgba(74,222,128,.55)';
+          big.textContent = '🟢 ' + okc + ' tower chal raha hai — app me yahi select karo (sab dost wahi)';
+        } else {
+          big.style.borderColor = 'rgba(251,113,133,.5)';
+          big.textContent = '🔴 Koi tower nahi chala — aap ke network ne ye sab band kiye hue hain';
+        }
+        return;
+      }
+      testTower(TOWERS[i]).then(function (ok) { if (ok) okc++; i++; step(); });
+    })();
+  });
+}
+document.getElementById('again').onclick = run;
+run();
+</script>
+</body>
+</html>
