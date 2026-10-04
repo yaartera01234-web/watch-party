@@ -4322,6 +4322,7 @@ function renderMembers() {
   </div>
   <div class="dm-pop4" id="dm-pop4">
     <button id="dm-clear-chat" type="button">🧹 Ye chat clear karo</button>
+    <button id="dm-clear-calls" type="button" style="display:none">🧹 Call history clear karo</button>
     <button id="dm-e2e-info" type="button">🔒 E2E — sirf tum aur wahi</button>
     <button id="dm-deep-voice" type="button" style="display:none">😎 Deep Boss: OFF</button>
   </div>
@@ -4505,6 +4506,8 @@ function renderMembers() {
     if (!Array.isArray(S.reqs)) S.reqs = [];
     if (!S.seen || typeof S.seen !== 'object') S.seen = {};
     if (!S.reads || typeof S.reads !== 'object') S.reads = {};
+    if (!S.clr || typeof S.clr !== 'object') S.clr = {};      /* 🆕 chat clear ki tareekh (tombstone) */
+    if (!S.clrc || typeof S.clrc !== 'object') S.clrc = {};    /* 🆕 call-history clear ki tareekh */
     // FIX v48: Normalize all old keys (WP1-XXXX-XXXX vs XXXXXXXX) + purge duplicate requests for APK cache
     try {
       // Normalize friends keys
@@ -4584,6 +4587,7 @@ function renderMembers() {
         mine.forEach(function (m) { have[keyOf(m)] = 1; });
         (prev.chats[c] || []).forEach(function (m) {
           if (!m) return; var k = keyOf(m);
+          if (dmDrop(c, m)) return;                            /* 🆕 clear-shuda msg merge mat karo */
           if (!have[k]) { mine.push(m); have[k] = 1; }
         });
         mine.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
@@ -4604,6 +4608,10 @@ function renderMembers() {
         if (pv > (S.reads[c] || 0)) S.reads[c] = pv;           /* blue tick bhi peeche nahi jata */
       });
       Object.keys(prev.seen || {}).forEach(function (k) { if (!S.seen[k]) S.seen[k] = 1; });
+      /* 🆕 clear ki tareekhein max — sabse nayi clear jeetegi (dono WebView ek jaisa rahen) */
+      Object.keys(prev.clr || {}).forEach(function (c) { if ((prev.clr[c] || 0) > (S.clr[c] || 0)) S.clr[c] = prev.clr[c]; });
+      Object.keys(prev.clrc || {}).forEach(function (c) { if ((prev.clrc[c] || 0) > (S.clrc[c] || 0)) S.clrc[c] = prev.clrc[c]; });
+      dmPruneAll();
     } catch (e) {}
   }
   function save() {
@@ -4611,6 +4619,7 @@ function renderMembers() {
       var keys = Object.keys(S.seen);
       if (keys.length > 400) { var nk = {}; keys.slice(-200).forEach(function (k) { nk[k] = 1; }); S.seen = nk; }
       try { mergeIntoStore(JSON.parse(localStorage.getItem(DKEY) || 'null')); } catch (e0) {}
+      dmPruneAll();                                        /* 🆕 clear-shuda msg disk par bhi na jaye */
       localStorage.setItem(DKEY, JSON.stringify(S));
     } catch (e) {}
   }
@@ -4634,6 +4643,7 @@ function renderMembers() {
         mine.forEach(function (m) { if (m && m.mid) have[m.mid] = 1; });
         for (var i = 0; i < theirs.length; i++) {
           var m = theirs[i];
+          if (m && dmDrop(c, m)) continue;                     /* 🆕 clear-shuda msg wapas na aaye */
           if (m && m.mid && !have[m.mid]) { mine.push(m); ch = true; }
         }
         mine.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
@@ -4654,6 +4664,11 @@ function renderMembers() {
       Object.keys(d.seen || {}).forEach(function (midKey) {
         if (!S.seen[midKey]) { S.seen[midKey] = 1; ch = true; }
       });
+      /* 🆕 clear ki tareekhein (max) + clear-shuda msg hatao */
+      var _clrCh = false;
+      Object.keys(d.clr || {}).forEach(function (c) { if ((d.clr[c] || 0) > (S.clr[c] || 0)) { S.clr[c] = d.clr[c]; _clrCh = true; } });
+      Object.keys(d.clrc || {}).forEach(function (c) { if ((d.clrc[c] || 0) > (S.clrc[c] || 0)) { S.clrc[c] = d.clrc[c]; _clrCh = true; } });
+      if (_clrCh) { dmPruneAll(); ch = true; }
       /* 🆕 blue-tick state ka max (reload ke baad bhi tick na khoye) */
       Object.keys(d.reads || {}).forEach(function (c) {
         var pv = d.reads[c] || 0;
@@ -5310,11 +5325,42 @@ function renderMembers() {
     return !!ok;
   };
 
+  /* 🆕 CHAT / CALL-HISTORY CLEAR (tombstone)
+     Pehle clear karne par msgs wapas aa jate the — warna save()/mergeStore() disk se merge
+     karte hain. Ab clear ki tareekh (S.clr = poori chat, S.clrc = sirf call log) yaad rehti hai
+     aur us se purane msg har jagah drop hote hain: render, merge, dobara aane wala retained packet. */
+  function dmDrop(peer, m) {
+    try {
+      peer = normCode(peer); if (!peer || !m) return false;
+      var c1 = (S.clr && S.clr[peer]) || 0, c2 = (S.clrc && S.clrc[peer]) || 0, ts = m.ts || 0;
+      if (c1 && ts <= c1) return true;                              /* poori chat clear thi */
+      if (c2 && m.t === 'call' && ts <= c2) return true;            /* sirf call history clear thi */
+    } catch (e) {}
+    return false;
+  }
+  function dmPrune(peer) {
+    try {
+      peer = normCode(peer);
+      var arr = S.chats[peer]; if (!arr || !arr.length) return false;
+      var c1 = (S.clr && S.clr[peer]) || 0, c2 = (S.clrc && S.clrc[peer]) || 0;
+      if (!c1 && !c2) return false;
+      var out = arr.filter(function (m) { return !dmDrop(peer, m); });
+      if (out.length !== arr.length) { S.chats[peer] = out; return true; }
+    } catch (e) {}
+    return false;
+  }
+  function dmPruneAll() {
+    try {
+      Object.keys(S.clr || {}).forEach(dmPrune);
+      Object.keys(S.clrc || {}).forEach(dmPrune);
+    } catch (e) {}
+  }
   function appendMsg(peer, m) {
     peer = normCode(peer);
     if (!S.chats[peer]) S.chats[peer] = [];
     var arr = S.chats[peer];
     if (m.mid && arr.some(function (x) { return x.mid === m.mid; })) return;
+    if (dmDrop(peer, m)) return;                          /* 🆕 clear-shuda msg wapas na aaye */
     arr.push(m);
     if (m.d === 'out') { d4AtBottom = true; d4JumpBottom = true; }   /* apna msg = foran neeche */
     if (arr.length > MAX_MSGS) S.chats[peer] = arr.slice(arr.length - MAX_MSGS);   /* storage cap */
@@ -5807,6 +5853,11 @@ function renderMembers() {
     var addb = $('dm-add-btn');
     if (addb) addb.style.display = (v === 'dm-view-inbox') ? 'grid' : 'none';
     var avb = $('dm-bar-av'); if (avb) avb.style.display = (v === 'dm-view-chat') ? 'block' : 'none';
+    /* 🆕 ⋮ menu context ke hisab se: chat me "chat clear", Call view me "call history clear" */
+    try {
+      var _ccb = $('dm-clear-chat'); if (_ccb) _ccb.style.display = (v === 'dm-view-chat') ? '' : 'none';
+      var _clb = $('dm-clear-calls'); if (_clb) _clb.style.display = (v === 'dm-view-calls') ? '' : 'none';
+    } catch (e) {}
     var callb = $('dm-call-btn'); if (callb) callb.style.display = (v === 'dm-view-chat' && curChat && S.friends[curChat]) ? 'grid' : 'none';
     var title = $('dm-bar-title'), sub = $('dm-bar-sub');
     if (v === 'dm-view-add') { title.textContent = '➕ Add Friend'; if(sub){ sub.textContent=''; sub.style.display='none'; } }
@@ -6494,9 +6545,26 @@ function renderMembers() {
     var cc = $('dm-clear-chat');
     if (cc) cc.onclick = function () {
       if (pop4) pop4.classList.remove('on');
-      if (!curChat) return;
-      S.chats[curChat] = []; save(); renderThread(); renderChats();
+      if (!curChat) { toast('Pehle koi chat kholo'); return; }
+      var _pt = nowMs();
+      S.clr[curChat] = _pt;                                /* 🆕 tombstone — warna merge purane msg wapas le aata tha */
+      dmPrune(curChat);
+      try { if (S.friends[curChat]) S.friends[curChat].un = 0; } catch (e1) {}
+      try { S.chats[curChat] = []; } catch (e2) {}
+      save(); renderAll(); renderThread();
+      try { window.ypCallRefresh && window.ypCallRefresh(); } catch (e3) {}
       toast('🧹 Chat clear ho gayi (sirf tumhare phone se)');
+    };
+    /* 🆕 CALL VIEW ka ⋮ -> poori call history clear (missed + successful, sab) */
+    var ccb = $('dm-clear-calls');
+    if (ccb) ccb.onclick = function () {
+      if (pop4) pop4.classList.remove('on');
+      var _ct = nowMs(), _n = 0;
+      Object.keys(S.friends || {}).forEach(function (c) { S.clrc[c] = _ct; });
+      Object.keys(S.chats || {}).forEach(function (c) { if (dmPrune(c)) _n++; });
+      save(); renderAll();
+      try { window.ypCallRefresh && window.ypCallRefresh(); } catch (e3) {}
+      toast('📞 Call history clear ho gayi (sirf tumhare phone se)');
     };
     var ei = $('dm-e2e-info');
     if (ei) ei.onclick = function () {
