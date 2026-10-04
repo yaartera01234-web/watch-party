@@ -2004,6 +2004,7 @@ function onConnect() {
   mqttUp = true;
   clearTimeout(watchdog);
   subscribeRoom();
+  try { if (wpSleepPend) wpSleepFire(); } catch (e) {}   /* 🌙 tower band tha -> connect hote hi pause dobara */
   /* 🆕 DM is tower se juda nahi — uska apna EMQX client hai (upar connectDmTower) */
   if (joined) publishPresence();
   if (everConnected) {
@@ -2044,7 +2045,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-04-11';
+const WP_BUILD = '2026-10-04-12';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -2059,6 +2060,7 @@ function wpShowUpdate() {
 }
 /* 🌙 SLEEP TIMER — waqt pura hone par SAB ke liye playback pause */
 let wpSleepAt = 0, wpSleepMins = 0;
+let wpSleepT = 0, wpSleepPend = false;   /* backstop timer + 'tower band tha' retry flag */
 function wpSleepLabel() {
   try {
     var b = document.getElementById('dm-sleep'); if (!b) return;
@@ -2068,26 +2070,39 @@ function wpSleepLabel() {
   } catch (e) {}
 }
 function wpSleepCancel(show) {
-  wpSleepAt = 0; wpSleepMins = 0; wpSleepLabel();
+  wpSleepAt = 0; wpSleepMins = 0; wpSleepPend = false;
+  try { clearTimeout(wpSleepT); wpSleepT = 0; } catch (e) {}
+  wpSleepLabel();
   if (show) { try { toast('🌙 Sleep timer cancel'); } catch (e) {} }
 }
 function wpSleepSet(mins) {
-  wpSleepAt = Date.now() + mins * 60000; wpSleepMins = mins; wpSleepLabel();
+  wpSleepAt = Date.now() + mins * 60000; wpSleepMins = mins;
+  try { clearTimeout(wpSleepT); wpSleepT = setTimeout(wpSleepTick, mins * 60000 + 300); } catch (e) {}
+  wpSleepLabel();
   try { toast('🌙 Sleep timer: ' + mins + ' min — pura hone par sab pause'); } catch (e) {}
+}
+function wpSleepFire() {
+  try {
+    var t = localNow();
+    try { remotePause(t, true); } catch (e) {}
+    wpSleepPend = false;
+    try { if (mqttUp) pubCmd('pause', { time: t, user: true }); else wpSleepPend = true; } catch (e) { wpSleepPend = true; }
+    try { addSysMsg('🌙 Sleep timer pura — playback pause'); } catch (e) {}
+    try { toast('🌙 Sleep timer — playback pause'); } catch (e) {}
+  } catch (e) { wpSleepPend = true; }
 }
 function wpSleepTick() {
   try {
     if (!wpSleepAt) return;
     wpSleepLabel();
     if (Date.now() < wpSleepAt) return;
-    wpSleepAt = 0; wpSleepMins = 0; wpSleepLabel();
-    try { remotePause(localNow(), true); } catch (e) {}
-    try { pubCmd('pause', { time: localNow(), user: true }); } catch (e) {}
-    try { addSysMsg('🌙 Sleep timer pura — playback pause'); } catch (e) {}
-    try { toast('🌙 Sleep timer — playback pause'); } catch (e) {}
+    wpSleepAt = 0; wpSleepMins = 0;
+    try { clearTimeout(wpSleepT); wpSleepT = 0; } catch (e) {}
+    wpSleepLabel();
+    wpSleepFire();
   } catch (e) {}
 }
-setInterval(wpSleepTick, 10000);
+setInterval(wpSleepTick, 10000);   /* 10s tick + wpSleepSet ka one-shot backstop */
 function wpSleepAsk() {
   try {
     var old = document.getElementById('wp-sleep');
@@ -2180,6 +2195,7 @@ window.addEventListener('pagehide', () => { try { if (joined) publishLeaveNow();
 document.addEventListener('visibilitychange', () => {
   try {
     if (document.visibilityState === 'visible' && joined) { try { publishPresence(); } catch (e) {} }   /* 🆕 wapas aaye -> foran online */
+    if (document.visibilityState === 'visible') { try { if (wpSleepAt) wpSleepTick(); } catch (e) {} }  /* 🌙 sote page ka catch-up */
     if (document.visibilityState === 'hidden' && joined) {
       // don't publish leave on just tab switch, but if page is being discarded, the beforeunload/pagehide will handle
       // we still update presence as offline quickly
@@ -2192,6 +2208,7 @@ document.addEventListener('visibilitychange', () => {
 
 /* ---------- 📩 MESSAGES ---------- */
 function onMsg(topic, buf) {
+  try { if (wpSleepAt) wpSleepTick(); } catch (e) {}   /* 🌙 sote page ka catch-up */
   const str = buf.toString();
   if (topic === TP.cmd) {
     let c; try { c = JSON.parse(str); } catch (e) { return; }
