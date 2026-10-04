@@ -5227,14 +5227,23 @@ function renderMembers() {
   window.yaarQuickReply = async function (requestId, codeRaw, text) {
     if (typeof text === 'undefined') { text = codeRaw; codeRaw = requestId; requestId = ''; }
     var ok = false;
+    var code = normCode(codeRaw), value = String(text || '').trim();
     try {
-      var code = normCode(codeRaw), value = String(text || '').trim();
-      if (code && value && connected() && S.friends[code]) {
-        ok = await sendMsg(code, { t: 'text', x: value.slice(0, 500) }, false, true);
+      if (code && value) {
+        /* 🆕 FIX (notification reply): pehle foran fail ho jata tha agar bg me socket
+           reconnect kar raha ho ya friend list load na hui ho. Ab:
+           1) client na ho to chalao, 2) ~4s tak connection ka intezar, 3) friend entry bana do */
+        try { if (!mc() && typeof connectDmTower === 'function') connectDmTower(); } catch (e0) {}
+        var qr0 = nowMs();
+        while (!connected() && (nowMs() - qr0) < 4200) { await new Promise(function (r) { setTimeout(r, 200); }); }
+        if (connected()) {
+          if (!S.friends[code]) S.friends[code] = { name: code, color: '#8b72ff', avatar: { type: 'letter' }, ts: 0, un: 0 };
+          ok = await sendMsg(code, { t: 'text', x: value.slice(0, 500) }, false, true);
+        }
       }
     } catch (e) { ok = false; }
     /* 🆕 notification se reply kiya = tumne parh liya -> tick neela karo */
-    if (ok) { try { markRead(normCode(codeRaw || '')); } catch (e2) {} }
+    if (ok) { try { markRead(code); } catch (e2) {} }
     if (requestId) {
       try { if (window.YaarNative && typeof window.YaarNative.replyResult === 'function') window.YaarNative.replyResult(String(requestId), !!ok); } catch (e) {}
     }
