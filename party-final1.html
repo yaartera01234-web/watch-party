@@ -1179,6 +1179,10 @@ body.pc-mini-on .sync-row { display: none !important; }
 #dm-call-bar .acts button.end { background: linear-gradient(135deg,#ff5d76,#ed245a); border: 0; }
 #dm-call-bar .acts button.end svg { transform: rotate(135deg); }
 #dm-call-bar.gone { opacity: 0; transform: translateX(-50%) translateY(24px); pointer-events: none; }
+/* 🆕 call-bar DRAG — haath se pakar kar kahin bhi le jao */
+#dm-call-bar { touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+#dm-call-bar.dragging { transition: none; cursor: grabbing; }
+#dm-call-bar.dragging .info { pointer-events: none; }
 .dm-call-center { position: relative; z-index: 1; flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 0 18px; text-align: center; }
 .dm-call-avatar-ring { position: relative; width: 162px; height: 162px; display: grid; place-items: center; margin-bottom: 25px; }
 .dm-call-avatar-ring:before, .dm-call-avatar-ring:after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(173,145,255,.34); animation: dm-call-pulse 2.8s ease-out infinite; }
@@ -4760,6 +4764,7 @@ function renderMembers() {
     screen.classList.toggle('mini', !!wpCallMin);                        /* 🆕 minimize slide */
     if (bar) {
       bar.classList.toggle('gone', !wpCallMin);                          /* 🆕 bar sirf minimized halat me */
+      if (!bar.classList.contains('gone') && bar._wpRestore) { try { bar._wpRestore(); } catch (e) {} }
       var bAv = $('dm-call-bar-av'); if (bAv) bAv.innerHTML = avatarHTML(c.peer, 'dm-call-bar-av-inner');
       var bNm = $('dm-call-bar-name'); if (bNm) bNm.textContent = peerName(c.peer);
       var bTm = $('dm-call-bar-timer'); if (bTm) bTm.textContent = callElapsed(c);
@@ -6258,6 +6263,73 @@ function renderMembers() {
       callScr.addEventListener('touchstart', function (e) { _cy0 = e.touches[0].clientY; }, { passive: true });
       callScr.addEventListener('touchend', function (e) { if (_cy0 !== null && (e.changedTouches[0].clientY - _cy0) > 70) wpCallMinimize(); _cy0 = null; }, { passive: true });
     }
+
+    /* 🆕 CALL-BAR DRAG: ungli/maous se pakar kar kahin bhi move karo (jagah yaad rehti hai) */
+    (function () {
+      var bar = $('dm-call-bar'); if (!bar || bar._wpDrag) return; bar._wpDrag = true;
+      var dragging = false, moved = false, sx = 0, sy = 0, ox = 0, oy = 0, TH = 6, pid = null;
+      function pt(e) { return (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e; }
+      function place(x, y) {
+        var r = bar.getBoundingClientRect(); var w = r.width || 320, h = r.height || 54;
+        var mx = Math.max(6, (window.innerWidth || 360) - w - 6), my = Math.max(6, (window.innerHeight || 640) - h - 6);
+        x = Math.min(Math.max(x, 6), mx); y = Math.min(Math.max(y, 6), my);
+        bar.style.left = x + 'px'; bar.style.top = y + 'px';
+        bar.style.bottom = 'auto'; bar.style.transform = 'none';
+      }
+      function save() {
+        try { var r = bar.getBoundingClientRect(); localStorage.setItem('wpCallBarPos', JSON.stringify({ x: r.left, y: r.top })); } catch (e) {}
+      }
+      function down(e) {
+        if (e.target && e.target.closest && e.target.closest('button')) return;   /* buttons chhoo kar drag na ho */
+        var t = pt(e), r = bar.getBoundingClientRect();
+        dragging = true; moved = false; sx = t.clientX; sy = t.clientY; ox = r.left; oy = r.top;
+        pid = (e.pointerId != null) ? e.pointerId : null;
+      }
+      function move(e) {
+        if (!dragging) return;
+        var t = pt(e), dx = t.clientX - sx, dy = t.clientY - sy;
+        if (!moved && (Math.abs(dx) + Math.abs(dy)) < TH) return;
+        if (!moved) { moved = true; bar.classList.add('dragging'); try { if (pid != null && bar.setPointerCapture) bar.setPointerCapture(pid); } catch (err) {} }
+        place(ox + dx, oy + dy);
+        if (e.cancelable) e.preventDefault();
+      }
+      function up() {
+        if (!dragging) return;
+        dragging = false; bar.classList.remove('dragging');
+        if (moved) { save(); bar._wpJustDragged = Date.now(); }
+      }
+      if (window.PointerEvent) {
+        bar.addEventListener('pointerdown', down, { passive: true });
+        window.addEventListener('pointermove', move, { passive: false });
+        window.addEventListener('pointerup', up, { passive: true });
+        window.addEventListener('pointercancel', up, { passive: true });
+      } else {
+        bar.addEventListener('touchstart', down, { passive: true });
+        window.addEventListener('touchmove', move, { passive: false });
+        window.addEventListener('touchend', up, { passive: true });
+        window.addEventListener('touchcancel', up, { passive: true });
+        bar.addEventListener('mousedown', down);
+        window.addEventListener('mousemove', move);
+        window.addEventListener('mouseup', up);
+      }
+      /* drag ke foran baad ghalti se tap/click na ho (call screen na khul jaye) */
+      bar.addEventListener('click', function (e) {
+        if (Date.now() - (bar._wpJustDragged || 0) < 300) { e.stopPropagation(); e.preventDefault(); }
+      }, true);
+      /* minimize hone par purani jagah wapas lao */
+      bar._wpRestore = function () {
+        var p = null; try { p = JSON.parse(localStorage.getItem('wpCallBarPos') || 'null'); } catch (e) {}
+        if (!p || typeof p.x !== 'number' || typeof p.y !== 'number') return;
+        if (!bar.getBoundingClientRect().width) return;
+        place(p.x, p.y);
+      };
+      /* screen size badle to bar screen ke andar hi rahe (sirf jab user ne khud shift ki ho) */
+      window.addEventListener('resize', function () {
+        if (!bar.style.left) return;
+        var r = bar.getBoundingClientRect();
+        if (r.width) place(r.left, r.top);
+      }, { passive: true });
+    })();
     var ov = $('dm-ov'); if (ov) ov.onclick = closeSheet;
     var x = $('dm-close-btn'); if (x) x.onclick = closeSheet;
     var addb = $('dm-add-btn'); if (addb) addb.onclick = function () { $('dm-my-code').textContent = S.code; showView('dm-view-add'); };
