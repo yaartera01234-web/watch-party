@@ -2082,7 +2082,14 @@ function publishLeaveNow() {
    (sab control kar sakte hain — room kabhi jam nahi hota). Sab page-side, koi app build nahi. */
 let hostId = '', hostName = '', hostTs = 0;
 const BOSS_CODE = 'WP1-8TQN-YTM9';
-function isBossCode() { try { return normCode(S.code || '') === normCode(BOSS_CODE); } catch (e) { return false; } }
+function wpCodeSafe() {
+  /* DM code block 7 (messages) me rehta hai — yahan se window.DM se ya localStorage se laate hain */
+  try { if (window.DM && window.DM.code) { var c0 = window.DM.code(); if (c0) return c0; } } catch (e) {}
+  try { var raw = localStorage.getItem('wp_dm_v1'); if (raw) { var o = JSON.parse(raw); if (o && o.code) return o.code; } } catch (e) {}
+  return '';
+}
+function wpNorm(c) { c = String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if (c.indexOf('WP1') === 0) c = c.slice(3); return c.slice(0, 8); }
+function isBossCode() { try { return wpNorm(wpCodeSafe()) === wpNorm(BOSS_CODE); } catch (e) { return false; } }
 function isKing() { return !!hostId && hostId === myId; }
 function kingToast(msg) {
   try {
@@ -2170,6 +2177,13 @@ function lockTick() {
     kingToast('🔒 King 👑 ' + (hostName || '') + ' ke gaane se sync kar diya');
   } catch (e) {}
 }
+function hostAfterJoin() {
+  /* Party join hone ke baad taaj ka faisla */
+  if (!joined) return;
+  if (isBossCode()) { takeCrown('boss', true); return; }          /* 👑 boss ka room — taaj boss ka, reload ke baad bhi */
+  if (!hostId || (Date.now() - hostTs) > 45000) takeCrown('pehla member');
+  else { renderMembers(); paintKingChip(); }
+}
 function paintKingChip() {
   try {
     let c = document.getElementById('wp-king-chip');
@@ -2188,8 +2202,10 @@ function paintKingChip() {
         if (confirm('🔓 Sab ko azadi dein? (Open Mode — sab control kar sakte hain)')) openMode('King ne azadi di');
         return;
       }
+      const present = Object.keys(membersCache).filter(function (k) { return membersCache[k] && (!membersCache[k].ts || Date.now() - membersCache[k].ts <= 40000); });
+      const alone = present.length <= 1;                      /* room me sirf main — taaj se lockout na ho */
       if (hostId) {
-        if (isBossCode()) { if (confirm('👑 Taaj le lein? (' + (hostName || 'King') + ' se)')) takeCrown('boss ne taaj liya'); }
+        if (isBossCode() || alone) { if (confirm('👑 Taaj le lein? (' + (hostName || 'King') + ' se)')) takeCrown(isBossCode() ? 'boss ne taaj liya' : 'akele hain'); }
         else kingToast('🔒 Control King 👑 ' + (hostName || '') + ' ke paas hai');
       } else { if (confirm('👑 Aap King ban jayein?')) takeCrown('khud aage aaye'); }
     };
@@ -2477,11 +2493,7 @@ window.wpRoomEnter = function () {
     joined = true;
     try { renderMembers(); } catch (e1) {}
     /* 👑 King decide: koi King nahi ya purana 45s se gayab -> taaj lo */
-    setTimeout(() => { try {
-      if (!joined) return;
-      if (isBossCode()) { takeCrown('boss', true); return; }        /* 👑 boss ka room — taaj boss ka, reload ke baad bhi */
-      if (!hostId || (Date.now() - hostTs) > 45000) takeCrown('pehla member'); else { renderMembers(); paintKingChip(); }
-    } catch (e) {} }, 900);
+    setTimeout(() => { try { hostAfterJoin(); } catch (e) {} }, 900);
     try { renderQueue(queueLocal.items || [], queueLocal.index); } catch (e2) {}
   const doCatchup = () => {
     const s = stateLocal;
