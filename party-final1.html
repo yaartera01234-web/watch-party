@@ -2023,17 +2023,18 @@ ensureLib(() => { connectBroker(parseInt(towerInput.value, 10) || 0); connectDmT
 
 function subscribeRoom() {
   if (!client || !mqttUp) return;
-  client.subscribe([TP.cmd, TP.state, TP.queue, TP.chat, TP.events, TP.react, TP.members, TP.typing], { qos: 1 }, () => {});
+  client.subscribe([TP.cmd, TP.state, TP.queue, TP.chat, TP.events, TP.react, TP.members, TP.typing, ROOM + '/host'], { qos: 1 }, () => {});
 }
 function unsubscribeRoom() {
   if (!client) return;
-  try { client.unsubscribe([TP.cmd, TP.state, TP.queue, TP.chat, TP.events, TP.react, TP.members, TP.typing]); } catch (e) {}
+  try { client.unsubscribe([TP.cmd, TP.state, TP.queue, TP.chat, TP.events, TP.react, TP.members, TP.typing, ROOM + '/host']); } catch (e) {}
 }
 function pub(topic, obj, retain) {
   if (!client || !mqttUp) return;
   try { client.publish(topic, JSON.stringify(obj), { qos: 1, retain: !!retain }); } catch (e) {}
 }
 function pubCmd(action, extra) {
+  if (hostId && hostId !== myId) { kingToast('🔒 Control King 👑 ' + (hostName || '') + ' ke paas hai'); return; }   /* 👑 King mode */
   const o = Object.assign({ action: action, from: myId, by: myName, rid: mid() }, extra || {});
   pub(TP.cmd, o, false);
 }
@@ -2047,7 +2048,8 @@ function publishPresence() {
   if (isBg()) return;                    /* v39: chhupi bg service khud ko online dikhaye hi na */
   pub(ROOM + '/members/' + myId, { name: myName, color: myColor, avatar: myAvatar, ts: Date.now() }, true);
 }
-setInterval(() => { if (joined && mqttUp) publishPresence(); }, 15000);
+setInterval(() => { if (joined && mqttUp) publishPresence(); hostTick(); }, 15000);
+setInterval(() => { lockTick(); }, 6000);   /* 👑 locked member ka player sync me rahe */
 setInterval(() => {
   if (!joined) return;
   const now = Date.now();
@@ -2073,6 +2075,125 @@ function publishLeaveNow() {
       try { client.publish(ROOM + '/members/' + myId, '', { qos: 1, retain: true }); } catch(e){}
     }
   } catch(e){}
+}
+/* ═══════════════ 👑 KING (HOST) — Phase 1 ═══════════════
+   King hi room control karta hai (play/pause/seek/next/queue). Taaj kisi ko bhi diya ja sakta hai
+   (King ki marzi). King room chhode / 45s gayab rahe / khud "sab ko azadi" de -> 🔓 OPEN MODE
+   (sab control kar sakte hain — room kabhi jam nahi hota). Sab page-side, koi app build nahi. */
+let hostId = '', hostName = '', hostTs = 0;
+const BOSS_CODE = 'WP1-8TQN-YTM9';
+function isBossCode() { try { return normCode(S.code || '') === normCode(BOSS_CODE); } catch (e) { return false; } }
+function isKing() { return !!hostId && hostId === myId; }
+function kingToast(msg) {
+  try {
+    let el = document.getElementById('king-toast');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'king-toast';
+      el.style.cssText = 'position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:99;background:rgba(22,10,44,.95);border:1px solid rgba(255,215,0,.35);color:#fff;font-size:12.5px;font-weight:700;padding:10px 14px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.55);opacity:0;transition:opacity .25s;pointer-events:none;max-width:88vw;text-align:center';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg; el.style.opacity = '1';
+    clearTimeout(el._t); el._t = setTimeout(() => { el.style.opacity = '0'; }, 2200);
+  } catch (e) {}
+}
+function pubHostRaw(payload) { try { if (!client || !mqttUp) return; client.publish(ROOM + '/host', payload, { qos: 1, retain: true }); } catch (e) {} }
+function setHost(id, name, ts) {
+  hostId = id || ''; hostName = name || ''; hostTs = ts || (id ? Date.now() : 0);
+  try { renderMembers(); } catch (e) {} try { paintKingChip(); } catch (e) {}
+}
+function takeCrown(why, quiet) {
+  const wasSame = (hostName || '') === (myName || '');            /* wahi shakhs dobara taaj le raha hai? */
+  const t = Date.now(); setHost(myId, myName, t);
+  pubHostRaw(JSON.stringify({ id: myId, name: myName, ts: t }));
+  if (!quiet && !wasSame) { try { addSysMsg('👑 ' + myName + ' King hai' + (why ? ' (' + why + ')' : '')); tuneJoin(); } catch (e) {} }
+  kingToast('👑 Aap King hain — room control aap ke paas');
+}
+function giveCrown(id, name) {
+  const t = Date.now(); setHost(id, name, t);
+  pubHostRaw(JSON.stringify({ id: id, name: name, ts: t }));
+  try { addSysMsg('👑 ' + (name || 'Koi') + ' ab King hai'); tuneJoin(); } catch (e) {}
+}
+function openMode(why) {
+  if (!hostId) return;
+  setHost('', '', 0); pubHostRaw('');
+  try { addSysMsg('🔓 Open Mode — ab sab control kar sakte hain' + (why ? ' (' + why + ')' : '')); } catch (e) {}
+  kingToast('🔓 Open Mode — sab control kar sakte hain');
+}
+function onHostMsg(str) {
+  try {
+    if (!str) {                                  /* taaj utar gaya -> Open Mode */
+      if (hostId) { setHost('', '', 0); addSysMsg('🔓 Open Mode — ab sab control kar sakte hain'); }
+      return;
+    }
+    const o = JSON.parse(str);
+    if (!o || !o.id) return;
+    if (o.id === hostId) { hostTs = o.ts || Date.now(); return; }     /* wahi King — sirf heartbeat */
+    hostId = o.id; hostName = o.name || ''; hostTs = o.ts || Date.now();
+    try { renderMembers(); paintKingChip(); } catch (e) {}
+    if (o.id !== myId) { try { addSysMsg('👑 ' + (hostName || 'Koi') + ' ab King hai'); } catch (e) {} }
+    else { kingToast('👑 Aap King hain — room control aap ke paas'); }
+  } catch (e) {}
+}
+function hostTick() {
+  try {
+    if (!joined || !mqttUp) return;
+    if (isKing()) { const t = Date.now(); hostTs = t; pubHostRaw(JSON.stringify({ id: myId, name: myName, ts: t })); return; }
+    if (hostId && (Date.now() - hostTs) > 45000) {
+      /* King 45s se gayab (app band / phone off / net gaya) -> sabse chhota id wala member taaj utaar de
+         (warna room jam ho jata). Ek hi member kare — is liye id ka lowest chunte hain. */
+      const present = Object.keys(membersCache).filter((k) => membersCache[k] && (!membersCache[k].ts || Date.now() - membersCache[k].ts <= 40000));
+      if (!present.includes(myId)) present.push(myId);
+      present.sort();
+      if (present[0] === myId) openMode('King 45s se gayab');
+    }
+  } catch (e) {}
+}
+let lockPausedSince = 0;
+function lockTick() {
+  /* 🆕 Locked member ka player galti se pause ho gaya (taap ke zariye) -> King ke state se wapas sync.
+     Sirf "paused" case theek karta hai (seek/spam nahi) — 5s grace ke baad ek dafa. */
+  try {
+    if (!joined || !hostId || hostId === myId) return;                 /* sirf locked members */
+    if (!stateLocal || !stateLocal.type || stateLocal.type === 'none' || !stateLocal.playing) return;
+    let paused = false;
+    try {
+      paused = (currentType === 'youtube')
+        ? !(ytReady && ytPlayer && ytPlayer.getPlayerState && ytPlayer.getPlayerState() === 1)
+        : !!(mp4 && mp4.paused);
+    } catch (e) { return; }
+    if (!paused) { lockPausedSince = 0; return; }
+    if (!lockPausedSince) { lockPausedSince = Date.now(); return; }
+    if (Date.now() - lockPausedSince < 5000) return;
+    lockPausedSince = 0;
+    iPausedByMe = false;
+    applyState(stateLocal);
+    kingToast('🔒 King 👑 ' + (hostName || '') + ' ke gaane se sync kar diya');
+  } catch (e) {}
+}
+function paintKingChip() {
+  try {
+    let c = document.getElementById('wp-king-chip');
+    if (!c) {
+      const bar = document.querySelector('header') || document.querySelector('.wp-top') || document.body;
+      c = document.createElement('span'); c.id = 'wp-king-chip';
+      c.style.cssText = 'margin-left:8px;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.42);color:#ffe066;white-space:nowrap;cursor:pointer;display:inline-block;vertical-align:middle';
+      bar.appendChild(c);
+    }
+    const hn = (hostName || 'King'); const shortHn = hn.length > 10 ? hn.slice(0, 9) + '…' : hn;
+    c.textContent = isKing() ? '👑 King' : (hostId ? '👑 ' + shortHn : '🔓 Open');
+    c.style.maxWidth = '116px'; c.style.overflow = 'hidden'; c.style.textOverflow = 'ellipsis';
+    c.title = (isBossCode() && !isKing()) ? 'Taaj le lein' : 'King / Open Mode';
+    c.onclick = function () {
+      if (isKing()) {
+        if (confirm('🔓 Sab ko azadi dein? (Open Mode — sab control kar sakte hain)')) openMode('King ne azadi di');
+        return;
+      }
+      if (hostId) {
+        if (isBossCode()) { if (confirm('👑 Taaj le lein? (' + (hostName || 'King') + ' se)')) takeCrown('boss ne taaj liya'); }
+        else kingToast('🔒 Control King 👑 ' + (hostName || '') + ' ke paas hai');
+      } else { if (confirm('👑 Aap King ban jayein?')) takeCrown('khud aage aaye'); }
+    };
+  } catch (e) {}
 }
 window.addEventListener('beforeunload', () => {
   try {
@@ -2138,6 +2259,7 @@ function onMsg(topic, buf) {
         renderMembers();
       }
       addSysMsg((ev.name || 'Someone') + ' Left 👋'); tuneLeave();
+      if (ev.from === hostId) openMode('King ne room chhoda');
       try { client.publish(ROOM + '/members/' + ev.from, '', { qos: 1, retain: true }); } catch(e){}
       return;
     }
@@ -2165,6 +2287,8 @@ function onMsg(topic, buf) {
         }
       } catch(e) {}
     }
+  } else if (topic === ROOM + '/host') {
+    onHostMsg(str);
   } else if (topic.indexOf(ROOM + '/members/') === 0) {
     const id = topic.slice((ROOM + '/members/').length);
     if (!str) {
@@ -2173,6 +2297,7 @@ function onMsg(topic, buf) {
         delete membersCache[id];
         renderMembers();
         if (id !== myId) { addSysMsg(nm + ' Left 👋'); tuneLeave(); }
+        if (id === hostId) openMode('King ne room chhoda');
       }
     } else {
       try {
@@ -2192,7 +2317,7 @@ function onMsg(topic, buf) {
               }
             });
           } catch(e) {}
-          membersCache[id] = u; renderMembers();
+          u.uid = id; membersCache[id] = u; renderMembers();
         }
       } catch (e) {}
     }
@@ -2351,6 +2476,12 @@ window.wpRoomEnter = function () {
     pub(TP.events, { t: 'join', name: myName, from: myId, mid: mid() }, false);
     joined = true;
     try { renderMembers(); } catch (e1) {}
+    /* 👑 King decide: koi King nahi ya purana 45s se gayab -> taaj lo */
+    setTimeout(() => { try {
+      if (!joined) return;
+      if (isBossCode()) { takeCrown('boss', true); return; }        /* 👑 boss ka room — taaj boss ka, reload ke baad bhi */
+      if (!hostId || (Date.now() - hostTs) > 45000) takeCrown('pehla member'); else { renderMembers(); paintKingChip(); }
+    } catch (e) {} }, 900);
     try { renderQueue(queueLocal.items || [], queueLocal.index); } catch (e2) {}
   const doCatchup = () => {
     const s = stateLocal;
@@ -3002,6 +3133,7 @@ updateMiniInfo();
 
 /* ---------- 📋 PLAYLIST / QUEUE ---------- */
 $('queue-btn').onclick = () => {
+  if (hostId && hostId !== myId) { kingToast('🔒 Queue me gaana sirf King 👑 daal sakta hai'); return; }
   const val = urlInput.value.trim();
   if (!val) { alert('Pehle link paste karo! 🔗'); return; }
   const d = parseURL(val);
@@ -3879,6 +4011,25 @@ function renderMembers() {
     chip.appendChild(avatarEl(u.avatar, u.name, u.color, 20));
     const nm = document.createElement('span'); nm.textContent = u.name;
     chip.appendChild(nm);
+    /* 👑 King ka nishan + (King ho to) tap se taaj dena */
+    try {
+      const isK = !!u.uid && u.uid === hostId;
+      if (isK) {
+        const cr = document.createElement('b'); cr.textContent = '👑';
+        cr.style.cssText = 'font-size:13px;margin-left:2px;filter:drop-shadow(0 0 6px rgba(255,215,0,.7))';
+        chip.appendChild(cr);
+      }
+      if ((isKing() || isBossCode()) && u.uid && u.uid !== myId) {
+        chip.style.cursor = 'pointer'; chip.title = '👑 ' + u.name + ' ko taaj do';
+        chip.onclick = function () {
+          if (!confirm('👑 ' + u.name + ' ko taaj do? (wo room control karega)')) return;
+          giveCrown(u.uid, u.name);
+        };
+      } else if (isK && !isKing()) {
+        chip.style.cursor = 'pointer'; chip.title = 'King';
+        chip.onclick = function () { kingToast('🔒 Control King 👑 ' + (hostName || '') + ' ke paas hai'); };
+      }
+    } catch (e) {}
     userList.appendChild(chip);
   });
 }
