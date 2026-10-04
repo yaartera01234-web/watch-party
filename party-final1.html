@@ -2043,6 +2043,32 @@ function pubState(s) {
   pub(TP.state, o, true);
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
+/* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
+const WP_BUILD = '2026-10-04-10';
+function wpShowUpdate() {
+  try {
+    if (document.getElementById('wp-upd')) return;
+    var el = document.createElement('div'); el.id = 'wp-upd';
+    el.style.cssText = 'position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:2147483000;display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:15px;background:linear-gradient(135deg,rgba(38,20,66,.97),rgba(18,10,38,.97));border:1px solid rgba(120,200,255,.38);color:#fff;font-size:12px;font-weight:700;box-shadow:0 12px 32px rgba(0,0,0,.55);max-width:92vw';
+    var sp = document.createElement('span'); sp.textContent = '🔄 Naya update aa gaya';
+    var b = document.createElement('button'); b.type = 'button'; b.textContent = 'Update karo';
+    b.style.cssText = 'padding:7px 12px;border-radius:11px;border:0;font-weight:900;font-size:11.5px;color:#08222f;background:linear-gradient(135deg,#9be7ff,#5ec8ff);cursor:pointer;white-space:nowrap';
+    b.onclick = function () { try { var u = new URL(location.href); u.searchParams.set('u', Date.now()); location.replace(u.toString()); } catch (e) { location.reload(); } };
+    el.appendChild(sp); el.appendChild(b); document.body.appendChild(el);
+  } catch (e) {}
+}
+async function wpVersionCheck() {
+  try {
+    if (isBg()) return;                              /* chhupa bg page: kuch na badle (music/handoff safe rahe) */
+    const r = await fetch('wp-ver.txt?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return;
+    const v = (await r.text()).trim();
+    if (v && v !== WP_BUILD) wpShowUpdate();
+  } catch (e) {}
+}
+setTimeout(wpVersionCheck, 6000);
+setInterval(wpVersionCheck, 15 * 60 * 1000);
+document.addEventListener('visibilitychange', function () { try { if (document.visibilityState === 'visible') wpVersionCheck(); } catch (e) {} });
 function publishPresence() {
   if (isBg()) return;                    /* v39: chhupi bg service khud ko online dikhaye hi na */
   pub(ROOM + '/members/' + myId, { name: myName, color: myColor, avatar: myAvatar, ts: Date.now() }, true);
@@ -2137,12 +2163,13 @@ function onMsg(topic, buf) {
         delete membersCache[ev.from];
         renderMembers();
       }
-      addSysMsg((ev.name || 'Someone') + ' Left 👋'); tuneLeave();
+      if (wpEvOnce('left', ev.name)) addSysMsg((ev.name || 'Someone') + ' Left 👋');
+      tuneLeave();
       try { client.publish(ROOM + '/members/' + ev.from, '', { qos: 1, retain: true }); } catch(e){}
       return;
     }
     if (ev.t === 'join' && ev.from !== myId) {
-      addSysMsg(ev.name + ' Joined Party 🎉'); tuneJoin();
+      if (wpEvOnce('join', ev.name)) { addSysMsg(ev.name + ' Joined Party 🎉'); tuneJoin(); }
       // Boss fix: late joiner perfect timing + no auto pause loop
       try {
         // Reset pause flags so no auto pause publish after new join
@@ -2172,7 +2199,7 @@ function onMsg(topic, buf) {
         const nm = membersCache[id].name || 'Koi';
         delete membersCache[id];
         renderMembers();
-        if (id !== myId) { addSysMsg(nm + ' Left 👋'); tuneLeave(); }
+        if (id !== myId) { if (wpEvOnce('left', nm)) addSysMsg(nm + ' Left 👋'); tuneLeave(); }
       }
     } else {
       try {
@@ -2228,6 +2255,19 @@ function scrollChatDown() {
 }
 chatBox.addEventListener('scroll', () => { if (isNearBottom()) newMsgBtn.classList.add('hidden'); });
 newMsgBtn.onclick = () => { scrollChatDown(); newMsgBtn.classList.add('hidden'); };
+let wpEvSeen = {};
+function wpEvOnce(kind, name) {
+  /* 🧹 ek hi aadmi ka Join/Left 45 sec me sirf ek dafa likho (duplicate + purane page ka shor band) */
+  try {
+    const k = kind + '|' + String(name || '').trim().toLowerCase();
+    const t = Date.now();
+    if (wpEvSeen[k] && (t - wpEvSeen[k]) < 45000) return false;
+    wpEvSeen[k] = t;
+    const ks = Object.keys(wpEvSeen);
+    if (ks.length > 60) ks.slice(0, 40).forEach(function (x) { delete wpEvSeen[x]; });
+    return true;
+  } catch (e) { return true; }
+}
 function addSysMsg(text) {
   const div = document.createElement('div');
   div.className = 'sys-msg';
