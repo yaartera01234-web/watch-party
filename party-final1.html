@@ -2036,8 +2036,23 @@ function pub(topic, obj, retain) {
 function pubCmd(action, extra) {
   if (hostId && hostId !== myId) {                           /* 👑 King mode */
     if (!hostPresent()) fixGhostKing();                      /* 👻 ghost kabhi block na kare */
-    else { kingToast('🔒 Control King 👑 ' + (hostName || '') + ' ke paas hai'); return; }
+    else {
+      kingSnapBack();                                        /* 🔄 member ka player wapas sync me */
+      kingToast('🔒 Control King 👑 ' + (hostName || '') + ' ke paas hai');
+      return;
+    }
   }
+  try {                                                       /* 👑 King ka intent yaad (enforcement ke liye) */
+    if (isKing()) {
+      const tn = Number(extra && extra.time);
+      const tt = isFinite(tn) ? tn : localNow();
+      if (action === 'play') kIntent = { playing: true, time: tt, at: Date.now() };
+      else if (action === 'pause') kIntent = { playing: false, time: tt, at: Date.now() };
+      else if (action === 'seek') kIntent = { playing: (kIntent ? kIntent.playing : true), time: tt, at: Date.now() };
+      else if (action === 'load') kIntent = { playing: true, time: 0, at: Date.now() };
+      else if (action === 'sync') kIntent = { playing: !!(extra && extra.playing), time: tt, at: Date.now() };
+    }
+  } catch (e) {}
   const o = Object.assign({ action: action, from: myId, by: myName, rid: mid() }, extra || {});
   pub(TP.cmd, o, false);
 }
@@ -2116,6 +2131,71 @@ function kingToast(msg) {
     clearTimeout(el._t); el._t = setTimeout(() => { el.style.opacity = '0'; }, 2200);
   } catch (e) {}
 }
+function wpAsk(o) {
+  /* 🎨 Apna stylish dialog — browser ka bhadda "github.io says" wala box nahi */
+  try {
+    var old = document.getElementById('wp-ask');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+    var ov = document.createElement('div'); ov.id = 'wp-ask';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(6,3,16,.66);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)';
+    var card = document.createElement('div');
+    card.style.cssText = 'width:100%;max-width:340px;border-radius:22px;padding:20px 16px 15px;text-align:center;color:#fff;background:linear-gradient(160deg,rgba(40,21,70,.98),rgba(16,9,34,.98));border:1px solid rgba(255,215,0,.30);box-shadow:0 26px 70px rgba(0,0,0,.66),inset 0 1px 0 rgba(255,255,255,.09)';
+    var ic = document.createElement('div'); ic.textContent = o.icon || '👑';
+    ic.style.cssText = 'font-size:36px;line-height:1;filter:drop-shadow(0 0 14px rgba(255,215,0,.40))';
+    card.appendChild(ic);
+    var ti = document.createElement('div'); ti.textContent = o.title || '';
+    ti.style.cssText = 'margin-top:11px;font-size:16px;font-weight:800;letter-spacing:.2px';
+    card.appendChild(ti);
+    if (o.sub) {
+      var su = document.createElement('div'); su.textContent = o.sub;
+      su.style.cssText = 'margin-top:8px;font-size:11.5px;line-height:1.55;color:#cbc0ea';
+      card.appendChild(su);
+    }
+    var row = document.createElement('div'); row.style.cssText = 'display:flex;gap:9px;margin-top:17px';
+    var no = document.createElement('button'); no.type = 'button'; no.textContent = o.cancel || 'Cancel';
+    no.style.cssText = 'flex:1 1 0;padding:12px 10px;border-radius:14px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#e7e1ff;font-size:13px;font-weight:700;cursor:pointer';
+    var yes = document.createElement('button'); yes.type = 'button'; yes.textContent = o.ok || 'OK';
+    yes.style.cssText = 'flex:1.3 1 0;padding:12px 10px;border-radius:14px;border:0;color:#2a1230;font-size:13px;font-weight:900;cursor:pointer;background:linear-gradient(135deg,#ffdd8a,#ffb03a);box-shadow:0 10px 24px rgba(255,190,70,.30)';
+    function closeAsk() { try { if (ov.parentNode) ov.parentNode.removeChild(ov); } catch (e2) {} }
+    no.onclick = function () { closeAsk(); };
+    yes.onclick = function () { closeAsk(); try { if (o.onOk) o.onOk(); } catch (e2) {} };
+    ov.onclick = function (e2) { if (e2.target === ov) closeAsk(); };
+    row.appendChild(no); row.appendChild(yes); card.appendChild(row); ov.appendChild(card);
+    document.body.appendChild(ov);
+  } catch (e) {}
+}
+let kIntent = null, lastSnap = 0, lastEnforce = 0;
+function kingSnapBack() {
+  /* 🔒 Member ne control dabaya (block hua) — uske phone par playback wapas apni jagah (warna sync tootta hai) */
+  const t = Date.now();
+  if (t - lastSnap < 700) return;
+  lastSnap = t;
+  try {
+    iPausedByMe = false;
+    const st = (roomWant && (t - roomWant.at) < 3600000) ? roomWant : stateLocal;   /* aakhri command = asli haal */
+    if (!st || (st.type && st.type === 'none')) return;
+    if (!st.playing && st.time === 0 && !roomWant) return;
+    const wantT = (st.time || 0) + (st.playing ? Math.max(0, (t - (st.at || t)) / 1000) : 0);
+    if (st.playing) remotePlay(wantT, true); else remotePause(wantT, true);
+  } catch (e) {}
+}
+function kingEnforce() {
+  /* 👑 King mojood ho magar koi aur (purana page wala) control bhej de -> King apni state wapas lagata hai */
+  const t = Date.now();
+  if (t - lastEnforce < 1500) return;
+  lastEnforce = t;
+  setTimeout(() => {
+    try {
+      if (!isKing() || !kIntent) return;
+      const now = Date.now();
+      const wantT = kIntent.playing ? (kIntent.time + Math.max(0, (now - kIntent.at) / 1000)) : kIntent.time;
+      kIntent.time = wantT; kIntent.at = now;
+      try { pubCmd('sync', { time: wantT, playing: kIntent.playing, kx: 1 }); } catch (e) {}
+      if (kIntent.playing) remotePlay(wantT, true); else remotePause(wantT, true);
+      kingToast('👑 King ne sync wapas laga diya');
+    } catch (e) {}
+  }, 500);
+}
 function pubHostRaw(payload) { try { if (!client || !mqttUp) return; client.publish(ROOM + '/host', payload, { qos: 1, retain: true }); } catch (e) {} }
 function setHost(id, name, ts) {
   hostId = id || ''; hostName = name || ''; hostTs = ts || (id ? Date.now() : 0);
@@ -2186,7 +2266,17 @@ function fixGhostKing() {
 function hostTick() {
   try {
     if (!joined || !mqttUp) return;
-    if (isKing()) { const t = Date.now(); hostTs = t; pubHostRaw(JSON.stringify({ id: myId, name: myName, ts: t })); return; }
+    if (isKing()) {
+      const t = Date.now(); hostTs = t;
+      pubHostRaw(JSON.stringify({ id: myId, name: myName, ts: t }));
+      if (kIntent && (t - (kIntent.sent || 0) > 30000)) {      /* 👑 har 30s chup-chaap resync (purane page wale bhi saath aayein) */
+        kIntent.sent = t;
+        const wantT = kIntent.playing ? (kIntent.time + Math.max(0, (t - kIntent.at) / 1000)) : kIntent.time;
+        kIntent.time = wantT; kIntent.at = t;
+        try { pubCmd('sync', { time: wantT, playing: kIntent.playing, kx: 1 }); } catch (e) {}
+      }
+      return;
+    }
     if (hostId && hostId !== myId && hostId === wpLastHost()) { takeCrown('aap ka purana taaj', true); return; }   /* 👑 mera purana taaj */
     if (hostId && !hostPresent()) { fixGhostKing(); return; }      /* 👻 purani entry -> foran azadi */
     if (hostId && (Date.now() - hostTs) > 45000) {
@@ -2264,6 +2354,7 @@ function onMsg(topic, buf) {
     let c; try { c = JSON.parse(str); } catch (e) { return; }
     if (!c || c.from === myId || dup(c.rid)) return;
     applyCmd(c);
+    if (isKing() && !c.kx) kingEnforce();          /* 👑 koi aur control kar raha hai -> King wapas laga dega */
   } else if (topic === TP.state) {
     try { stateLocal = JSON.parse(str); } catch (e) {}
   } else if (topic === TP.queue) {
@@ -2576,6 +2667,17 @@ function saneSeek(t) {
   if (dur > 600 && cur > 120 && t < 30) return false;   // ad ka shor
   return true;
 }
+let roomWant = null;
+function noteWant(c) {
+  try {
+    const t = cmdTime(c), now = Date.now();
+    if (c.action === 'play') roomWant = { playing: true, time: t || 0, at: now };
+    else if (c.action === 'pause') roomWant = { playing: false, time: t || 0, at: now };
+    else if (c.action === 'seek') roomWant = { playing: (roomWant ? roomWant.playing : true), time: t || 0, at: now };
+    else if (c.action === 'load') roomWant = { playing: true, time: 0, at: now };
+    else if (c.action === 'sync') roomWant = { playing: !!c.playing, time: t || 0, at: now };
+  } catch (e) {}
+}
 function applyCmd(c) {
   const t = cmdTime(c);
   if (c.action === 'seek' && !saneSeek(t)) return;
@@ -2586,7 +2688,8 @@ function applyCmd(c) {
   } else if (c.action === 'play') remotePlay(t || 0, !!c.user);
   else if (c.action === 'pause') remotePause(t || 0, !!c.user);
   else if (c.action === 'seek') remoteSeek(t);
-  else if (c.action === 'sync') { remoteSeek(t); if (c.playing) remotePlay(t || 0); else remotePause(t || 0); addSysMsg('🔄 ' + c.by + ' ne sab ko sync kiya'); }
+  else if (c.action === 'sync') { remoteSeek(t); if (c.playing) remotePlay(t || 0); else remotePause(t || 0); if (!c.kx) addSysMsg('🔄 ' + c.by + ' ne sab ko sync kiya'); }
+  noteWant(c);
 }
 function applyState(s) {
   loadVideoLocal(s, false);
@@ -4059,16 +4162,16 @@ function renderMembers() {
       if (isKing() && u.uid && !mine) {                                  /* 👑➡️ King apni marzi se taaj de */
         chip.style.cursor = 'pointer'; chip.title = '👑 ' + u.name + ' ko taaj do';
         chip.onclick = function () {
-          if (!confirm('👑 ' + u.name + ' ko taaj do? (wo room control karega)')) return;
-          giveCrown(u.uid, u.name);
+          wpAsk({ icon: '👑', title: u.name + ' ko King banao?', sub: 'Ab wo room control karega — play, pause, seek, queue. Wapas lene ke liye apne naam par tap karein.',
+                  ok: '👑 Make King', onOk: function () { giveCrown(u.uid, u.name); } });
         };
       } else if (mine && !isKing() && hostId) {                          /* taaj wapas lena (sirf jab jaiz ho) */
         const canTake = isBossCode() || hostCount() <= 1 || !hostPresent();
         if (canTake) {
           chip.style.cursor = 'pointer'; chip.title = '👑 Taaj le lein';
           chip.onclick = function () {
-            if (!confirm('👑 Taaj le lein? (' + (hostName || 'King') + ')')) return;
-            takeCrown(isBossCode() ? 'boss' : 'wapas');
+            wpAsk({ icon: '👑', title: 'Taaj wapas lein?', sub: 'Abhi King: ' + (hostName || '—') + '. Taaj aap ke paas aa jayega.',
+                    ok: '👑 Make Me King', onOk: function () { takeCrown(isBossCode() ? 'boss' : 'wapas'); } });
           };
         }
       } else if (isK && !isKing()) {
@@ -4528,7 +4631,7 @@ function renderMembers() {
     <div class="add2" id="dm-add-btn" title="Add Friends" style="display:grid; place-items:center">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14" stroke-width="2.5"/><line x1="22" y1="11" x2="16" y2="11" stroke-width="2.5"/></svg>
     </div>
-    <div class="add2" id="dm-menu-btn">⋮</div>
+    <div class="add2" id="dm-menu-btn" title="Menu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></div>
     <div class="add2" id="dm-close-btn" style="background:rgba(255,255,255,.12);color:#fff">✕</div>
   </div>
   <div class="dm-pop4" id="dm-pop4">
