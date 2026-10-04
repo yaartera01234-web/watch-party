@@ -2481,6 +2481,22 @@ window.wpRoomEnter = function () {
     return true;
   } catch (e) { return false; }
 };
+/* 🆕 BACK = LEFT (boss: "back krte hi Left party se Left") — koi ghost ID nahi.
+   Back dabate hi turant leave event + retained clear, taake sab ki list se foran gayab ho jaye.
+   DM/Call is se bilkul aazad hain (dono apne default EMQX tower par hi rehte hain). */
+window.wpRoomLeave = function (reason) {
+  try {
+    if (!joined) return false;
+    publishLeaveNow();                       /* 'leave' event -> sab ko "Left 👋" + apna retained member clear */
+    joined = false;                          /* ab party member nahi — heartbeat bhi band */
+    iPausedByMe = false; localHoldUntil = 0;
+    try { renderMembers(); } catch (e1) {}
+    if (reason !== 'silent') {
+      try { toast('🚪 Party se left — dobara join karne ke liye neeche "Party" dabao'); } catch (e2) {}
+    }
+    return true;
+  } catch (e) { return false; }
+};
 joinBtn.onclick = join;
 nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') join(); });
 roomInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') join(); });
@@ -6012,7 +6028,9 @@ function renderMembers() {
             // Push room again so next back exits cleanly
             try { history.pushState({wp:'room'}, '', location.href); } catch(e){}
           } else if (document.body && document.body.classList.contains('yp-joined')) {
-            /* 🆕 party ke andar back = EXIT NAHI — chatting bars wapas (openSheet khud history re-arm karta hai) */
+            /* 🆕 party ke andar back = EXIT NAHI — chatting bars wapas (openSheet khud history re-arm karta hai)
+               🆕 + back = PARTY SE LEFT (boss ka idea): turant left, ID list me chipki nahi rehti */
+            try { if (window.wpRoomLeave) window.wpRoomLeave('back'); } catch(e){}
             try { openSheet(); } catch(e){}
             try { showView('dm-view-inbox'); } catch(e){}
             try { curChat = null; } catch(e){}
