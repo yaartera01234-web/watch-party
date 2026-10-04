@@ -2023,36 +2023,17 @@ ensureLib(() => { connectBroker(parseInt(towerInput.value, 10) || 0); connectDmT
 
 function subscribeRoom() {
   if (!client || !mqttUp) return;
-  client.subscribe([TP.cmd, TP.state, TP.queue, TP.chat, TP.events, TP.react, TP.members, TP.typing, ROOM + '/host'], { qos: 1 }, () => {});
+  client.subscribe([TP.cmd, TP.state, TP.queue, TP.chat, TP.events, TP.react, TP.members, TP.typing], { qos: 1 }, () => {});
 }
 function unsubscribeRoom() {
   if (!client) return;
-  try { client.unsubscribe([TP.cmd, TP.state, TP.queue, TP.chat, TP.events, TP.react, TP.members, TP.typing, ROOM + '/host']); } catch (e) {}
+  try { client.unsubscribe([TP.cmd, TP.state, TP.queue, TP.chat, TP.events, TP.react, TP.members, TP.typing]); } catch (e) {}
 }
 function pub(topic, obj, retain) {
   if (!client || !mqttUp) return;
   try { client.publish(topic, JSON.stringify(obj), { qos: 1, retain: !!retain }); } catch (e) {}
 }
 function pubCmd(action, extra) {
-  if (hostId && hostId !== myId) {                           /* 👑 King mode */
-    if (!hostPresent()) fixGhostKing();                      /* 👻 ghost kabhi block na kare */
-    else {
-      kingSnapBack();                                        /* 🔄 member ka player wapas sync me */
-      kingToast('🔒 Control King 👑 ' + (hostName || '') + ' ke paas hai');
-      return;
-    }
-  }
-  try {                                                       /* 👑 King ka intent yaad (enforcement ke liye) */
-    if (isKing()) {
-      const tn = Number(extra && extra.time);
-      const tt = isFinite(tn) ? tn : localNow();
-      if (action === 'play') kIntent = { playing: true, time: tt, at: Date.now() };
-      else if (action === 'pause') kIntent = { playing: false, time: tt, at: Date.now() };
-      else if (action === 'seek') kIntent = { playing: (kIntent ? kIntent.playing : true), time: tt, at: Date.now() };
-      else if (action === 'load') kIntent = { playing: true, time: 0, at: Date.now() };
-      else if (action === 'sync') kIntent = { playing: !!(extra && extra.playing), time: tt, at: Date.now() };
-    }
-  } catch (e) {}
   const o = Object.assign({ action: action, from: myId, by: myName, rid: mid() }, extra || {});
   pub(TP.cmd, o, false);
 }
@@ -2061,23 +2042,21 @@ function pubState(s) {
   stateLocal = o;
   pub(TP.state, o, true);
 }
-let lastQToast = 0;
-function pubQueue() {
-  if (hostId && hostId !== myId) {
-    if (!hostPresent()) { fixGhostKing(); }
-    else {
-      if (Date.now() - lastQToast > 8000) { lastQToast = Date.now(); kingToast('🔒 Queue King 👑 ' + (hostName || '') + ' ke paas hai'); }
-      return;
-    }
-  }
-  pub(TP.queue, queueLocal, true);
+function pubQueue() { pub(TP.queue, queueLocal, true); }
+function wpMyCodeN() {
+  /* apna DM code (badge ke liye) — DM block se ya localStorage se */
+  function nz(c) { c = String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if (c.indexOf('WP1') === 0) c = c.slice(3); return c.slice(0, 8); }
+  try { if (window.DM && window.DM.code) { var c0 = window.DM.code(); if (c0) return nz(c0); } } catch (e) {}
+  try { var raw = localStorage.getItem('wp_dm_v1'); if (raw) { var o = JSON.parse(raw); if (o && o.code) return nz(o.code); } } catch (e) {}
+  return '';
 }
+function wpIsBossCode(c) { try { return !!c && ('' + wpMyCodeN.clean(c)) === ('' + wpMyCodeN.clean('WP1-8TQN-YTM9')); } catch (e) { return false; } }
+wpMyCodeN.clean = function (c) { c = String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if (c.indexOf('WP1') === 0) c = c.slice(3); return c.slice(0, 8); };
 function publishPresence() {
   if (isBg()) return;                    /* v39: chhupi bg service khud ko online dikhaye hi na */
-  pub(ROOM + '/members/' + myId, { name: myName, color: myColor, avatar: myAvatar, ts: Date.now() }, true);
+  pub(ROOM + '/members/' + myId, { name: myName, color: myColor, avatar: myAvatar, ts: Date.now(), code: wpMyCodeN() }, true);
 }
-setInterval(() => { if (joined && mqttUp) publishPresence(); hostTick(); }, 15000);
-setInterval(() => { lockTick(); }, 6000);   /* 👑 locked member ka player sync me rahe */
+setInterval(() => { if (joined && mqttUp) publishPresence(); }, 15000);
 setInterval(() => {
   if (!joined) return;
   const now = Date.now();
@@ -2104,227 +2083,6 @@ function publishLeaveNow() {
     }
   } catch(e){}
 }
-/* ═══════════════ 👑 KING (HOST) — Phase 1 ═══════════════
-   King hi room control karta hai (play/pause/seek/next/queue). Taaj kisi ko bhi diya ja sakta hai
-   (King ki marzi). King room chhode / 45s gayab rahe / khud "sab ko azadi" de -> 🔓 OPEN MODE
-   (sab control kar sakte hain — room kabhi jam nahi hota). Sab page-side, koi app build nahi. */
-let hostId = '', hostName = '', hostTs = 0;
-const BOSS_CODE = 'WP1-8TQN-YTM9';
-function wpCodeSafe() {
-  /* DM code block 7 (messages) me rehta hai — yahan se window.DM se ya localStorage se laate hain */
-  try { if (window.DM && window.DM.code) { var c0 = window.DM.code(); if (c0) return c0; } } catch (e) {}
-  try { var raw = localStorage.getItem('wp_dm_v1'); if (raw) { var o = JSON.parse(raw); if (o && o.code) return o.code; } } catch (e) {}
-  return '';
-}
-function wpNorm(c) { c = String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if (c.indexOf('WP1') === 0) c = c.slice(3); return c.slice(0, 8); }
-function isBossCode() { try { return wpNorm(wpCodeSafe()) === wpNorm(BOSS_CODE); } catch (e) { return false; } }
-function isKing() { return !!hostId && hostId === myId; }
-function kingToast(msg) {
-  try {
-    let el = document.getElementById('king-toast');
-    if (!el) {
-      el = document.createElement('div'); el.id = 'king-toast';
-      el.style.cssText = 'position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:99;background:rgba(22,10,44,.95);border:1px solid rgba(255,215,0,.35);color:#fff;font-size:12.5px;font-weight:700;padding:10px 14px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.55);opacity:0;transition:opacity .25s;pointer-events:none;max-width:88vw;text-align:center';
-      document.body.appendChild(el);
-    }
-    el.textContent = msg; el.style.opacity = '1';
-    clearTimeout(el._t); el._t = setTimeout(() => { el.style.opacity = '0'; }, 2200);
-  } catch (e) {}
-}
-function wpAsk(o) {
-  /* 🎨 Apna stylish dialog — browser ka bhadda "github.io says" wala box nahi */
-  try {
-    var old = document.getElementById('wp-ask');
-    if (old && old.parentNode) old.parentNode.removeChild(old);
-    var ov = document.createElement('div'); ov.id = 'wp-ask';
-    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(6,3,16,.66);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)';
-    var card = document.createElement('div');
-    card.style.cssText = 'width:100%;max-width:340px;border-radius:22px;padding:20px 16px 15px;text-align:center;color:#fff;background:linear-gradient(160deg,rgba(40,21,70,.98),rgba(16,9,34,.98));border:1px solid rgba(255,215,0,.30);box-shadow:0 26px 70px rgba(0,0,0,.66),inset 0 1px 0 rgba(255,255,255,.09)';
-    var ic = document.createElement('div'); ic.textContent = o.icon || '👑';
-    ic.style.cssText = 'font-size:36px;line-height:1;filter:drop-shadow(0 0 14px rgba(255,215,0,.40))';
-    card.appendChild(ic);
-    var ti = document.createElement('div'); ti.textContent = o.title || '';
-    ti.style.cssText = 'margin-top:11px;font-size:16px;font-weight:800;letter-spacing:.2px';
-    card.appendChild(ti);
-    if (o.sub) {
-      var su = document.createElement('div'); su.textContent = o.sub;
-      su.style.cssText = 'margin-top:8px;font-size:11.5px;line-height:1.55;color:#cbc0ea';
-      card.appendChild(su);
-    }
-    var row = document.createElement('div'); row.style.cssText = 'display:flex;gap:9px;margin-top:17px';
-    var no = document.createElement('button'); no.type = 'button'; no.textContent = o.cancel || 'Cancel';
-    no.style.cssText = 'flex:1 1 0;padding:12px 10px;border-radius:14px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#e7e1ff;font-size:13px;font-weight:700;cursor:pointer';
-    var yes = document.createElement('button'); yes.type = 'button'; yes.textContent = o.ok || 'OK';
-    yes.style.cssText = 'flex:1.3 1 0;padding:12px 10px;border-radius:14px;border:0;color:#2a1230;font-size:13px;font-weight:900;cursor:pointer;background:linear-gradient(135deg,#ffdd8a,#ffb03a);box-shadow:0 10px 24px rgba(255,190,70,.30)';
-    function closeAsk() { try { if (ov.parentNode) ov.parentNode.removeChild(ov); } catch (e2) {} }
-    no.onclick = function () { closeAsk(); };
-    yes.onclick = function () { closeAsk(); try { if (o.onOk) o.onOk(); } catch (e2) {} };
-    ov.onclick = function (e2) { if (e2.target === ov) closeAsk(); };
-    row.appendChild(no); row.appendChild(yes); card.appendChild(row); ov.appendChild(card);
-    document.body.appendChild(ov);
-  } catch (e) {}
-}
-let kIntent = null, lastSnap = 0, lastEnforce = 0;
-function kingSnapBack() {
-  /* 🔒 Member ne control dabaya (block hua) — uske phone par playback wapas apni jagah (warna sync tootta hai) */
-  const t = Date.now();
-  if (t - lastSnap < 700) return;
-  lastSnap = t;
-  try {
-    iPausedByMe = false;
-    const st = (roomWant && (t - roomWant.at) < 3600000) ? roomWant : stateLocal;   /* aakhri command = asli haal */
-    if (!st || (st.type && st.type === 'none')) return;
-    if (!st.playing && st.time === 0 && !roomWant) return;
-    const wantT = (st.time || 0) + (st.playing ? Math.max(0, (t - (st.at || t)) / 1000) : 0);
-    if (st.playing) remotePlay(wantT, true); else remotePause(wantT, true);
-  } catch (e) {}
-}
-function kingEnforce() {
-  /* 👑 King mojood ho magar koi aur (purana page wala) control bhej de -> King apni state wapas lagata hai */
-  const t = Date.now();
-  if (t - lastEnforce < 1500) return;
-  lastEnforce = t;
-  setTimeout(() => {
-    try {
-      if (!isKing() || !kIntent) return;
-      const now = Date.now();
-      const wantT = kIntent.playing ? (kIntent.time + Math.max(0, (now - kIntent.at) / 1000)) : kIntent.time;
-      kIntent.time = wantT; kIntent.at = now;
-      try { pubCmd('sync', { time: wantT, playing: kIntent.playing, kx: 1 }); } catch (e) {}
-      if (kIntent.playing) remotePlay(wantT, true); else remotePause(wantT, true);
-      kingToast('👑 King ne sync wapas laga diya');
-    } catch (e) {}
-  }, 500);
-}
-function pubHostRaw(payload) { try { if (!client || !mqttUp) return; client.publish(ROOM + '/host', payload, { qos: 1, retain: true }); } catch (e) {} }
-function setHost(id, name, ts) {
-  hostId = id || ''; hostName = name || ''; hostTs = ts || (id ? Date.now() : 0);
-  try { renderMembers(); } catch (e) {} try { paintKingChip(); } catch (e) {}
-}
-function wpLastHost() { try { return localStorage.getItem('wp_last_host') || ''; } catch (e) { return ''; } }
-function wpSetLastHost(id) { try { if (id) localStorage.setItem('wp_last_host', id); else localStorage.removeItem('wp_last_host'); } catch (e) {} }
-function takeCrown(why, quiet) {
-  const wasSame = (hostName || '') === (myName || '');            /* wahi shakhs dobara taaj le raha hai? */
-  const t = Date.now(); setHost(myId, myName, t); wpSetLastHost(myId);
-  pubHostRaw(JSON.stringify({ id: myId, name: myName, ts: t }));
-  if (!quiet && !wasSame) { try { addSysMsg('👑 ' + myName + ' King hai' + (why ? ' (' + why + ')' : '')); tuneJoin(); } catch (e) {} }
-  kingToast('👑 Aap King hain — room control aap ke paas');
-}
-function giveCrown(id, name) {
-  const t = Date.now(); setHost(id, name, t); wpSetLastHost('');
-  pubHostRaw(JSON.stringify({ id: id, name: name, ts: t }));
-  try { addSysMsg('👑 ' + (name || 'Koi') + ' ab King hai'); tuneJoin(); } catch (e) {}
-}
-function openMode(why) {
-  if (!hostId) return;
-  setHost('', '', 0); wpSetLastHost(''); pubHostRaw('');
-  try { addSysMsg('🔓 Open Mode — ab sab control kar sakte hain' + (why ? ' (' + why + ')' : '')); } catch (e) {}
-  kingToast('🔓 Open Mode — sab control kar sakte hain');
-}
-function onHostMsg(str) {
-  try {
-    if (!str) {                                  /* taaj utar gaya -> Open Mode */
-      if (hostId) { setHost('', '', 0); addSysMsg('🔓 Open Mode — ab sab control kar sakte hain'); }
-      return;
-    }
-    const o = JSON.parse(str);
-    if (!o || !o.id) return;
-    if (o.id === hostId) { hostTs = o.ts || Date.now(); return; }     /* wahi King — sirf heartbeat */
-    hostId = o.id; hostName = o.name || ''; hostTs = o.ts || Date.now();
-    try { renderMembers(); paintKingChip(); } catch (e) {}
-    if (o.id !== myId) { try { addSysMsg('👑 ' + (hostName || 'Koi') + ' ab King hai'); } catch (e) {} }
-    else { kingToast('👑 Aap King hain — room control aap ke paas'); }
-  } catch (e) {}
-}
-let lastHostFix = 0;
-function hostCount() {
-  try { return Object.keys(membersCache).filter(function (k) { return membersCache[k] && (!membersCache[k].ts || Date.now() - membersCache[k].ts <= 45000); }).length; } catch (e) { return 9; }
-}
-function hostPresent() {
-  /* King ka id abhi room ke members me hai? (retained purani entry = ghost -> block nahi karni chahiye) */
-  try {
-    if (!hostId) return true;
-    if (hostId === myId) return true;
-    const keys = Object.keys(membersCache);
-    if (!keys.length) return true;                       /* list abhi khali (slow net) -> faisla na karo */
-    const u = membersCache[hostId];
-    if (!u) return false;                                /* list me hi nahi -> ghost */
-    return (!u.ts || Date.now() - u.ts <= 150000);       /* entry bohat purani -> ghost */
-  } catch (e) { return true; }
-}
-function fixGhostKing() {
-  /* Ghost King mila -> boss taaj le leta hai, warna Open Mode. Throttle: 5s me ek dafa. */
-  const t = Date.now();
-  if (t - lastHostFix < 5000) return;
-  lastHostFix = t;
-  if (isBossCode()) { takeCrown('King ghayab tha', true); return; }
-  const present = Object.keys(membersCache).filter(function (k) { return membersCache[k] && (!membersCache[k].ts || Date.now() - membersCache[k].ts <= 45000); });
-  if (!present.includes(myId)) present.push(myId);
-  present.sort();
-  if (present[0] === myId) openMode('King room me nahi');
-}
-function hostTick() {
-  try {
-    if (!joined || !mqttUp) return;
-    if (isKing()) {
-      const t = Date.now(); hostTs = t;
-      pubHostRaw(JSON.stringify({ id: myId, name: myName, ts: t }));
-      if (kIntent && (t - (kIntent.sent || 0) > 30000)) {      /* 👑 har 30s chup-chaap resync (purane page wale bhi saath aayein) */
-        kIntent.sent = t;
-        const wantT = kIntent.playing ? (kIntent.time + Math.max(0, (t - kIntent.at) / 1000)) : kIntent.time;
-        kIntent.time = wantT; kIntent.at = t;
-        try { pubCmd('sync', { time: wantT, playing: kIntent.playing, kx: 1 }); } catch (e) {}
-      }
-      return;
-    }
-    if (hostId && hostId !== myId && hostId === wpLastHost()) { takeCrown('aap ka purana taaj', true); return; }   /* 👑 mera purana taaj */
-    if (hostId && !hostPresent()) { fixGhostKing(); return; }      /* 👻 purani entry -> foran azadi */
-    if (hostId && (Date.now() - hostTs) > 45000) {
-      /* King 45s se gayab (app band / phone off / net gaya) -> sabse chhota id wala member taaj utaar de
-         (warna room jam ho jata). Ek hi member kare — is liye id ka lowest chunte hain. */
-      const present = Object.keys(membersCache).filter((k) => membersCache[k] && (!membersCache[k].ts || Date.now() - membersCache[k].ts <= 40000));
-      if (!present.includes(myId)) present.push(myId);
-      present.sort();
-      if (present[0] === myId) openMode('King 45s se gayab');
-    }
-  } catch (e) {}
-}
-let lockPausedSince = 0;
-function lockTick() {
-  /* 🆕 Locked member ka player galti se pause ho gaya (taap ke zariye) -> King ke state se wapas sync.
-     Sirf "paused" case theek karta hai (seek/spam nahi) — 5s grace ke baad ek dafa. */
-  try {
-    if (!joined || !hostId || hostId === myId) return;                 /* sirf locked members */
-    if (!stateLocal || !stateLocal.type || stateLocal.type === 'none' || !stateLocal.playing) return;
-    let paused = false;
-    try {
-      paused = (currentType === 'youtube')
-        ? !(ytReady && ytPlayer && ytPlayer.getPlayerState && ytPlayer.getPlayerState() === 1)
-        : !!(mp4 && mp4.paused);
-    } catch (e) { return; }
-    if (!paused) { lockPausedSince = 0; return; }
-    if (!lockPausedSince) { lockPausedSince = Date.now(); return; }
-    if (Date.now() - lockPausedSince < 5000) return;
-    lockPausedSince = 0;
-    iPausedByMe = false;
-    applyState(stateLocal);
-    kingToast('🔒 King 👑 ' + (hostName || '') + ' ke gaane se sync kar diya');
-  } catch (e) {}
-}
-function hostAfterJoin() {
-  /* Party join hone ke baad taaj ka faisla */
-  if (!joined) return;
-  if (hostId && hostId !== myId && hostId === wpLastHost()) { takeCrown('aap ka purana taaj', true); return; }   /* reload -> taaj wapas */
-  if (isBossCode()) { takeCrown('boss', true); return; }          /* 👑 boss ka room — taaj boss ka, reload ke baad bhi */
-  if (!hostId || !hostPresent() || (Date.now() - hostTs) > 45000) takeCrown('pehla member');
-  else { renderMembers(); paintKingChip(); }
-}
-function paintKingChip() {
-  /* 🗑️ Header ka 👑/🔓 chip hata diya (boss: "Azadi wala icon hata do") — King ki pehchan ab
-     sirf members list me 👑 se hoti hai. Agar purane version se chip para ho to wo hata dete hain. */
-  try { var c = document.getElementById('wp-king-chip'); if (c && c.parentNode) c.parentNode.removeChild(c); } catch (e) {}
-}
-
 window.addEventListener('beforeunload', () => {
   try {
     if (joined) publishLeaveNow();
@@ -2354,7 +2112,6 @@ function onMsg(topic, buf) {
     let c; try { c = JSON.parse(str); } catch (e) { return; }
     if (!c || c.from === myId || dup(c.rid)) return;
     applyCmd(c);
-    if (isKing() && !c.kx) kingEnforce();          /* 👑 koi aur control kar raha hai -> King wapas laga dega */
   } else if (topic === TP.state) {
     try { stateLocal = JSON.parse(str); } catch (e) {}
   } else if (topic === TP.queue) {
@@ -2390,7 +2147,6 @@ function onMsg(topic, buf) {
         renderMembers();
       }
       addSysMsg((ev.name || 'Someone') + ' Left 👋'); tuneLeave();
-      if (ev.from === hostId) openMode('King ne room chhoda');
       try { client.publish(ROOM + '/members/' + ev.from, '', { qos: 1, retain: true }); } catch(e){}
       return;
     }
@@ -2418,8 +2174,6 @@ function onMsg(topic, buf) {
         }
       } catch(e) {}
     }
-  } else if (topic === ROOM + '/host') {
-    onHostMsg(str);
   } else if (topic.indexOf(ROOM + '/members/') === 0) {
     const id = topic.slice((ROOM + '/members/').length);
     if (!str) {
@@ -2428,7 +2182,6 @@ function onMsg(topic, buf) {
         delete membersCache[id];
         renderMembers();
         if (id !== myId) { addSysMsg(nm + ' Left 👋'); tuneLeave(); }
-        if (id === hostId) openMode('King ne room chhoda');
       }
     } else {
       try {
@@ -2448,7 +2201,7 @@ function onMsg(topic, buf) {
               }
             });
           } catch(e) {}
-          u.uid = id; membersCache[id] = u; renderMembers();
+          membersCache[id] = u; renderMembers();
         }
       } catch (e) {}
     }
@@ -2607,8 +2360,6 @@ window.wpRoomEnter = function () {
     pub(TP.events, { t: 'join', name: myName, from: myId, mid: mid() }, false);
     joined = true;
     try { renderMembers(); } catch (e1) {}
-    /* 👑 King decide: koi King nahi ya purana 45s se gayab -> taaj lo */
-    setTimeout(() => { try { hostAfterJoin(); } catch (e) {} }, 900);
     try { renderQueue(queueLocal.items || [], queueLocal.index); } catch (e2) {}
   const doCatchup = () => {
     const s = stateLocal;
@@ -2667,17 +2418,6 @@ function saneSeek(t) {
   if (dur > 600 && cur > 120 && t < 30) return false;   // ad ka shor
   return true;
 }
-let roomWant = null;
-function noteWant(c) {
-  try {
-    const t = cmdTime(c), now = Date.now();
-    if (c.action === 'play') roomWant = { playing: true, time: t || 0, at: now };
-    else if (c.action === 'pause') roomWant = { playing: false, time: t || 0, at: now };
-    else if (c.action === 'seek') roomWant = { playing: (roomWant ? roomWant.playing : true), time: t || 0, at: now };
-    else if (c.action === 'load') roomWant = { playing: true, time: 0, at: now };
-    else if (c.action === 'sync') roomWant = { playing: !!c.playing, time: t || 0, at: now };
-  } catch (e) {}
-}
 function applyCmd(c) {
   const t = cmdTime(c);
   if (c.action === 'seek' && !saneSeek(t)) return;
@@ -2688,8 +2428,7 @@ function applyCmd(c) {
   } else if (c.action === 'play') remotePlay(t || 0, !!c.user);
   else if (c.action === 'pause') remotePause(t || 0, !!c.user);
   else if (c.action === 'seek') remoteSeek(t);
-  else if (c.action === 'sync') { remoteSeek(t); if (c.playing) remotePlay(t || 0); else remotePause(t || 0); if (!c.kx) addSysMsg('🔄 ' + c.by + ' ne sab ko sync kiya'); }
-  noteWant(c);
+  else if (c.action === 'sync') { remoteSeek(t); if (c.playing) remotePlay(t || 0); else remotePause(t || 0); addSysMsg('🔄 ' + c.by + ' ne sab ko sync kiya'); }
 }
 function applyState(s) {
   loadVideoLocal(s, false);
@@ -3272,7 +3011,6 @@ updateMiniInfo();
 
 /* ---------- 📋 PLAYLIST / QUEUE ---------- */
 $('queue-btn').onclick = () => {
-  if (hostId && hostId !== myId) { kingToast('🔒 Queue me gaana sirf King 👑 daal sakta hai'); return; }
   const val = urlInput.value.trim();
   if (!val) { alert('Pehle link paste karo! 🔗'); return; }
   const d = parseURL(val);
@@ -3607,7 +3345,9 @@ function addMsg(m) {
   wrap.className = 'msg ' + (own ? 'own' : 'other');
   const senderDiv = document.createElement('div');
   senderDiv.className = 'sender';
-  senderDiv.textContent = own ? 'You' : name;
+  let _crown = false;
+  try { const _mc = (own ? { code: wpMyCodeN() } : mem); _crown = !!(own ? wpIsBossCode(wpMyCodeN()) : (_mc && _mc.code && wpIsBossCode(_mc.code))); } catch (e) {}
+  senderDiv.textContent = (_crown ? '👑 ' : '') + (own ? 'You' : name);
   senderDiv.style.color = own ? '#f9a8d4' : color;
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
@@ -4148,37 +3888,16 @@ function renderMembers() {
     chip.className = 'user-chip';
     chip.style.borderLeftColor = u.color;
     chip.appendChild(avatarEl(u.avatar, u.name, u.color, 20));
-    const nm = document.createElement('span'); nm.textContent = u.name;
-    chip.appendChild(nm);
-    /* 👑 King ka nishan; tap = taaj dena (King) / apna taaj wapas lena (boss, akele, ya King ghayab) */
+    /* 👑 sirf ek nishan — jis member ke DM code me boss ka code ho (WP1-8TQN-YTM9) */
     try {
-      const isK = !!u.uid && u.uid === hostId;
-      const mine = !!u.uid && u.uid === myId;
-      if (isK) {
+      if (u.code && wpIsBossCode(u.code)) {
         const cr = document.createElement('b'); cr.textContent = '👑';
-        cr.style.cssText = 'font-size:13px;margin-left:2px;filter:drop-shadow(0 0 6px rgba(255,215,0,.7))';
+        cr.style.cssText = 'font-size:13px;margin-left:3px;filter:drop-shadow(0 0 7px rgba(255,215,0,.75))';
         chip.appendChild(cr);
       }
-      if (isKing() && u.uid && !mine) {                                  /* 👑➡️ King apni marzi se taaj de */
-        chip.style.cursor = 'pointer'; chip.title = '👑 ' + u.name + ' ko taaj do';
-        chip.onclick = function () {
-          wpAsk({ icon: '👑', title: u.name + ' ko King banao?', sub: 'Ab wo room control karega — play, pause, seek, queue. Wapas lene ke liye apne naam par tap karein.',
-                  ok: '👑 Make King', onOk: function () { giveCrown(u.uid, u.name); } });
-        };
-      } else if (mine && !isKing() && hostId) {                          /* taaj wapas lena (sirf jab jaiz ho) */
-        const canTake = isBossCode() || hostCount() <= 1 || !hostPresent();
-        if (canTake) {
-          chip.style.cursor = 'pointer'; chip.title = '👑 Taaj le lein';
-          chip.onclick = function () {
-            wpAsk({ icon: '👑', title: 'Taaj wapas lein?', sub: 'Abhi King: ' + (hostName || '—') + '. Taaj aap ke paas aa jayega.',
-                    ok: '👑 Make Me King', onOk: function () { takeCrown(isBossCode() ? 'boss' : 'wapas'); } });
-          };
-        }
-      } else if (isK && !isKing()) {
-        chip.style.cursor = 'pointer'; chip.title = 'King';
-        chip.onclick = function () { kingToast('🔒 Control King 👑 ' + (hostName || '') + ' ke paas hai'); };
-      }
     } catch (e) {}
+    const nm = document.createElement('span'); nm.textContent = u.name;
+    chip.appendChild(nm);
     userList.appendChild(chip);
   });
 }
