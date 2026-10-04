@@ -1599,7 +1599,6 @@ body { margin: 0 !important; padding: 0 !important; }
 
 <!-- ===== JOIN SCREEN ===== -->
 <div id="join-screen">
-  <div id="dm-join-btn" title="Messages (DM) — room ke bagair bhi"><span class="ic">💬</span><span class="lb">Messages</span><b id="dm-badge-join"></b></div>
   <div class="join-card">
     <div class="logo"><span class="wp-logo-big"><svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><rect x="2.4" y="8" width="2.7" height="13" rx="1.35" fill="#54e8ff"/><rect x="6.7" y="5" width="2.7" height="16" rx="1.35" fill="#8b72ff"/><rect x="11" y="2.6" width="2.7" height="18.4" rx="1.35" fill="#ff5ebc"/><rect x="15.3" y="6.4" width="2.7" height="14.6" rx="1.35" fill="#8b72ff"/><rect x="19.6" y="9.6" width="2.7" height="11.4" rx="1.35" fill="#54e8ff"/></svg></span></div>
     <h1>Watch Party</h1>
@@ -2332,6 +2331,8 @@ async function join() {
   joined = true;
   joinScreen.classList.add('hidden');
   app.classList.remove('hidden');
+  /* 🆕 join ke baad: neeche bar ON + seedha Chat page (jaisa boss ne kaha) */
+  try { document.body.classList.add('yp-joined'); if (window.ypOnJoined) window.ypOnJoined(); } catch (e) {}
   const shortRoom = myRoom.length > 12 ? myRoom.slice(0, 12) + '\u2026' : myRoom;
   var nbEl = $('my-name-badge');            /* wp-header-clean: header se hata diya hai */
   if (nbEl) nbEl.textContent = '\uD83D\uDE0E ' + myName + ' \u00B7 \uD83D\uDEAA ' + shortRoom;
@@ -5771,7 +5772,7 @@ function renderMembers() {
   })();
 
   function showView(v, noHistory) {
-    ['dm-view-inbox', 'dm-view-add', 'dm-view-chat'].forEach(function (k) {
+    ['dm-view-inbox', 'dm-view-add', 'dm-view-chat', 'dm-view-calls'].forEach(function (k) {
       var e = $(k); if (!e) return;
       e.classList.remove('on'); e.classList.remove('first');
     });
@@ -5789,7 +5790,7 @@ function renderMembers() {
     /* P44: chat view khula hai? -> header ko Insta Vanish look (inbox/add pe purana) */
     var shC = $('dm-sheet'); if (shC) shC.classList.toggle('dm-chat', v === 'dm-view-chat');
     /* P42: pichhle view ka jhuka hua scroll yaad na rahe (warna content khisak jata hai) */
-    ['dm-view-inbox', 'dm-view-add', 'dm-view-chat'].forEach(function (k) {
+    ['dm-view-inbox', 'dm-view-add', 'dm-view-chat', 'dm-view-calls'].forEach(function (k) {
       var e = $(k); if (!e) return; e.scrollLeft = 0; e.scrollTop = 0;
     });
     var sh0 = $('dm-sheet'); if (sh0) { sh0.scrollLeft = 0; sh0.scrollTop = 0; }
@@ -5801,6 +5802,7 @@ function renderMembers() {
     var callb = $('dm-call-btn'); if (callb) callb.style.display = (v === 'dm-view-chat' && curChat && S.friends[curChat]) ? 'grid' : 'none';
     var title = $('dm-bar-title'), sub = $('dm-bar-sub');
     if (v === 'dm-view-add') { title.textContent = '➕ Add Friend'; if(sub){ sub.textContent=''; sub.style.display='none'; } }
+    else if (v === 'dm-view-calls') { title.textContent = '📞 Calls'; if(sub){ sub.textContent=''; sub.style.display='none'; } }
     else if (v === 'dm-view-chat') { setChatBar(); }
     else { title.textContent = '💬 Messages'; if(sub){ sub.textContent=''; sub.style.display='none'; } }
     try { fitSheet(); } catch (e) {}
@@ -6796,6 +6798,135 @@ function renderMembers() {
   }
 
   /* ---------------- expose ---------------- */
+  /* ================= 🆕 3-TAB BAR: Party | Chat | Call ================= */
+  (function ypBarInit() {
+    if (BGMODE) return;                       /* chhupa bg page par bar nahi chahiye */
+    try {
+      var css = ''
+        + '#yp-bar{position:fixed;left:0;right:0;bottom:0;z-index:90;display:none;align-items:stretch;'
+        +   'background:#150c26;border-top:1px solid rgba(255,255,255,.10);'
+        +   'padding:7px 4px calc(9px + env(safe-area-inset-bottom));}'
+        + '#yp-bar .yp-t{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#8f7cb5;'
+        +   'font-size:9.5px;font-weight:750;position:relative;cursor:pointer;padding:3px 2px;}'
+        + '#yp-bar .yp-t .e{font-size:20px;line-height:1.1;filter:grayscale(.4) opacity(.8);}'
+        + '#yp-bar .yp-t.on{color:#fff;}'
+        + '#yp-bar .yp-t.on .e{filter:none;}'
+        + '#yp-bar .yp-t.on::before{content:"";position:absolute;top:-8px;width:28px;height:3px;border-radius:99px;'
+        +   'background:linear-gradient(90deg,#a855f7,#ec4899);}'
+        + '#yp-bar .yp-t b{position:absolute;top:-2px;right:calc(50% - 20px);min-width:18px;height:18px;line-height:18px;'
+        +   'padding:0 5px;border-radius:99px;background:#ec4899;color:#fff;font-size:10px;font-weight:800;display:none;text-align:center;}'
+        + '#yp-bar .yp-t b.on{display:block;}'
+        + 'body.yp-joined #app{height:calc(100vh - 58px);}'
+        + 'body.yp-joined #dm-view-inbox .dm-list{padding-bottom:70px;}'
+        + '#yp-calls .yp-crow{display:flex;align-items:center;gap:10px;padding:10px 6px;cursor:pointer;'
+        +   'border-bottom:1px solid rgba(255,255,255,.055);}'
+        + '#yp-calls .yp-av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;'
+        +   'background:linear-gradient(160deg,#4ade80,#16a34a);color:#08240f;font-weight:800;font-size:15px;}'
+        + '#yp-calls .yp-in{flex:1 1 auto;min-width:0;}'
+        + '#yp-calls .yp-in b{font-size:13px;display:block;}'
+        + '#yp-calls .yp-in s{text-decoration:none;font-size:11px;color:#a291c6;display:block;margin-top:2px;'
+        +   'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
+        + '#yp-calls .yp-tt{font-size:10px;color:#8b78b3;flex:0 0 auto;}'
+        + '#yp-calls .yp-cb{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;'
+        +   'background:linear-gradient(135deg,#22c55e,#10b981);font-size:15px;}'
+        + '#yp-calls .yp-empty{padding:26px 12px;text-align:center;color:#8f7cb5;font-size:12px;line-height:1.7;}';
+      var st = document.createElement('style'); st.id = 'yp-bar-css'; st.textContent = css;
+      document.head.appendChild(st);
+
+      var bar = document.createElement('div');
+      bar.id = 'yp-bar';
+      bar.innerHTML = '<div class="yp-t" data-yp="party"><span class="e">🎬</span><span class="l">Party</span></div>'
+                    + '<div class="yp-t on" data-yp="chat"><span class="e">💬</span><span class="l">Chat</span><b id="yp-badge"></b></div>'
+                    + '<div class="yp-t" data-yp="call"><span class="e">📞</span><span class="l">Call</span></div>';
+      document.body.appendChild(bar);
+
+      var sheet = $('dm-sheet');
+      if (sheet && !$('dm-view-calls')) {
+        var cv = document.createElement('div');
+        cv.className = 'dm-view'; cv.id = 'dm-view-calls';
+        cv.innerHTML = '<div class="dm-list" id="yp-calls"></div>';
+        sheet.appendChild(cv);
+      }
+
+      function ypRenderCalls() {
+        var w = $('yp-calls'); if (!w) return;
+        var rows = [];
+        Object.keys(S.chats || {}).forEach(function (c) {
+          var arr = S.chats[c] || [], last = null;
+          for (var i = arr.length - 1; i >= 0; i--) { var m = arr[i]; if (m && m.t === 'call') { last = m; break; } }
+          if (last) rows.push({ c: c, m: last });
+        });
+        rows.sort(function (a, b) { return (b.m.ts || 0) - (a.m.ts || 0); });
+        if (!rows.length) {
+          w.innerHTML = '<div class="yp-empty">📞 Abhi koi call nahi hui<br><small style="opacity:.75">Chat khol kar 📞 dabao — call ki history yahan aayegi</small></div>';
+          return;
+        }
+        w.innerHTML = rows.map(function (r) {
+          var nm = ''; try { nm = peerName(r.c); } catch (e) { nm = r.c; }
+          var txt = ''; try { txt = String(r.m.x || '📞 Call'); } catch (e) {}
+          var tt = ''; try { tt = timeShort(r.m.ts); } catch (e) {}
+          return '<div class="yp-crow" data-c="' + r.c + '">'
+               +   '<div class="yp-av">' + esc((nm || '?').slice(0, 1).toUpperCase()) + '</div>'
+               +   '<div class="yp-in"><b>' + esc(nm) + '</b><s>' + esc(txt.slice(0, 60)) + '</s></div>'
+               +   '<span class="yp-tt">' + esc(tt) + '</span>'
+               +   '<span class="yp-cb">📞</span></div>';
+        }).join('');
+        Array.prototype.forEach.call(w.querySelectorAll('.yp-crow'), function (rowEl) {
+          rowEl.onclick = function () { try { openChat(rowEl.getAttribute('data-c')); } catch (e) { } ypSync(); };
+          var cb = rowEl.querySelector('.yp-cb');
+          if (cb) cb.onclick = function (ev) {
+            if (ev && ev.stopPropagation) ev.stopPropagation();
+            try { openChat(rowEl.getAttribute('data-c')); } catch (e) { }
+            try { startVoiceCall(); } catch (e) { }
+            ypSync();
+          };
+        });
+      }
+
+      function ypTabOf(el) {
+        while (el) { if (el.getAttribute && el.getAttribute('data-yp')) return el.getAttribute('data-yp'); el = el.parentNode; }
+        return null;
+      }
+      function ypSync() {
+        try {
+          var joined = document.body.classList.contains('yp-joined');
+          var sh = $('dm-sheet'), cvw = $('dm-view-chat'), clw = $('dm-view-calls');
+          var sheetOn = !!(sh && sh.classList.contains('on'));
+          var chatView = !!(cvw && cvw.classList.contains('on'));
+          var callsView = !!(clw && clw.classList.contains('on'));
+          var show = joined && !(sheetOn && chatView);       /* apni chat ke andar bar nahi */
+          bar.style.display = show ? 'flex' : 'none';
+          var want = callsView ? 'call' : (sheetOn ? 'chat' : 'party');
+          Array.prototype.forEach.call(bar.children, function (el) {
+            var k = el.getAttribute('data-yp');
+            el.classList.toggle('on', k === want);
+          });
+          var bd = $('yp-badge');
+          if (bd) {
+            var n = 0; try { n = unreadTotal(); } catch (e) {}
+            bd.textContent = n > 9 ? '9+' : String(n);
+            bd.classList.toggle('on', n > 0);
+          }
+        } catch (e) {}
+      }
+      bar.onclick = function (ev) {
+        var k = ypTabOf(ev && ev.target); if (!k) return;
+        try {
+          if (k === 'party') { closeSheet(); }
+          else if (k === 'chat') { openSheet(); showView('dm-view-inbox'); }
+          else { openSheet(); showView('dm-view-calls'); ypRenderCalls(); }
+        } catch (e) {}
+        ypSync();
+      };
+      window.ypOnJoined = function () {
+        try { openSheet(); showView('dm-view-inbox'); } catch (e) {}
+        ypSync();
+      };
+      setInterval(ypSync, 500);
+      ypSync();
+    } catch (e) {}
+  })();
+
   window.DM = {
     onConnect: onConnect,
     onMessage: onDmMessage,
