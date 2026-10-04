@@ -2043,18 +2043,9 @@ function pubState(s) {
   pub(TP.state, o, true);
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
-function wpMyCodeN() {
-  /* apna DM code (badge ke liye) — DM block se ya localStorage se */
-  function nz(c) { c = String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if (c.indexOf('WP1') === 0) c = c.slice(3); return c.slice(0, 8); }
-  try { if (window.DM && window.DM.code) { var c0 = window.DM.code(); if (c0) return nz(c0); } } catch (e) {}
-  try { var raw = localStorage.getItem('wp_dm_v1'); if (raw) { var o = JSON.parse(raw); if (o && o.code) return nz(o.code); } } catch (e) {}
-  return '';
-}
-function wpIsBossCode(c) { try { return !!c && ('' + wpMyCodeN.clean(c)) === ('' + wpMyCodeN.clean('WP1-8TQN-YTM9')); } catch (e) { return false; } }
-wpMyCodeN.clean = function (c) { c = String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if (c.indexOf('WP1') === 0) c = c.slice(3); return c.slice(0, 8); };
 function publishPresence() {
   if (isBg()) return;                    /* v39: chhupi bg service khud ko online dikhaye hi na */
-  pub(ROOM + '/members/' + myId, { name: myName, color: myColor, avatar: myAvatar, ts: Date.now(), code: wpMyCodeN() }, true);
+  pub(ROOM + '/members/' + myId, { name: myName, color: myColor, avatar: myAvatar, ts: Date.now() }, true);
 }
 setInterval(() => { if (joined && mqttUp) publishPresence(); }, 15000);
 setInterval(() => {
@@ -3345,9 +3336,7 @@ function addMsg(m) {
   wrap.className = 'msg ' + (own ? 'own' : 'other');
   const senderDiv = document.createElement('div');
   senderDiv.className = 'sender';
-  let _crown = false;
-  try { const _mc = (own ? { code: wpMyCodeN() } : mem); _crown = !!(own ? wpIsBossCode(wpMyCodeN()) : (_mc && _mc.code && wpIsBossCode(_mc.code))); } catch (e) {}
-  senderDiv.textContent = (_crown ? '👑 ' : '') + (own ? 'You' : name);
+  senderDiv.textContent = own ? 'You' : name;
   senderDiv.style.color = own ? '#f9a8d4' : color;
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
@@ -3888,14 +3877,6 @@ function renderMembers() {
     chip.className = 'user-chip';
     chip.style.borderLeftColor = u.color;
     chip.appendChild(avatarEl(u.avatar, u.name, u.color, 20));
-    /* 👑 sirf ek nishan — jis member ke DM code me boss ka code ho (WP1-8TQN-YTM9) */
-    try {
-      if (u.code && wpIsBossCode(u.code)) {
-        const cr = document.createElement('b'); cr.textContent = '👑';
-        cr.style.cssText = 'font-size:13px;margin-left:3px;filter:drop-shadow(0 0 7px rgba(255,215,0,.75))';
-        chip.appendChild(cr);
-      }
-    } catch (e) {}
     const nm = document.createElement('span'); nm.textContent = u.name;
     chip.appendChild(nm);
     userList.appendChild(chip);
