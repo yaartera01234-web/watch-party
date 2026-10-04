@@ -2034,7 +2034,10 @@ function pub(topic, obj, retain) {
   try { client.publish(topic, JSON.stringify(obj), { qos: 1, retain: !!retain }); } catch (e) {}
 }
 function pubCmd(action, extra) {
-  if (hostId && hostId !== myId) { kingToast('🔒 Control King 👑 ' + (hostName || '') + ' ke paas hai'); return; }   /* 👑 King mode */
+  if (hostId && hostId !== myId) {                           /* 👑 King mode */
+    if (!hostPresent()) fixGhostKing();                      /* 👻 ghost kabhi block na kare */
+    else { kingToast('🔒 Control King 👑 ' + (hostName || '') + ' ke paas hai'); return; }
+  }
   const o = Object.assign({ action: action, from: myId, by: myName, rid: mid() }, extra || {});
   pub(TP.cmd, o, false);
 }
@@ -2043,7 +2046,17 @@ function pubState(s) {
   stateLocal = o;
   pub(TP.state, o, true);
 }
-function pubQueue() { pub(TP.queue, queueLocal, true); }
+let lastQToast = 0;
+function pubQueue() {
+  if (hostId && hostId !== myId) {
+    if (!hostPresent()) { fixGhostKing(); }
+    else {
+      if (Date.now() - lastQToast > 8000) { lastQToast = Date.now(); kingToast('🔒 Queue King 👑 ' + (hostName || '') + ' ke paas hai'); }
+      return;
+    }
+  }
+  pub(TP.queue, queueLocal, true);
+}
 function publishPresence() {
   if (isBg()) return;                    /* v39: chhupi bg service khud ko online dikhaye hi na */
   pub(ROOM + '/members/' + myId, { name: myName, color: myColor, avatar: myAvatar, ts: Date.now() }, true);
@@ -2108,21 +2121,23 @@ function setHost(id, name, ts) {
   hostId = id || ''; hostName = name || ''; hostTs = ts || (id ? Date.now() : 0);
   try { renderMembers(); } catch (e) {} try { paintKingChip(); } catch (e) {}
 }
+function wpLastHost() { try { return localStorage.getItem('wp_last_host') || ''; } catch (e) { return ''; } }
+function wpSetLastHost(id) { try { if (id) localStorage.setItem('wp_last_host', id); else localStorage.removeItem('wp_last_host'); } catch (e) {} }
 function takeCrown(why, quiet) {
   const wasSame = (hostName || '') === (myName || '');            /* wahi shakhs dobara taaj le raha hai? */
-  const t = Date.now(); setHost(myId, myName, t);
+  const t = Date.now(); setHost(myId, myName, t); wpSetLastHost(myId);
   pubHostRaw(JSON.stringify({ id: myId, name: myName, ts: t }));
   if (!quiet && !wasSame) { try { addSysMsg('👑 ' + myName + ' King hai' + (why ? ' (' + why + ')' : '')); tuneJoin(); } catch (e) {} }
   kingToast('👑 Aap King hain — room control aap ke paas');
 }
 function giveCrown(id, name) {
-  const t = Date.now(); setHost(id, name, t);
+  const t = Date.now(); setHost(id, name, t); wpSetLastHost('');
   pubHostRaw(JSON.stringify({ id: id, name: name, ts: t }));
   try { addSysMsg('👑 ' + (name || 'Koi') + ' ab King hai'); tuneJoin(); } catch (e) {}
 }
 function openMode(why) {
   if (!hostId) return;
-  setHost('', '', 0); pubHostRaw('');
+  setHost('', '', 0); wpSetLastHost(''); pubHostRaw('');
   try { addSysMsg('🔓 Open Mode — ab sab control kar sakte hain' + (why ? ' (' + why + ')' : '')); } catch (e) {}
   kingToast('🔓 Open Mode — sab control kar sakte hain');
 }
@@ -2141,10 +2156,39 @@ function onHostMsg(str) {
     else { kingToast('👑 Aap King hain — room control aap ke paas'); }
   } catch (e) {}
 }
+let lastHostFix = 0;
+function hostCount() {
+  try { return Object.keys(membersCache).filter(function (k) { return membersCache[k] && (!membersCache[k].ts || Date.now() - membersCache[k].ts <= 45000); }).length; } catch (e) { return 9; }
+}
+function hostPresent() {
+  /* King ka id abhi room ke members me hai? (retained purani entry = ghost -> block nahi karni chahiye) */
+  try {
+    if (!hostId) return true;
+    if (hostId === myId) return true;
+    const keys = Object.keys(membersCache);
+    if (!keys.length) return true;                       /* list abhi khali (slow net) -> faisla na karo */
+    const u = membersCache[hostId];
+    if (!u) return false;                                /* list me hi nahi -> ghost */
+    return (!u.ts || Date.now() - u.ts <= 150000);       /* entry bohat purani -> ghost */
+  } catch (e) { return true; }
+}
+function fixGhostKing() {
+  /* Ghost King mila -> boss taaj le leta hai, warna Open Mode. Throttle: 5s me ek dafa. */
+  const t = Date.now();
+  if (t - lastHostFix < 5000) return;
+  lastHostFix = t;
+  if (isBossCode()) { takeCrown('King ghayab tha', true); return; }
+  const present = Object.keys(membersCache).filter(function (k) { return membersCache[k] && (!membersCache[k].ts || Date.now() - membersCache[k].ts <= 45000); });
+  if (!present.includes(myId)) present.push(myId);
+  present.sort();
+  if (present[0] === myId) openMode('King room me nahi');
+}
 function hostTick() {
   try {
     if (!joined || !mqttUp) return;
     if (isKing()) { const t = Date.now(); hostTs = t; pubHostRaw(JSON.stringify({ id: myId, name: myName, ts: t })); return; }
+    if (hostId && hostId !== myId && hostId === wpLastHost()) { takeCrown('aap ka purana taaj', true); return; }   /* 👑 mera purana taaj */
+    if (hostId && !hostPresent()) { fixGhostKing(); return; }      /* 👻 purani entry -> foran azadi */
     if (hostId && (Date.now() - hostTs) > 45000) {
       /* King 45s se gayab (app band / phone off / net gaya) -> sabse chhota id wala member taaj utaar de
          (warna room jam ho jata). Ek hi member kare — is liye id ka lowest chunte hain. */
@@ -2180,37 +2224,17 @@ function lockTick() {
 function hostAfterJoin() {
   /* Party join hone ke baad taaj ka faisla */
   if (!joined) return;
+  if (hostId && hostId !== myId && hostId === wpLastHost()) { takeCrown('aap ka purana taaj', true); return; }   /* reload -> taaj wapas */
   if (isBossCode()) { takeCrown('boss', true); return; }          /* 👑 boss ka room — taaj boss ka, reload ke baad bhi */
-  if (!hostId || (Date.now() - hostTs) > 45000) takeCrown('pehla member');
+  if (!hostId || !hostPresent() || (Date.now() - hostTs) > 45000) takeCrown('pehla member');
   else { renderMembers(); paintKingChip(); }
 }
 function paintKingChip() {
-  try {
-    let c = document.getElementById('wp-king-chip');
-    if (!c) {
-      const bar = document.querySelector('header') || document.querySelector('.wp-top') || document.body;
-      c = document.createElement('span'); c.id = 'wp-king-chip';
-      c.style.cssText = 'margin-left:8px;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.42);color:#ffe066;white-space:nowrap;cursor:pointer;display:inline-block;vertical-align:middle';
-      bar.appendChild(c);
-    }
-    const hn = (hostName || 'King'); const shortHn = hn.length > 10 ? hn.slice(0, 9) + '…' : hn;
-    c.textContent = isKing() ? '👑 King' : (hostId ? '👑 ' + shortHn : '🔓 Open');
-    c.style.maxWidth = '116px'; c.style.overflow = 'hidden'; c.style.textOverflow = 'ellipsis';
-    c.title = (isBossCode() && !isKing()) ? 'Taaj le lein' : 'King / Open Mode';
-    c.onclick = function () {
-      if (isKing()) {
-        if (confirm('🔓 Sab ko azadi dein? (Open Mode — sab control kar sakte hain)')) openMode('King ne azadi di');
-        return;
-      }
-      const present = Object.keys(membersCache).filter(function (k) { return membersCache[k] && (!membersCache[k].ts || Date.now() - membersCache[k].ts <= 40000); });
-      const alone = present.length <= 1;                      /* room me sirf main — taaj se lockout na ho */
-      if (hostId) {
-        if (isBossCode() || alone) { if (confirm('👑 Taaj le lein? (' + (hostName || 'King') + ' se)')) takeCrown(isBossCode() ? 'boss ne taaj liya' : 'akele hain'); }
-        else kingToast('🔒 Control King 👑 ' + (hostName || '') + ' ke paas hai');
-      } else { if (confirm('👑 Aap King ban jayein?')) takeCrown('khud aage aaye'); }
-    };
-  } catch (e) {}
+  /* 🗑️ Header ka 👑/🔓 chip hata diya (boss: "Azadi wala icon hata do") — King ki pehchan ab
+     sirf members list me 👑 se hoti hai. Agar purane version se chip para ho to wo hata dete hain. */
+  try { var c = document.getElementById('wp-king-chip'); if (c && c.parentNode) c.parentNode.removeChild(c); } catch (e) {}
 }
+
 window.addEventListener('beforeunload', () => {
   try {
     if (joined) publishLeaveNow();
@@ -4023,20 +4047,30 @@ function renderMembers() {
     chip.appendChild(avatarEl(u.avatar, u.name, u.color, 20));
     const nm = document.createElement('span'); nm.textContent = u.name;
     chip.appendChild(nm);
-    /* 👑 King ka nishan + (King ho to) tap se taaj dena */
+    /* 👑 King ka nishan; tap = taaj dena (King) / apna taaj wapas lena (boss, akele, ya King ghayab) */
     try {
       const isK = !!u.uid && u.uid === hostId;
+      const mine = !!u.uid && u.uid === myId;
       if (isK) {
         const cr = document.createElement('b'); cr.textContent = '👑';
         cr.style.cssText = 'font-size:13px;margin-left:2px;filter:drop-shadow(0 0 6px rgba(255,215,0,.7))';
         chip.appendChild(cr);
       }
-      if ((isKing() || isBossCode()) && u.uid && u.uid !== myId) {
+      if (isKing() && u.uid && !mine) {                                  /* 👑➡️ King apni marzi se taaj de */
         chip.style.cursor = 'pointer'; chip.title = '👑 ' + u.name + ' ko taaj do';
         chip.onclick = function () {
           if (!confirm('👑 ' + u.name + ' ko taaj do? (wo room control karega)')) return;
           giveCrown(u.uid, u.name);
         };
+      } else if (mine && !isKing() && hostId) {                          /* taaj wapas lena (sirf jab jaiz ho) */
+        const canTake = isBossCode() || hostCount() <= 1 || !hostPresent();
+        if (canTake) {
+          chip.style.cursor = 'pointer'; chip.title = '👑 Taaj le lein';
+          chip.onclick = function () {
+            if (!confirm('👑 Taaj le lein? (' + (hostName || 'King') + ')')) return;
+            takeCrown(isBossCode() ? 'boss' : 'wapas');
+          };
+        }
       } else if (isK && !isKing()) {
         chip.style.cursor = 'pointer'; chip.title = 'King';
         chip.onclick = function () { kingToast('🔒 Control King 👑 ' + (hostName || '') + ' ke paas hai'); };
