@@ -4465,6 +4465,8 @@ function renderMembers() {
   var DKEY = 'wp_dm_v1';
   var SALT = 'YaarParty786-dm-v1';
   var MAX_MSGS = 500;
+  /* 🆕 PAGE VER: presence ke sath dost ko bhi jata hai — pata chale uska page purana hai ya nahi */
+  var PAGE_VER = '0410b';
   var ALPHA = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';   /* confusing chars (0/O/1/I) hata diye */
 
   function $(id) { return document.getElementById(id); }
@@ -5466,6 +5468,7 @@ function renderMembers() {
     try {
       var p = JSON.parse(str);
       S.friends[peer].ts = p.ts || 0;
+      if (p.pv) S.friends[peer].pv = String(p.pv);   /* 🆕 dost ke page ka version */
       var nm = p.n && String(p.n).trim();
       if (nm && !isCodeName(nm, peer) && isCodeName(S.friends[peer].name, peer)) {
         S.friends[peer].name = nm.slice(0, 20);
@@ -5507,6 +5510,30 @@ function renderMembers() {
     dmReadPend[peer] = { ts: mx, force: !!force };
     if (dmReadTimer) return;
     dmReadTimer = setTimeout(dmSendReadFlush, 250);
+  }
+  /* 🆕 BG receipt relay: samne wala page jab chat parhta hai to "parha hua" (lrt) shared store me likhta
+     hai. Us page ke receipts thake hue/late ho sakte hain — is liye ye chhupa (bg) page khud receipt
+     bhej deta hai. Isi se "dost ne sirf dekha" wale message ka tick bhi neela hota hai. */
+  var dmRelayMark = {};
+  function bgRelayReceipts() {
+    try {
+      if (!BGMODE || !connected()) return;
+      var raw = localStorage.getItem(DKEY); if (!raw) return;
+      var d = JSON.parse(raw) || {}, fm = d.friends || {}, ch = d.chats || {};
+      Object.keys(fm).forEach(function (c) {
+        var lrt = (fm[c] && fm[c].lrt) || 0; if (!lrt) return;
+        if ((dmRelayMark[c] || 0) >= lrt) return;      /* is parhai par pehle hi bhej chuke */
+        dmRelayMark[c] = lrt;
+        var mx = 0, arr = ch[c] || [];
+        for (var i = 0; i < arr.length; i++) {
+          var m = arr[i]; if (!m || m.d !== 'in' || m.t === 'call') continue;
+          var t = m.ts || 0; if (t > mx && t <= lrt) mx = t;
+        }
+        if (!mx || mx <= (dmReadSent[c] || 0)) return;
+        dmReadSent[c] = mx;
+        try { mc().publish(NSP + 'rcpt-' + h36(normCode(S.code)), JSON.stringify({ p: c, ts: mx, at: nowMs() }), { qos: 1, retain: true }); } catch (e) {}
+      });
+    } catch (e) {}
   }
   /* 🆕 dost ne jawab diya ya reaction di = usne tumhara message DEKHA -> tumhare outgoing par neela tick,
      chahe uska receipt gum ho gaya ho (ghari ka andaza nahi lagta, sirf apne msg ka ts use hota hai) */
@@ -5606,7 +5633,7 @@ function renderMembers() {
     try {
       var vis = !document.hidden;                                   /* app saamne hai? */
       var tsv = vis ? nowMs() : (nowMs() - 100000);                 /* peeche gaya -> ~50s me Offline dikhe */
-      mc().publish(myPresenceTopic(), JSON.stringify({ ts: tsv, n: myLabel(), fg: vis ? 1 : 0 }), { qos: 1, retain: true });
+      mc().publish(myPresenceTopic(), JSON.stringify({ ts: tsv, n: myLabel(), fg: vis ? 1 : 0, pv: PAGE_VER }), { qos: 1, retain: true });
     } catch (e) {}
   }
   function onConnect(c) { if (c) clientRef = c; subscribed = false; subscribeDm(); pubPresence(); }
@@ -5624,6 +5651,7 @@ function renderMembers() {
     };
     try { if (window.YaarNative && window.YaarNative.bgReady) window.YaarNative.bgReady(); } catch (e) {}
     bgBeat(); setInterval(bgBeat, 60000);
+    try { setInterval(bgRelayReceipts, 6000); } catch (e) {}   /* 🆕 sirf-dekha receipt relay */
   }
 
   /* ---------------- views ---------------- */
@@ -5699,7 +5727,10 @@ function renderMembers() {
     if (sub) {
       sub.style.display='block';
       var on = dmIsOnline(curChat);
-      sub.innerHTML = '<span class="dot4' + (on ? ' on' : '') + '"></span>' + (on ? 'Online' : 'Offline') + ' · 🔒 E2E';
+      /* 🆕 dost online hai magar uske page par naya code nahi -> usay app band kar ke kholna hoga */
+      var _fpv = S.friends[curChat] && S.friends[curChat].pv;
+      var _pvw = (on && (!_fpv || String(_fpv) !== PAGE_VER)) ? ' · <span style="opacity:.7">⚠️ dost ka app purana</span>' : '';
+      sub.innerHTML = '<span class="dot4' + (on ? ' on' : '') + '"></span>' + (on ? 'Online' : 'Offline') + ' · 🔒 E2E' + _pvw;
     }
   }
   function showTyping(nm) {
