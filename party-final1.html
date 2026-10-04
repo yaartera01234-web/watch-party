@@ -671,6 +671,8 @@ body.pc-mini-on .sync-row { display: none !important; }
   transform: translateX(105%); transition: transform .32s cubic-bezier(0.32, 0.72, 0, 1);
 }
 #dm-sheet.on { transform: none; }
+/* 🆕 boss: join karte hi SEEDHA chat page — party page ka jhatka / slide nahi (sirf boot ke 2 frame) */
+body.yp-nofx #dm-sheet, body.yp-nofx #dm-ov, body.yp-nofx .dm-ov { transition: none !important; }
 #dm-sheet::before {
   content: ''; position: absolute; inset: 0; pointer-events: none;
   background: radial-gradient(circle at 20% 20%, rgba(139,114,255,0.08), transparent 40%),
@@ -2045,7 +2047,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-04-12';
+const WP_BUILD = '2026-10-04-13';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -2455,10 +2457,18 @@ async function join() {
   /* 🆕 PARTY JOIN AB AUTOMATIC NAHI (boss: "jab tak Party icon pe tap na karein, udher join nahi hona chahiye")
      Yahan sirf app khulti hai; subscribe chup-chaap chalta rehta hai. Asli join — presence + 'Joined Party'
      event + video sync (catch-up) — neeche window.wpRoomEnter() me hai, jo bar ke PARTY icon se chalta hai. */
+  /* 🆕 boss fix: join karte hi SEEDHA chat page — party page ek frame bhi na dikhe.
+     Sheet ka slide/boot animation band karke usi paint me chat laga dete hain, phir 2 frame baad wapis normal. */
+  try { document.body.classList.add('yp-nofx'); } catch (e) {}
   joinScreen.classList.add('hidden');
   app.classList.remove('hidden');
   /* 🆕 join ke baad: neeche bar ON + seedha Chat page (jaisa boss ne kaha) */
   try { document.body.classList.add('yp-joined'); if (window.ypOnJoined) window.ypOnJoined(); } catch (e) {}
+  try { if (window.ypSnapBarNow) window.ypSnapBarNow(); } catch (e) {}
+  try {
+    requestAnimationFrame(function () { requestAnimationFrame(function () { try { document.body.classList.remove('yp-nofx'); } catch (e) {} }); });
+    setTimeout(function () { try { document.body.classList.remove('yp-nofx'); } catch (e) {} }, 230);
+  } catch (e) { try { document.body.classList.remove('yp-nofx'); } catch (e2) {} }
   const shortRoom = myRoom.length > 12 ? myRoom.slice(0, 12) + '\u2026' : myRoom;
   var nbEl = $('my-name-badge');            /* wp-header-clean: header se hata diya hai */
   if (nbEl) nbEl.textContent = '\uD83D\uDE0E ' + myName + ' \u00B7 \uD83D\uDEAA ' + shortRoom;
@@ -7212,6 +7222,7 @@ function renderMembers() {
         try { if (window.wpRoomJoined && !window.wpRoomJoined()) toast('🚪 Party me jaane ke liye neeche "Party" dabao'); } catch (e) {}
         ypSync();
       };
+      window.ypSnapBarNow = ypSync;                       /* 🆕 join par bar foran apni jagah (500ms wait nahi) */
       window.ypCallRefresh = ypRenderCalls;
       setInterval(ypSync, 500);
       ypSync();
