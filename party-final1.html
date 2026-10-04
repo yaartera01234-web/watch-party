@@ -5097,7 +5097,8 @@ function renderMembers() {
     if (dmCall) { toast('📞 Pehle wali call khatam karo'); return; }
     if (!connected()) { toast('📡 Connection nahi — call nahi lag saki'); return; }
     var ctx = { id: mid(), peer: peer, role: 'caller', state: 'calling', muted: false, speaker: false, startedAt: 0 };
-    dmCall = ctx; callRender(); callStartRing();   /* 🆕 caller ko ringback sunai de */
+    try { callNativeRoute(false); } catch (e) {}   /* 🆕 ringback kaan wale (earpiece) speaker me sunai de — loudspeaker nahi */
+    dmCall = ctx; callRender(); callStartRing();
     callTimeout(ctx, 30000, function () { callSend(peer, ctx.id, 'cancel'); callFinish(false); toast('⏱ Jawab nahi aaya'); });
     if (!await callSend(peer, ctx.id, 'invite', { name: myLabel() })) {
       callFinish(false); toast('📡 Call invite nahi bheji ja saki');
@@ -5215,6 +5216,7 @@ function renderMembers() {
         mc().publish(topic, JSON.stringify(out), { qos: 1, retain: true });
       }
     } catch (err) { if (!waitAck) toast('📡 bheja nahi ja saka'); return false; }
+    try { dmSendRead(peer); } catch (e) {}
     S.seen[midv] = 1;
     appendMsg(peer, { d: 'out', t: payload.t, x: payload.x, mid: midv, ts: nowMs(), u: payload.u, dv: payload.dv, dur: payload.dur, rq: payload.rq || null, rx: payload.rx || '' });
     save(); renderAll();
@@ -5231,6 +5233,8 @@ function renderMembers() {
         ok = await sendMsg(code, { t: 'text', x: value.slice(0, 500) }, false, true);
       }
     } catch (e) { ok = false; }
+    /* 🆕 notification se reply kiya = tumne parh liya -> tick neela karo */
+    if (ok) { try { markRead(normCode(codeRaw || '')); } catch (e2) {} }
     if (requestId) {
       try { if (window.YaarNative && typeof window.YaarNative.replyResult === 'function') window.YaarNative.replyResult(String(requestId), !!ok); } catch (e) {}
     }
@@ -5413,23 +5417,29 @@ function renderMembers() {
 
   /* 🆕 READ RECEIPT: parh liya -> dost ke paas neela tick ✓✓ */
   var dmReadSent = {}, dmReadPend = {}, dmReadTimer = null;
-  function dmSendRead(peer) {
+  function dmSendRead(peer, force) {
     peer = normCode(peer); if (!peer) return;
     var arr = S.chats[peer] || [], mx = 0;
-    for (var i = 0; i < arr.length; i++) { var mm = arr[i]; if (mm && mm.d === 'in' && (mm.ts || 0) > mx) mx = mm.ts || 0; }
-    if (!mx || mx <= (dmReadSent[peer] || 0)) return;
-    dmReadPend[peer] = mx;
+    for (var i = 0; i < arr.length; i++) {
+      var mm = arr[i];
+      /* call-log local hai (apni ghari ka ts) — usay chhoro, warna galat ts chala jayega */
+      if (mm && mm.d === 'in' && mm.t !== 'call' && (mm.ts || 0) > mx) mx = mm.ts || 0;
+    }
+    if (!mx) return;
+    if (!force && mx <= (dmReadSent[peer] || 0)) return;
+    dmReadPend[peer] = { ts: mx, force: !!force };
     if (dmReadTimer) return;
     dmReadTimer = setTimeout(function () {
       dmReadTimer = null;
       if (!connected()) { dmReadPend = {}; return; }
       Object.keys(dmReadPend).forEach(function (pc) {
-        var v = dmReadPend[pc]; delete dmReadPend[pc];
-        if (v <= (dmReadSent[pc] || 0)) return;
-        dmReadSent[pc] = v;
-        try { mc().publish(NSP + 'rcpt-' + h36(normCode(S.code)), JSON.stringify({ p: pc, ts: v, at: nowMs() }), { qos: 1, retain: true }); } catch (e) {}
+        var p0 = dmReadPend[pc]; delete dmReadPend[pc];
+        if (!p0 || !p0.ts) return;
+        if (!p0.force && p0.ts <= (dmReadSent[pc] || 0)) return;
+        dmReadSent[pc] = Math.max(dmReadSent[pc] || 0, p0.ts);
+        try { mc().publish(NSP + 'rcpt-' + h36(normCode(S.code)), JSON.stringify({ p: pc, ts: p0.ts, at: nowMs() }), { qos: 1, retain: true }); } catch (e) {}
       });
-    }, 900);
+    }, 250);
   }
   function onRcpt(topic, str) {
     if (!str) return;
@@ -5521,8 +5531,10 @@ function renderMembers() {
   function onConnect(c) { if (c) clientRef = c; subscribed = false; subscribeDm(); pubPresence(); }
   setInterval(function () { if (connected()) { if (!subscribed) subscribeDm(); pubPresence(); } }, 45000);
   /* v39: app saamne aayi / peeche gayi -> foran online/offline signal (45s intezar nahi) */
-  try { document.addEventListener('visibilitychange', function () { if (connected()) pubPresence(); }); } catch (e) {}
-  try { window.addEventListener('pageshow', function () { if (connected()) pubPresence(); }); } catch (e) {}
+  try { document.addEventListener('visibilitychange', function () { if (connected()) { pubPresence(); if (!document.hidden && curChat && sheetOpen()) { try { dmSendRead(curChat, true); } catch (e2) {} } } }); } catch (e) {}
+  try { window.addEventListener('pageshow', function () { if (connected()) { pubPresence(); if (curChat && sheetOpen()) { try { dmSendRead(curChat, true); } catch (e2) {} } } }); } catch (e) {}
+  /* 🆕 tick bharosemand: chat khuli ho to har 12s receipt dobara (chaho to gum ho jaye, phir bhi pahunche) */
+  setInterval(function () { try { if (curChat && sheetOpen() && connected()) dmSendRead(curChat, true); } catch (e) {} }, 12000);
 
   /* v28: background mode — native service ko batao ke hum zinda hain */
   if (BGMODE) {
