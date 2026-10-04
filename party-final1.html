@@ -4711,6 +4711,10 @@ function renderMembers() {
       try { if (ev && ev.key && ev.key !== DKEY) return; if (!document.hidden) mergeStore(); } catch (e) {}
     });
     document.addEventListener('visibilitychange', function () { if (!document.hidden) mergeStore(); });
+    /* 🆕 har 5s halka merge: bg WebView ne jo parhai (lrt/reads) ya message likha ho wo fg page me
+       aa kar foran repaint ho. Pehle ye sirf storage-event par hota tha, jo do WebView ke darmiyan
+       kabhi miss ho jata tha -> tick grey reh jata tha (boss ki exact shikayat). */
+    setInterval(function () { try { if (!BGMODE && !document.hidden) mergeStore(); } catch (e) {} }, 5000);
   } catch (e) {}
 
   /* ---------------- crypto ---------------- */
@@ -5244,12 +5248,16 @@ function renderMembers() {
     if (!peer) { toast('⚠️ Code theek nahi'); return false; }
     if (!connected()) { toast('📡 Tower se connect nahi — message nahi gaya'); return false; }
     var midv = mid();
+    /* 🆕 BLUE-TICK FIX: ek hi timestamp — body, envelope aur apna bubble, teeno me SAME.
+       Pehle apna bubble publish ke BAAD ka nowMs() leta tha jo dost ke paas pahunche ts se BARA hota tha,
+       is liye dost ke receipt (parhai) par bhi "m.ts <= reads" fail hota tha -> tick hamesha grey. */
+    var _ts0 = nowMs();
     var e;
-    try { e = await encTo(peer, { mid: midv, ts: nowMs(), t: payload.t, x: payload.x, u: payload.u || '', dv: payload.dv || '', dur: payload.dur || 0, rq: payload.rq || null, rx: payload.rx || '' }); }
+    try { e = await encTo(peer, { mid: midv, ts: _ts0, t: payload.t, x: payload.x, u: payload.u || '', dv: payload.dv || '', dur: payload.dur || 0, rq: payload.rq || null, rx: payload.rx || '' }); }
     catch (err) { toast('🔒 Lock nahi hua — dobara try karo'); return false; }
     var _nm = myLabel();
     if (_nm && _nm !== 'Dost' && S.name !== _nm) { S.name = _nm; }
-    var out = { c: S.code, n: _nm, k: (typeof myColor !== 'undefined' && myColor) ? myColor : S.color, ts: nowMs(), iv: e.iv, ct: e.ct };
+    var out = { c: S.code, n: _nm, k: (typeof myColor !== 'undefined' && myColor) ? myColor : S.color, ts: _ts0, iv: e.iv, ct: e.ct };
     if (typeof myAvatar !== 'undefined') out.a = myAvatar; // FIX: always send avatar - first pic stuck bug
     var topic = NSP + 'inbox-' + h36(peer) + '/' + midv;
     try {
@@ -5267,7 +5275,7 @@ function renderMembers() {
     } catch (err) { if (!waitAck) toast('📡 bheja nahi ja saka'); return false; }
     try { dmSendRead(peer); } catch (e) {}
     S.seen[midv] = 1;
-    appendMsg(peer, { d: 'out', t: payload.t, x: payload.x, mid: midv, ts: nowMs(), u: payload.u, dv: payload.dv, dur: payload.dur, rq: payload.rq || null, rx: payload.rx || '' });
+    appendMsg(peer, { d: 'out', t: payload.t, x: payload.x, mid: midv, ts: _ts0, u: payload.u, dv: payload.dv, dur: payload.dur, rq: payload.rq || null, rx: payload.rx || '' });
     save(); renderAll();
     return true;
   }
@@ -6389,9 +6397,10 @@ function renderMembers() {
     if (!connected()) { toast('📡 Tower nahi — reaction sirf tumhare paas rahegi'); return; }
     try {
       var midv = mid();
-      var e = await encTo(peer, { mid: midv, ts: nowMs(), t: 'react', x: myNow, u: '', dv: '', dur: 0, rq: null, rx: midTarget });
+      var _tsr = nowMs();   /* 🆕 react ka bhi ek hi ts (body = envelope) */
+      var e = await encTo(peer, { mid: midv, ts: _tsr, t: 'react', x: myNow, u: '', dv: '', dur: 0, rq: null, rx: midTarget });
       var _nm = myLabel();
-      var out = { c: S.code, n: _nm, k: (typeof myColor !== 'undefined' && myColor) ? myColor : S.color, ts: nowMs(), iv: e.iv, ct: e.ct };
+      var out = { c: S.code, n: _nm, k: (typeof myColor !== 'undefined' && myColor) ? myColor : S.color, ts: _tsr, iv: e.iv, ct: e.ct };
       mc().publish(NSP + 'inbox-' + h36(peer) + '/' + midv, JSON.stringify(out), { qos: 1, retain: true });
     } catch (err) { toast('📡 Reaction bheji nahi ja saki'); }
   }
