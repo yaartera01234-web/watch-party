@@ -1576,13 +1576,21 @@ body { margin: 0 !important; padding: 0 !important; }
     width: 100% !important;
     margin: 0 !important;
   }
+  /* 🆕 TABLET (boss ki shikayat): chatting POORI screen fill kare — Snapchat jaisa.
+     Pehle ye content 520px me center ho jata tha, is liye tablet par dain/bayan khaali black jagah reh jati thi.
+     Phone (<600px) par ye rule lagta hi nahi — mobile design bilkul waisa hi hai. */
   #dm-view-inbox .dm-list, #dm-view-inbox .dm-search,
-  #dm-view-chat #dm-thread, #dm-view-chat .dm-inbar,
+  #dm-view-chat #dm-thread, #dm-view-chat .dm-inbar {
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: auto !important;
+  }
   #dm-view-add .dm-addbox, #dm-view-add .dm-codecard {
-    max-width: 520px !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    width: 100% !important;
+    max-width: none !important;
+    margin-left: 12px !important;
+    margin-right: 12px !important;
+    width: auto !important;
   }
   #dm-ov.on {
     background: rgba(0,0,0,0.75) !important;
@@ -2047,7 +2055,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-04-13';
+const WP_BUILD = '2026-10-04-14';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
