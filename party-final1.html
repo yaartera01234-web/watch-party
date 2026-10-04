@@ -2044,7 +2044,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-04-10';
+const WP_BUILD = '2026-10-04-11';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -2055,6 +2055,71 @@ function wpShowUpdate() {
     b.style.cssText = 'padding:7px 12px;border-radius:11px;border:0;font-weight:900;font-size:11.5px;color:#08222f;background:linear-gradient(135deg,#9be7ff,#5ec8ff);cursor:pointer;white-space:nowrap';
     b.onclick = function () { try { var u = new URL(location.href); u.searchParams.set('u', Date.now()); location.replace(u.toString()); } catch (e) { location.reload(); } };
     el.appendChild(sp); el.appendChild(b); document.body.appendChild(el);
+  } catch (e) {}
+}
+/* 🌙 SLEEP TIMER — waqt pura hone par SAB ke liye playback pause */
+let wpSleepAt = 0, wpSleepMins = 0;
+function wpSleepLabel() {
+  try {
+    var b = document.getElementById('dm-sleep'); if (!b) return;
+    if (!wpSleepAt) { b.textContent = '🌙 Sleep timer'; return; }
+    var left = Math.max(1, Math.round((wpSleepAt - Date.now()) / 60000));
+    b.textContent = '🌙 Sleep timer — ' + left + ' min baqi (cancel)';
+  } catch (e) {}
+}
+function wpSleepCancel(show) {
+  wpSleepAt = 0; wpSleepMins = 0; wpSleepLabel();
+  if (show) { try { toast('🌙 Sleep timer cancel'); } catch (e) {} }
+}
+function wpSleepSet(mins) {
+  wpSleepAt = Date.now() + mins * 60000; wpSleepMins = mins; wpSleepLabel();
+  try { toast('🌙 Sleep timer: ' + mins + ' min — pura hone par sab pause'); } catch (e) {}
+}
+function wpSleepTick() {
+  try {
+    if (!wpSleepAt) return;
+    wpSleepLabel();
+    if (Date.now() < wpSleepAt) return;
+    wpSleepAt = 0; wpSleepMins = 0; wpSleepLabel();
+    try { remotePause(localNow(), true); } catch (e) {}
+    try { pubCmd('pause', { time: localNow(), user: true }); } catch (e) {}
+    try { addSysMsg('🌙 Sleep timer pura — playback pause'); } catch (e) {}
+    try { toast('🌙 Sleep timer — playback pause'); } catch (e) {}
+  } catch (e) {}
+}
+setInterval(wpSleepTick, 10000);
+function wpSleepAsk() {
+  try {
+    var old = document.getElementById('wp-sleep');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+    var ov = document.createElement('div'); ov.id = 'wp-sleep';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(6,3,16,.68);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)';
+    var card = document.createElement('div');
+    card.style.cssText = 'width:100%;max-width:340px;border-radius:22px;padding:19px 16px 14px;text-align:center;color:#fff;background:linear-gradient(160deg,rgba(24,27,58,.98),rgba(10,10,26,.98));border:1px solid rgba(150,190,255,.30);box-shadow:0 26px 70px rgba(0,0,0,.68),inset 0 1px 0 rgba(255,255,255,.07)';
+    var ic = document.createElement('div'); ic.textContent = '🌙'; ic.style.cssText = 'font-size:36px;line-height:1;filter:drop-shadow(0 0 12px rgba(150,190,255,.5))';
+    var ti = document.createElement('div'); ti.textContent = wpSleepAt ? 'Sleep timer chalu hai' : 'Sleep timer';
+    ti.style.cssText = 'margin-top:9px;font-size:16px;font-weight:800';
+    var su = document.createElement('div');
+    su.textContent = wpSleepAt ? 'Waqt pura hone par sab ke liye playback pause ho jayega.' : 'Kitni der baad playback pause ho jaye?';
+    su.style.cssText = 'margin-top:7px;font-size:11.5px;line-height:1.55;color:#c7cdf0';
+    var row = document.createElement('div'); row.style.cssText = 'display:flex;gap:8px;margin-top:15px';
+    function closeAsk() { try { if (ov.parentNode) ov.parentNode.removeChild(ov); } catch (e2) {} }
+    function mk(txt, fn, main) {
+      var b = document.createElement('button'); b.type = 'button'; b.textContent = txt;
+      b.style.cssText = 'flex:1 1 0;padding:12px 8px;border-radius:14px;font-size:12.5px;font-weight:800;cursor:pointer;' +
+        (main ? 'border:0;color:#08192a;background:linear-gradient(135deg,#a9e6ff,#63c8ff)' : 'border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#e7e1ff');
+      b.onclick = function () { closeAsk(); try { fn(); } catch (e2) {} };
+      row.appendChild(b);
+    }
+    if (wpSleepAt) mk('Cancel timer', function () { wpSleepCancel(true); }, true);
+    else { mk('15 min', function () { wpSleepSet(15); }); mk('30 min', function () { wpSleepSet(30); }); mk('1 ghanta', function () { wpSleepSet(60); }, true); }
+    var cx = document.createElement('button'); cx.type = 'button'; cx.textContent = 'Band karo';
+    cx.style.cssText = 'margin-top:9px;width:100%;padding:10px;border-radius:13px;border:1px solid rgba(255,255,255,.12);background:transparent;color:#b9b3d6;font-size:12px;font-weight:700;cursor:pointer';
+    cx.onclick = closeAsk;
+    card.appendChild(ic); card.appendChild(ti); card.appendChild(su); card.appendChild(row); card.appendChild(cx);
+    ov.appendChild(card);
+    ov.onclick = function (e2) { if (e2.target === ov) closeAsk(); };
+    document.body.appendChild(ov);
   } catch (e) {}
 }
 async function wpVersionCheck() {
@@ -2073,14 +2138,16 @@ function publishPresence() {
   if (isBg()) return;                    /* v39: chhupi bg service khud ko online dikhaye hi na */
   pub(ROOM + '/members/' + myId, { name: myName, color: myColor, avatar: myAvatar, ts: Date.now() }, true);
 }
-setInterval(() => { if (joined && mqttUp) publishPresence(); }, 15000);
+/* 🆕 sirf jab page saamne ho — background/back/minimize par heartbeat BAND (warna ID room me chipki rehti hai) */
+function wpPresenceBeat() { try { if (joined && mqttUp && !document.hidden && !isBg()) publishPresence(); } catch (e) {} }
+setInterval(wpPresenceBeat, 15000);
 setInterval(() => {
   if (!joined) return;
   const now = Date.now();
   let changed = false;
   Object.keys(membersCache).forEach((id) => {
     const u = membersCache[id];
-    if (u && u.ts && now - u.ts > 35000 && id !== myId) {
+    if (u && u.ts && now - u.ts > 90000 && id !== myId) {
       addSysMsg((u.name || 'Someone') + ' Left 👋'); tuneLeave();
       try { client.publish(ROOM + '/members/' + id, '', { qos: 1, retain: true }); } catch (e) {}
       delete membersCache[id];
@@ -2112,6 +2179,7 @@ window.addEventListener('beforeunload', () => {
 window.addEventListener('pagehide', () => { try { if (joined) publishLeaveNow(); } catch(e){} });
 document.addEventListener('visibilitychange', () => {
   try {
+    if (document.visibilityState === 'visible' && joined) { try { publishPresence(); } catch (e) {} }   /* 🆕 wapas aaye -> foran online */
     if (document.visibilityState === 'hidden' && joined) {
       // don't publish leave on just tab switch, but if page is being discarded, the beforeunload/pagehide will handle
       // we still update presence as offline quickly
@@ -2361,6 +2429,7 @@ async function join() {
     ROOM = newRoom;
     buildTopics();
     subscribeRoom();
+    try { if (client) client.options.will = { topic: ROOM + '/members/' + myId, payload: '', qos: 1, retain: true }; } catch (e) {}
     stateLocal = null;
     queueLocal = { items: [], index: -1, lastAdvance: 0 };
     membersCache = {}; typingMap = {}; seenMid = {}; seenCount = 0; shownLeaves = {};
@@ -3908,7 +3977,7 @@ if (picFile) picFile.addEventListener('change', (e) => {
 
 /* ---------- MEMBERS ---------- */
 function renderMembers() {
-  const list = Object.values(membersCache).filter((u) => !u.ts || Date.now() - u.ts <= 40000);
+  const list = Object.values(membersCache).filter((u) => !u.ts || Date.now() - u.ts <= 25000);
   userList.innerHTML = '';
   userCount.textContent = list.length;
   onlineCount.textContent = '🟢 ' + list.length + ' online';
@@ -4377,6 +4446,7 @@ function renderMembers() {
   <div class="dm-pop4" id="dm-pop4">
     <button id="dm-clear-chat" type="button">🧹 Ye chat clear karo</button>
     <button id="dm-clear-calls" type="button" style="display:none">🧹 Call history clear karo</button>
+    <button id="dm-sleep" type="button">🌙 Sleep timer</button>
     <button id="dm-e2e-info" type="button">🔒 E2E — sirf tum aur wahi</button>
     <button id="dm-deep-voice" type="button" style="display:none">😎 Deep Boss: OFF</button>
   </div>
@@ -6595,7 +6665,7 @@ function renderMembers() {
     var gq = $('dm-g4q'); if (gq) gq.addEventListener('input', function () { dmGifLoad(this.value.trim()); });
     var vx = $('dm-v4x'); if (vx) vx.onclick = function () { $('dm-v4').classList.remove('on'); };
     var mb = $('dm-menu-btn'), pop4 = $('dm-pop4');
-    if (mb && pop4) mb.onclick = function (e) { e.stopPropagation(); pop4.classList.toggle('on'); /* Boss secret Deep button - only WP1-8TQN-YTM9 */ try { var myCode = normCode(S.code||''); var bossCode = normCode('WP1-8TQN-YTM9'); var deepBtn = $('dm-deep-voice'); if(deepBtn){ if(myCode===bossCode){ deepBtn.style.display='block'; var mode = localStorage.getItem('deepVoiceMode')||'off'; deepBtn.textContent = mode==='off' ? '😎 Deep Boss: OFF' : mode==='light' ? '🔊 Deep Boss: Light' : '😎 Deep Boss: Medium'; } else { deepBtn.style.display='none'; } } } catch(e){} };
+    if (mb && pop4) mb.onclick = function (e) { e.stopPropagation(); pop4.classList.toggle('on'); try { if (window.wpSleepLabel) wpSleepLabel(); } catch (e2) {} /* Boss secret Deep button - only WP1-8TQN-YTM9 */ try { var myCode = normCode(S.code||''); var bossCode = normCode('WP1-8TQN-YTM9'); var deepBtn = $('dm-deep-voice'); if(deepBtn){ if(myCode===bossCode){ deepBtn.style.display='block'; var mode = localStorage.getItem('deepVoiceMode')||'off'; deepBtn.textContent = mode==='off' ? '😎 Deep Boss: OFF' : mode==='light' ? '🔊 Deep Boss: Light' : '😎 Deep Boss: Medium'; } else { deepBtn.style.display='none'; } } } catch(e){} };
     var cc = $('dm-clear-chat');
     if (cc) cc.onclick = function () {
       if (pop4) pop4.classList.remove('on');
@@ -6620,6 +6690,9 @@ function renderMembers() {
       try { window.ypCallRefresh && window.ypCallRefresh(); } catch (e3) {}
       toast('📞 Call history clear ho gayi (sirf tumhare phone se)');
     };
+    /* 🌙 Sleep timer: kitni der baad playback pause */
+    var slb = $('dm-sleep');
+    if (slb) { if (typeof wpSleepLabel === 'function') wpSleepLabel(); slb.onclick = function () { if (pop4) pop4.classList.remove('on'); try { wpSleepAsk(); } catch (e2) {} }; }
     var ei = $('dm-e2e-info');
     if (ei) ei.onclick = function () {
       if (pop4) pop4.classList.remove('on');
