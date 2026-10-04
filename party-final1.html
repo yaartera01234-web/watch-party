@@ -2326,9 +2326,9 @@ async function join() {
     membersCache = {}; typingMap = {}; seenMid = {}; seenCount = 0; shownLeaves = {};
     chatBox.innerHTML = '';
   }
-  publishPresence();
-  pub(TP.events, { t: 'join', name: myName, from: myId, mid: mid() }, false);
-  joined = true;
+  /* 🆕 PARTY JOIN AB AUTOMATIC NAHI (boss: "jab tak Party icon pe tap na karein, udher join nahi hona chahiye")
+     Yahan sirf app khulti hai; subscribe chup-chaap chalta rehta hai. Asli join — presence + 'Joined Party'
+     event + video sync (catch-up) — neeche window.wpRoomEnter() me hai, jo bar ke PARTY icon se chalta hai. */
   joinScreen.classList.add('hidden');
   app.classList.remove('hidden');
   /* 🆕 join ke baad: neeche bar ON + seedha Chat page (jaisa boss ne kaha) */
@@ -2339,7 +2339,19 @@ async function join() {
   var rmEl = $('wp-room-name'); if (rmEl) rmEl.textContent = shortRoom;   /* header ka room chip */
   renderMembers();
   renderQueue(queueLocal.items || [], queueLocal.index);
-  // late joiner catchup - no auto pause/agay peeche - 8 sec quiet
+}
+
+/* 🆕 ASLI PARTY JOIN — sirf neeche bar ke "Party" icon se chalta hai (auto nahi) */
+window.wpRoomJoined = function () { try { return !!joined; } catch (e) { return false; } };
+window.wpRoomEnter = function () {
+  try {
+    if (joined) return true;
+    if (!mqttUp) { alert('Tower se jur raha hai... 3 sec baad Party dobara dabao! 📻'); return false; }
+    publishPresence();
+    pub(TP.events, { t: 'join', name: myName, from: myId, mid: mid() }, false);
+    joined = true;
+    try { renderMembers(); } catch (e1) {}
+    try { renderQueue(queueLocal.items || [], queueLocal.index); } catch (e2) {}
   const doCatchup = () => {
     const s = stateLocal;
     if (s && s.type && s.type !== 'none') {
@@ -2354,10 +2366,12 @@ async function join() {
       applyState(s);
     }
   };
-  doCatchup();
-  setTimeout(doCatchup, 1500);
-  setTimeout(doCatchup, 3500);
-}
+    doCatchup();
+    setTimeout(doCatchup, 1500);
+    setTimeout(doCatchup, 3500);
+    return true;
+  } catch (e) { return false; }
+};
 joinBtn.onclick = join;
 nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') join(); });
 roomInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') join(); });
@@ -6931,6 +6945,10 @@ function renderMembers() {
         + '#yp-calls .yp-cb{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;'
         +   'background:linear-gradient(135deg,#22c55e,#10b981);font-size:15px;box-shadow:0 4px 12px rgba(16,185,129,.35);}'
         + '#yp-calls .yp-empty{padding:26px 12px;text-align:center;color:#8f7cb5;font-size:12px;line-height:1.7;}'
+        + '#yp-bar .yp-dot{position:absolute;top:4px;right:calc(50% - 21px);width:7px;height:7px;border-radius:50%;background:#4ade80;'
+        +   'box-shadow:0 0 9px rgba(74,222,128,.95);display:none;animation:ypNy 1.5s ease-in-out infinite;}'
+        + '#yp-bar .yp-dot.on{display:block;}'
+        + '@keyframes ypNy{0%,100%{opacity:.35;transform:scale(.75)}50%{opacity:1;transform:scale(1.2)}}'
         + 'body.yp-joined #dm-view-inbox .dm-list{padding-bottom:74px;}';
       var st = document.createElement('style'); st.id = 'yp-bar-css'; st.textContent = css;
       document.head.appendChild(st);
@@ -6938,7 +6956,7 @@ function renderMembers() {
       var bar = document.createElement('div');
       bar.id = 'yp-bar';
       bar.innerHTML = '<span class="yp-pill" id="yp-pillbg"></span>'
-        + '<div class="yp-t" data-yp="party">' + ic('party') + '<span class="l">Party</span></div>'
+        + '<div class="yp-t" data-yp="party" title="Party join karo">' + ic('party') + '<span class="l">Party</span><i class="yp-dot" id="yp-dotjoin"></i></div>'
         + '<div class="yp-t" data-yp="chat">' + ic('chat') + '<span class="l">Chat</span><b id="yp-badge"></b></div>'
         + '<div class="yp-t" data-yp="call">' + ic('call') + '<span class="l">Call</span></div>';
       document.body.appendChild(bar);
@@ -7015,6 +7033,8 @@ function renderMembers() {
             var k = el.getAttribute && el.getAttribute('data-yp'); if (!k) return;
             el.classList.toggle('on', k === want);
           });
+          var dj = $('yp-dotjoin');
+          if (dj) { var _rj = !(window.wpRoomJoined && window.wpRoomJoined()); dj.classList.toggle('on', _rj); }
           var bd = $('yp-badge');
           if (bd) {
             var n = 0; try { n = unreadTotal(); } catch (e) {}
@@ -7026,7 +7046,13 @@ function renderMembers() {
       bar.onclick = function (ev) {
         var k = ypTabOf(ev && ev.target); if (!k) return;
         try {
-          if (k === 'party') { closeSheet(); }                 /* wapas watchparty */
+          if (k === 'party') {
+            /* 🆕 Party icon = asli join. Pehle join (presence + Joined Party + video sync), phir room. */
+            if (window.wpRoomJoined && !window.wpRoomJoined() && window.wpRoomEnter) {
+              try { if (window.wpRoomEnter()) toast('🎉 Party join ho gayi'); } catch (e) {}
+            }
+            closeSheet();                                     /* wapas watchparty */
+          }
           else if (k === 'chat') { openSheet(); showView('dm-view-inbox'); }
           else { openSheet(); showView('dm-view-calls'); ypRenderCalls(); }
         } catch (e) {}
@@ -7034,6 +7060,8 @@ function renderMembers() {
       };
       window.ypOnJoined = function () {
         try { openSheet(); showView('dm-view-inbox'); } catch (e) {}
+        /* 🆕 ab party khud-ba-khud join nahi hoti — boss ko batado */
+        try { if (window.wpRoomJoined && !window.wpRoomJoined()) toast('🚪 Party me jaane ke liye neeche "Party" dabao'); } catch (e) {}
         ypSync();
       };
       window.ypCallRefresh = ypRenderCalls;
