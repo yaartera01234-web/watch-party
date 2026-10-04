@@ -30,6 +30,7 @@ html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui,
 #tower-input { width: 100%; padding: 12px 18px; border-radius: 14px; border: 2px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: #fff; font-size: 16px; outline: none; text-align: center; margin-top: 10px; }
 #tower-input:focus { border-color: #60a5fa; }
 #tower-input option { color: #000; }
+.tower-note { margin-top: 6px; font-size: 11px; line-height: 1.35; color: rgba(255,255,255,.62); text-align: center; }
 #join-btn { width: 100%; margin-top: 14px; padding: 14px; border: none; border-radius: 14px; font-size: 18px; font-weight: bold; color: #fff; cursor: pointer; background: linear-gradient(90deg, var(--wp-acc1, #f472b6), var(--wp-acc2, #a78bfa), var(--wp-acc3, #60a5fa)); transition: transform 0.15s; }
 #join-btn:hover { transform: scale(1.03); }
 .features { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
@@ -1602,6 +1603,7 @@ body { margin: 0 !important; padding: 0 !important; }
       <option value="1">🗼 HiveMQ</option>
       <option value="2">🗼 Mosquitto</option>
     </select>
+    <div class="tower-note">📩 DM (private messages) hamesha EMQX par — ye tower sirf ROOM ke liye badal sakte ho</div>
     <div id="wp-themebar" class="wp-themebar">
       <span class="wp-tb-ico">🎨</span>
       <span class="wp-tb-txt"><b id="wp-tb-name">Night Purple · Pink + Cyan</b><i>theme aur bubble badlo</i></span>
@@ -1802,6 +1804,8 @@ function cleanRoom(r) {
 const COLORS = ['#FF5C8A','#FF9F45','#FFD93D','#6BCB77','#4D96FF','#9B5DE5','#F15BB5','#00BBF9','#00F5D4','#FEE440','#FF6B6B','#4ECDC4'];
 
 let client = null, brokerIdx = 0, mqttUp = false, everConnected = false, watchdog = null;
+/* 🆕 DM ka apna tower: hamesha EMQX (BROKERS[0]) — room ke tower ki tabdeeli se aazad */
+let dmClient = null, dmMqttUp = false;
 let myRoom = 'main',
 myName = '', myId = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 let myColor = COLORS[Math.floor(Math.random() * COLORS.length)];
@@ -1945,7 +1949,7 @@ function connectBroker(i) {
   watchdog = setTimeout(() => { if (!mqttUp) { try { client.end(true); } catch (e) {} alert('\u274C ' + BROKERS[i].name + ' nahi mil raha! Dusra tower select karo! 🔄'); } }, 11000);
   client.on('connect', onConnect);
   client.on('message', function (topic, buf) {
-    try { if (window.DM && topic && topic.indexOf('YaarParty786/x7k2/dm/') === 0) { window.DM.onMessage(topic, buf.toString()); return; } } catch (e) {}
+    /* 🆕 DM topics ab is client par nahi aate — DM ka apna EMQX client hai (connectDmTower) */
     onMsg(topic, buf);
   });
   client.on('error', () => {});
@@ -1957,11 +1961,35 @@ function connectBroker(i) {
     }
   });
 }
+/* 🆕 DM TOWER: ye client hamesha EMQX par rehta hai — DM/calls/presence sirf yahan */
+function connectDmTower() {
+  if (typeof mqtt === 'undefined') return;
+  try { if (dmClient) dmClient.end(true); } catch (e) {}
+  dmMqttUp = false;
+  try {
+    dmClient = mqtt.connect(BROKERS[0].url, {
+      clientId: 'wpdm_' + myId + '_' + Math.random().toString(36).slice(2, 6),
+      clean: true, connectTimeout: 9000, reconnectPeriod: 2500, keepalive: 20
+    });
+  } catch (e) { dmClient = null; return; }
+  dmClient.on('connect', function () {
+    dmMqttUp = true;
+    try { if (window.DM && window.DM.onConnect) window.DM.onConnect(dmClient); } catch (e) {}
+  });
+  dmClient.on('message', function (topic, buf) {
+    try {
+      if (window.DM && topic && topic.indexOf('YaarParty786/x7k2/dm/') === 0) window.DM.onMessage(topic, buf.toString());
+    } catch (e) {}
+  });
+  dmClient.on('error', function () {});
+  dmClient.on('close', function () { dmMqttUp = false; });
+}
+
 function onConnect() {
   mqttUp = true;
   clearTimeout(watchdog);
   subscribeRoom();
-  try { if (window.DM && window.DM.onConnect) window.DM.onConnect(client); } catch (e) {}
+  /* 🆕 DM is tower se juda nahi — uska apna EMQX client hai (upar connectDmTower) */
   if (joined) publishPresence();
   if (everConnected) {
     if (joined) addSysMsg('🔄 Tower se wapis jur gaye! ✅');
@@ -1976,7 +2004,7 @@ function onConnect() {
   }
 }
 loadPrefs();
-ensureLib(() => connectBroker(parseInt(towerInput.value, 10) || 0));
+ensureLib(() => { connectBroker(parseInt(towerInput.value, 10) || 0); connectDmTower(); });
 
 function subscribeRoom() {
   if (!client || !mqttUp) return;
@@ -4706,13 +4734,13 @@ function renderMembers() {
   /* page mein `let client` hai (window.client NAHI) — is liye teen tarikon se dhoondo */
   var clientRef = null;                     /* S ke BAHAR — warna JSON.stringify(S) circular pe fail */
   function mc() {
+    /* 🆕 DM sirf apne EMQX client par chalta hai — room ke tower se koi lena-dena nahi */
+    try { if (typeof dmClient !== 'undefined' && dmClient) return dmClient; } catch (e) {}
     if (clientRef) return clientRef;
-    try { if (typeof client !== 'undefined' && client) return client; } catch (e) {}
-    if (window.client) return window.client;
     return null;
   }
   function clearRetained(topic) { try { var c = mc(); if (c) c.publish(topic, '', { qos: 1, retain: true }); } catch (e) {} }
-  function connected() { return (typeof mqttUp !== 'undefined' && mqttUp && !!mc()); }
+  function connected() { return (typeof dmMqttUp !== 'undefined' && dmMqttUp && !!mc()); }
 
   /* ---------------- private 1:1 WebRTC voice calls ----------------
      MQTT carries only AES-GCM encrypted call control/SDP. Media is peer-to-peer.
@@ -5120,6 +5148,54 @@ function renderMembers() {
   function myInboxPrefix() { return NSP + 'inbox-' + h36(normCode(S.code)) + '/'; }
   function pairTag(peerRaw) { return [normCode(S.code), normCode(peerRaw)].sort().join('|'); }
   function dmBlobBase(peerCode) { return 'YaarParty786/x7k2/blobs/' + h36(pairTag(peerCode)); }
+
+  /* 🆕 DM ka photo/voice bhi DM ke EMQX tower par jata hai (room tower se aazad) */
+  function dmCliUp() { try { return (typeof dmClient !== 'undefined' && dmClient && dmMqttUp) ? dmClient : null; } catch (e) { return null; } }
+  function dmPutBlob(bytes, base) {
+    return new Promise(function (resolve, reject) {
+      var c = dmCliUp();
+      if (!c) { reject(new Error('dm-blob-no-tower')); return; }
+      var u8 = (bytes instanceof Uint8Array) ? bytes : (bytes && bytes.byteLength !== undefined ? new Uint8Array(bytes) : null);
+      if (!u8 || !u8.length) { reject(new Error('blob-empty')); return; }
+      if (typeof MQTT_BLOB_CAP !== 'undefined' && u8.length > MQTT_BLOB_CAP) { reject(new Error('blob-too-big')); return; }
+      var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      var topic = base + '/' + id, fin = false;
+      var tm = setTimeout(function () { if (!fin) { fin = true; reject(new Error('blob-timeout')); } }, 20000);
+      try {
+        c.publish(topic, u8, { qos: 1, retain: true }, function (err) {
+          if (fin) return; fin = true; clearTimeout(tm);
+          if (err) reject(err); else resolve(id);
+        });
+      } catch (e) { if (!fin) { fin = true; clearTimeout(tm); reject(e); } }
+    });
+  }
+  function dmGetBlob(base, id) {
+    return new Promise(function (resolve, reject) {
+      var c = dmCliUp();
+      if (!c || !id) { reject(new Error('dm-blob-no-tower')); return; }
+      var topic = base + '/' + id, fin = false;
+      function stop() { try { c.removeListener('message', onM); } catch (e) {} try { c.unsubscribe(topic); } catch (e) {} }
+      function onM(t, buf) {
+        if (fin || t !== topic) return;
+        fin = true; clearTimeout(tm); stop();
+        try { resolve(new Uint8Array(buf).buffer); } catch (e) { try { resolve(buf.buffer); } catch (e2) { reject(e2); } }
+      }
+      var tm = setTimeout(function () { if (!fin) { fin = true; stop(); reject(new Error('blob-timeout')); } }, 9000);
+      c.on('message', onM);
+      try { c.subscribe(topic, { qos: 1 }, function () {}); } catch (e) { fin = true; clearTimeout(tm); reject(e); }
+    });
+  }
+  async function dmAnyRefBuf(ref, base) {
+    if (typeof ref === 'string' && ref.indexOf('mqtt:') === 0) return await dmGetBlob(base, ref.slice(5));
+    var r = await fetch(ref, { mode: 'cors', cache: 'force-cache' });
+    if (!r.ok) throw new Error('fetch' + r.status);
+    return await r.arrayBuffer();
+  }
+  async function dmLbUpload(blob, name, base) {
+    try { var buf = await blob.arrayBuffer(); var id = await dmPutBlob(buf, base); return 'mqtt:' + id; } catch (e) {}
+    for (var t = 0; t < 2; t++) { try { return await upLitterbox(blob, name); } catch (e) {} }
+    throw new Error('upload-fail');
+  }
   function myPresenceTopic() { return NSP + 'presence-' + h36(normCode(S.code)); }
   function myTypingTopic() { return NSP + 'typing-' + h36(normCode(S.code)); }
 
@@ -5729,7 +5805,7 @@ function renderMembers() {
     if (src) { show(src); return; }
     (async function () {
       try {
-        var pt = await decBytes(code, await anyRefBuf(m.u, dmBlobBase(code)), m.dv);
+        var pt = await decBytes(code, await dmAnyRefBuf(m.u, dmBlobBase(code)), m.dv);
         var url = URL.createObjectURL(new Blob([pt], { type: 'image/jpeg' }));
         if (m.mid) dmLocalPhoto[m.mid] = url;
         show(url);
@@ -5875,7 +5951,7 @@ function renderMembers() {
       try {
         var src = (m.mid && localVoice[m.mid]) || null;
         if (!src) {
-          var pt = await decBytes(code, await anyRefBuf(m.u, dmBlobBase(code)), m.dv);
+          var pt = await decBytes(code, await dmAnyRefBuf(m.u, dmBlobBase(code)), m.dv);
           src = URL.createObjectURL(new Blob([pt], { type: 'audio/webm' }));
           if (m.mid) localVoice[m.mid] = src;
         }
@@ -5899,7 +5975,7 @@ function renderMembers() {
     try {
       var enc = await encBytes(peer, await blob.arrayBuffer());
       var ext = /mp4|m4a/i.test(blob.type || '') ? '.m4a' : '.webm';
-      var url = await lbUpload(new Blob([enc.ct], { type: 'application/octet-stream' }), 'dm-voice' + ext + '.enc', dmBlobBase(peer));
+      var url = await dmLbUpload(new Blob([enc.ct], { type: 'application/octet-stream' }), 'dm-voice' + ext + '.enc', dmBlobBase(peer));
       var ok = await sendMsg(peer, { t: 'voice', x: '\uD83C\uDFA4 Voice message', u: url, dv: enc.iv, dur: dur }, true);
       if (ok) {
         var arr2 = S.chats[normCode(peer)] || [];
@@ -6053,7 +6129,7 @@ function renderMembers() {
       var raw = await fileToDataURL(f);
       var small = await imgFit(raw, 1280, 0.8, 300000);
       var enc = await encBytes(peer, b64d(small.split(',')[1]).buffer);
-      var url = await lbUpload(new Blob([enc.ct], { type: 'application/octet-stream' }), 'dm-photo.jpg.enc', dmBlobBase(peer));
+      var url = await dmLbUpload(new Blob([enc.ct], { type: 'application/octet-stream' }), 'dm-photo.jpg.enc', dmBlobBase(peer));
       var ok = await sendMsg(peer, { t: 'photo', x: '🖼️ Photo', u: url, dv: enc.iv }, true);
       if (ok) {
         var arr = S.chats[peer] || [];
