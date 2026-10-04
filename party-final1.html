@@ -5231,9 +5231,12 @@ function renderMembers() {
         /* 🆕 FIX (notification reply): pehle foran fail ho jata tha agar bg me socket
            reconnect kar raha ho ya friend list load na hui ho. Ab:
            1) client na ho to chalao, 2) ~4s tak connection ka intezar, 3) friend entry bana do */
-        try { if (!mc() && typeof connectDmTower === 'function') connectDmTower(); } catch (e0) {}
-        var qr0 = nowMs();
-        while (!connected() && (nowMs() - qr0) < 4200) { await new Promise(function (r) { setTimeout(r, 200); }); }
+        var qr0 = nowMs(), qrN = 0;
+        while (!connected() && (nowMs() - qr0) < 6500) {
+          if (!mc()) { try { if (typeof connectDmTower === 'function') connectDmTower(); } catch (e0) {} }
+          else if (nowMs() - qrN > 1500) { qrN = nowMs(); try { if (typeof dmClient !== 'undefined' && dmClient && dmClient.reconnect) dmClient.reconnect(); } catch (e1) {} }
+          await new Promise(function (r) { setTimeout(r, 200); });
+        }
         if (connected()) {
           if (!S.friends[code]) S.friends[code] = { name: code, color: '#8b72ff', avatar: { type: 'letter' }, ts: 0, un: 0 };
           ok = await sendMsg(code, { t: 'text', x: value.slice(0, 500) }, false, true);
@@ -5541,7 +5544,7 @@ function renderMembers() {
   try { document.addEventListener('visibilitychange', function () { if (connected()) { pubPresence(); if (!document.hidden && curChat && sheetOpen()) { try { dmSendRead(curChat, true); } catch (e2) {} } } }); } catch (e) {}
   try { window.addEventListener('pageshow', function () { if (connected()) { pubPresence(); if (curChat && sheetOpen()) { try { dmSendRead(curChat, true); } catch (e2) {} } } }); } catch (e) {}
   /* 🆕 tick bharosemand: chat khuli ho to har 12s receipt dobara (chaho to gum ho jaye, phir bhi pahunche) */
-  setInterval(function () { try { if (curChat && sheetOpen() && connected()) dmSendRead(curChat, true); } catch (e) {} }, 12000);
+  setInterval(function () { try { if (curChat && sheetOpen() && connected()) dmSendRead(curChat, true); } catch (e) {} }, 8000);
 
   /* v28: background mode — native service ko batao ke hum zinda hain */
   if (BGMODE) {
@@ -6071,6 +6074,8 @@ function renderMembers() {
       if (arr.length > prevCount) d4Peek(true);
     }
     d4LastCount[curChat] = arr.length;
+    /* 🆕 chat saamne khuli hai to messages "parhe hue" manein -> tick neela (har render par check) */
+    try { if (!BGMODE && !document.hidden && sheetOpen() && curChat) dmSendRead(curChat); } catch (e) {}
   }
 
   function renderAll() {
