@@ -2055,7 +2055,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-04-14';
+const WP_BUILD = '2026-10-04-15';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -7101,8 +7101,10 @@ function renderMembers() {
         + '#yp-bar .yp-t b.on{display:block;}'
         + '#yp-calls{padding:2px 10px 74px;}'
         + '#yp-calls .yp-crow{display:flex;align-items:center;gap:10px;padding:11px 6px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.055);}'
-        + '#yp-calls .yp-av{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;'
+        + '#yp-calls .yp-av{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;overflow:hidden;'
         +   'background:linear-gradient(160deg,#4ade80,#16a34a);color:#08240f;font-weight:800;font-size:15px;}'
+        + '#yp-calls .yp-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;}'
+
         + '#yp-calls .yp-in{flex:1 1 auto;min-width:0;}'
         + '#yp-calls .yp-in b{font-size:13px;display:block;}'
         + '#yp-calls .yp-in s{text-decoration:none;font-size:11px;color:#a291c6;display:block;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
@@ -7161,7 +7163,7 @@ function renderMembers() {
           var when = ''; try { when = (typeof d4day === 'function' ? d4day(m.ts) + '<br>' : '') + timeShort(m.ts); }
           catch (e) { try { when = timeShort(m.ts); } catch (e2) {} }
           return '<div class="yp-crow' + (missed ? ' yp-miss' : '') + '" data-c="' + c + '">'
-               +   '<div class="yp-av">' + esc(String(nm || '?').slice(0, 1).toUpperCase()) + '</div>'
+               +   avatarHTML(c, 'yp-av')          /* 🆕 DP (asli photo) — pehle sirf naam ka pehla harf banta tha */
                +   '<div class="yp-in"><b>' + esc(nm) + '</b><s>' + esc(dir) + '</s></div>'
                +   '<span class="yp-tt">' + when + '</span>'
                +   '<span class="yp-cb">📞</span></div>';
