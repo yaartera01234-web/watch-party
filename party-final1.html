@@ -31,6 +31,16 @@ html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui,
 #tower-input:focus { border-color: #60a5fa; }
 #tower-input option { color: #000; }
 .tower-note { margin-top: 6px; font-size: 11px; line-height: 1.35; color: rgba(255,255,255,.62); text-align: center; }
+/* 🆕 Call summary card (call khatam hone par) */
+#wp-call-sum { position:fixed; left:50%; top:44%; transform:translate(-50%,-50%) scale(.96); z-index:260;
+  min-width:200px; max-width:82vw; padding:18px 22px; border-radius:22px; text-align:center; color:#fff;
+  background:linear-gradient(180deg, rgba(38,32,84,.97), rgba(19,16,45,.98)); border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 24px 70px rgba(0,0,0,.6); opacity:0; animation:csIn .28s cubic-bezier(.2,.9,.3,1) forwards; cursor:pointer; }
+#wp-call-sum b { display:block; font-size:15px; }
+#wp-call-sum span { display:block; margin-top:5px; font-size:12px; color:rgba(255,255,255,.66); }
+#wp-call-sum.out { animation:csOut .4s ease forwards; }
+@keyframes csIn { to { opacity:1; transform:translate(-50%,-50%) scale(1); } }
+@keyframes csOut { to { opacity:0; transform:translate(-50%,-50%) scale(.96); } }
 #join-btn { width: 100%; margin-top: 14px; padding: 14px; border: none; border-radius: 14px; font-size: 18px; font-weight: bold; color: #fff; cursor: pointer; background: linear-gradient(90deg, var(--wp-acc1, #f472b6), var(--wp-acc2, #a78bfa), var(--wp-acc3, #60a5fa)); transition: transform 0.15s; }
 #join-btn:hover { transform: scale(1.03); }
 .features { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
@@ -416,6 +426,14 @@ main { gap: 11px; }
 #gif-grid { flex:1; overflow-y:auto; padding:6px; display:grid; grid-template-columns:repeat(3, 1fr); gap:5px; font-size:12px; color:#c4b5fd; }
 #gif-grid img { width:100%; height:76px; object-fit:cover; border-radius:9px; background:#000; cursor:pointer; }
 #gif-grid .gif-none { grid-column:1 / -1; text-align:center; padding:14px 6px; }
+/* 🆕 GIF skeleton: dhadakta hua loading box */
+.gsk { position:relative; overflow:hidden; border-radius:9px; height:76px; background:rgba(255,255,255,.07); }
+#dm-g4g .gsk { height:80px; border-radius:11px; }
+.gsk::after { content:''; position:absolute; inset:0; transform:translateX(-100%); background:linear-gradient(90deg, transparent, rgba(255,255,255,.16), transparent); animation:wpsh 1.15s infinite; }
+@keyframes wpsh { 100% { transform:translateX(100%); } }
+/* 🆕 DM tick: halka = pahunch gaya, neela = parh liya */
+.tk { color:rgba(255,255,255,.62); font-weight:700; letter-spacing:-1.5px; }
+.tk.read { color:#5bdcff; text-shadow:0 0 6px rgba(91,220,255,.55); }
 .chat-gif { display:block; max-width:190px; max-height:190px; border-radius:10px; margin:2px 0; }
 .chat-input-bar { position:relative; }
 
@@ -3408,8 +3426,12 @@ function gifPaint(items) {
     gifGrid.appendChild(gifTile(small, full));
   });
 }
+function gifSkeleton(n) {
+  gifGrid.innerHTML = '';
+  for (let i = 0; i < (n || 9); i++) { const d = document.createElement('div'); d.className = 'gsk'; gifGrid.appendChild(d); }
+}
 async function gifLoad(q) {
-  gifShowEmpty('⏳ GIFs aa rahe hain...');
+  gifSkeleton(9);
   const cid = 'wp_' + (myId || 'x');
   const url = 'https://api.klipy.com/api/v1/' + KLIPY_KEY + '/gifs/' +
     (q ? 'search?q=' + encodeURIComponent(q) + '&' : 'trending?') +
@@ -4470,7 +4492,7 @@ function renderMembers() {
   function fmtCode(raw) { var c = normCode(raw); return c.length === 8 ? ('WP1-' + c.slice(0, 4) + '-' + c.slice(4)) : ''; }
 
   /* ---------------- state ---------------- */
-  var S = { code: '', name: '', color: '#54e8ff', avatar: { type: 'letter' }, friends: {}, chats: {}, reqs: [], seen: {} };
+  var S = { code: '', name: '', color: '#54e8ff', avatar: { type: 'letter' }, friends: {}, chats: {}, reqs: [], seen: {}, reads: {} };
   function load() {
     try {
       var raw = localStorage.getItem(DKEY);
@@ -4481,6 +4503,7 @@ function renderMembers() {
     if (!S.chats || typeof S.chats !== 'object') S.chats = {};
     if (!Array.isArray(S.reqs)) S.reqs = [];
     if (!S.seen || typeof S.seen !== 'object') S.seen = {};
+    if (!S.reads || typeof S.reads !== 'object') S.reads = {};
     // FIX v48: Normalize all old keys (WP1-XXXX-XXXX vs XXXXXXXX) + purge duplicate requests for APK cache
     try {
       // Normalize friends keys
@@ -4816,31 +4839,75 @@ function renderMembers() {
     if (speakerLabel) speakerLabel.textContent = c.speaker ? 'Speaker on' : 'Speaker';
     if (speaker && speaker.parentElement) speaker.parentElement.style.display = (window.YaarNative && typeof window.YaarNative.setCallAudioRoute === 'function') ? 'flex' : 'none';
   }
+  /* 🆕 Call tones (WebAudio — koi file nahi chahiye) */
+  var wpToneCtx = null;
+  function wpToneCtxGet() {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+      if (!wpToneCtx) wpToneCtx = new AC();
+      if (wpToneCtx.state === 'suspended') wpToneCtx.resume().catch(function () {});
+      return wpToneCtx;
+    } catch (e) { return null; }
+  }
+  function wpTone(freq, start, dur, vol) {
+    var c = wpToneCtxGet(); if (!c) return;
+    try {
+      var o = c.createOscillator(), g = c.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0, c.currentTime + start);
+      g.gain.linearRampToValueAtTime(vol, c.currentTime + start + .02);
+      g.gain.linearRampToValueAtTime(0, c.currentTime + start + dur);
+      o.connect(g); g.connect(c.destination);
+      o.start(c.currentTime + start); o.stop(c.currentTime + start + dur + .03);
+    } catch (e) {}
+  }
+  function callEndTone() {
+    /* 🆕 call cut/end — do chhoti beeps + halka vibrate */
+    wpTone(600, 0, .12, .05); wpTone(430, .16, .18, .05);
+    try { if (navigator.vibrate) navigator.vibrate(60); } catch (e) {}
+  }
+  try { document.addEventListener('pointerdown', function wpToneUnlock() { wpToneCtxGet(); document.removeEventListener('pointerdown', wpToneUnlock); }); } catch (e) {}
   function callStopRing() {
     if (dmCallRingTimer) { clearTimeout(dmCallRingTimer); dmCallRingTimer = null; }
     try { if (dmCallRingCtx) dmCallRingCtx.close(); } catch (e) {}
     dmCallRingCtx = null;
   }
   function callRingPulse() {
-    if (!dmCall || dmCall.state !== 'incoming') { callStopRing(); return; }
+    var st = dmCall && dmCall.state;
+    if (!dmCall || (st !== 'incoming' && st !== 'calling')) { callStopRing(); return; }
+    var outgoing = (st === 'calling');
     try {
       var AC = window.AudioContext || window.webkitAudioContext;
       if (AC) {
         if (!dmCallRingCtx) dmCallRingCtx = new AC();
         if (dmCallRingCtx.state === 'suspended') dmCallRingCtx.resume().catch(function () {});
         var base = dmCallRingCtx.currentTime;
-        [0, .38].forEach(function (offset) {
-          var osc = dmCallRingCtx.createOscillator(), gain = dmCallRingCtx.createGain();
-          osc.type = 'sine'; osc.frequency.value = 660;
-          gain.gain.setValueAtTime(0, base + offset);
-          gain.gain.linearRampToValueAtTime(.045, base + offset + .025);
-          gain.gain.linearRampToValueAtTime(0, base + offset + .23);
-          osc.connect(gain); gain.connect(dmCallRingCtx.destination);
-          osc.start(base + offset); osc.stop(base + offset + .24);
-        });
+        if (outgoing) {
+          /* 🆕 CALLER: kaan me "tuuu... tuuu" ringback — pata chale call ja rahi hai */
+          [0, 1.05].forEach(function (offset) {
+            var osc = dmCallRingCtx.createOscillator(), gain = dmCallRingCtx.createGain();
+            osc.type = 'sine'; osc.frequency.value = 425;
+            gain.gain.setValueAtTime(0, base + offset);
+            gain.gain.linearRampToValueAtTime(.05, base + offset + .04);
+            gain.gain.setValueAtTime(.05, base + offset + .7);
+            gain.gain.linearRampToValueAtTime(0, base + offset + .8);
+            osc.connect(gain); gain.connect(dmCallRingCtx.destination);
+            osc.start(base + offset); osc.stop(base + offset + .82);
+          });
+        } else {
+          [0, .38].forEach(function (offset) {
+            var osc = dmCallRingCtx.createOscillator(), gain = dmCallRingCtx.createGain();
+            osc.type = 'sine'; osc.frequency.value = 660;
+            gain.gain.setValueAtTime(0, base + offset);
+            gain.gain.linearRampToValueAtTime(.045, base + offset + .025);
+            gain.gain.linearRampToValueAtTime(0, base + offset + .23);
+            osc.connect(gain); gain.connect(dmCallRingCtx.destination);
+            osc.start(base + offset); osc.stop(base + offset + .24);
+          });
+        }
       }
     } catch (e) {}
-    dmCallRingTimer = setTimeout(callRingPulse, 2200);
+    dmCallRingTimer = setTimeout(callRingPulse, outgoing ? 4300 : 2200);
   }
   function callStartRing() { callStopRing(); callRingPulse(); }
   async function callSend(peer, id, action, extra) {
@@ -4882,6 +4949,7 @@ function renderMembers() {
       var cs = pc.connectionState || '', is = pc.iceConnectionState || '';
       if (cs === 'connected' || is === 'connected' || is === 'completed') {
         callClearTimer(); ctx.state = 'active'; if (!ctx.startedAt) ctx.startedAt = Date.now(); callRender();
+        try { callStopRing(); } catch (e2) {}
         if (!dmCallTicker) dmCallTicker = setInterval(function () { if (!dmCall) return; var t = $('dm-call-timer'); if (t) t.textContent = callElapsed(dmCall); var bt = $('dm-call-bar-timer'); if (bt) bt.textContent = callElapsed(dmCall); }, 1000);
       } else if (cs === 'disconnected' || is === 'disconnected') {
         ctx.state = 'reconnecting'; callRender();
@@ -4951,7 +5019,7 @@ function renderMembers() {
       var pc = callMakePeer(ctx); stream.getTracks().forEach(function (t) { pc.addTrack(t, stream); });
       var offer = await pc.createOffer(); await pc.setLocalDescription(offer); await callWaitIce(pc);
       if (dmCall !== ctx) return;
-      ctx.state = 'connecting'; callRender();
+      ctx.state = 'connecting'; callRender(); callStopRing();   /* jawab aa gaya -> ring band */
       if (!await callSend(ctx.peer, ctx.id, 'offer', { sdp: pc.localDescription.sdp })) throw new Error('signal');
       if (ctx.state !== 'active') callTimeout(ctx, 35000, function () { callSend(ctx.peer, ctx.id, 'hangup'); callFinish(false); toast('⏱ Call connect nahi hui'); });
     } catch (e) {
@@ -5029,14 +5097,49 @@ function renderMembers() {
     if (dmCall) { toast('📞 Pehle wali call khatam karo'); return; }
     if (!connected()) { toast('📡 Connection nahi — call nahi lag saki'); return; }
     var ctx = { id: mid(), peer: peer, role: 'caller', state: 'calling', muted: false, speaker: false, startedAt: 0 };
-    dmCall = ctx; callRender();
+    dmCall = ctx; callRender(); callStartRing();   /* 🆕 caller ko ringback sunai de */
     callTimeout(ctx, 30000, function () { callSend(peer, ctx.id, 'cancel'); callFinish(false); toast('⏱ Jawab nahi aaya'); });
     if (!await callSend(peer, ctx.id, 'invite', { name: myLabel() })) {
       callFinish(false); toast('📡 Call invite nahi bheji ja saki');
     }
   }
+  /* 🆕 Call summary (end hone par) + chat me call ka nishan */
+  function wpCallSummary(ctx) {
+    try {
+      var peer = ctx.peer, role = ctx.role;
+      var dur = ctx.startedAt ? Math.max(1, Math.round((Date.now() - ctx.startedAt) / 1000)) : 0;
+      var dirTxt = role === 'caller' ? 'Outgoing' : 'Incoming';
+      var head, sub, logTxt;
+      if (dur > 0) {
+        head = '\u260E\uFE0F Call ended'; sub = fmtDur(dur) + ' \u00B7 ' + dirTxt + ' \u00B7 ' + peerName(peer);
+        logTxt = (role === 'caller' ? '\uD83D\uDCDE Outgoing call' : '\uD83D\uDCDE Incoming call') + ' \u00B7 ' + fmtDur(dur);
+      } else if (role === 'caller') {
+        head = '\uD83D\uDCF5 Call nahi lagi'; sub = dirTxt + ' \u00B7 ' + peerName(peer); logTxt = '\uD83D\uDCF5 Call nahi lagi';
+      } else {
+        head = '\uD83D\uDCF5 Missed call'; sub = dirTxt + ' \u00B7 ' + peerName(peer); logTxt = '\uD83D\uDCF5 Missed call';
+      }
+      try {
+        appendMsg(peer, { d: role === 'caller' ? 'out' : 'in', t: 'call', x: logTxt, mid: mid(), ts: nowMs() });
+        save();
+        if (curChat === peer) renderThread();
+        renderAll();
+      } catch (e) {}
+      var old = $('wp-call-sum'); if (old && old.parentNode) old.parentNode.removeChild(old);
+      var card = document.createElement('div');
+      card.id = 'wp-call-sum';
+      var b1 = document.createElement('b'); b1.textContent = head;
+      var s1 = document.createElement('span'); s1.textContent = sub;
+      card.appendChild(b1); card.appendChild(s1);
+      document.body.appendChild(card);
+      var kill = function () { try { card.classList.add('out'); setTimeout(function () { if (card.parentNode) card.parentNode.removeChild(card); }, 420); } catch (e) {} };
+      var tm = setTimeout(kill, 3400);
+      card.onclick = function () { clearTimeout(tm); kill(); };
+    } catch (e) {}
+  }
   function callFinish(notifyPeer) {
     var ctx = dmCall; if (!ctx) return;
+    try { callEndTone(); } catch (e0) {}
+    try { wpCallSummary(ctx); } catch (e1) {}
     try { callStopRing(); } catch(e){}
     try { callClearTimer(); } catch(e){}
     try { if (dmCallTicker) { clearInterval(dmCallTicker); dmCallTicker = null; } } catch(e){}
@@ -5204,6 +5307,7 @@ function renderMembers() {
     if (topic.indexOf(myInboxPrefix()) !== 0) {
       if (topic.indexOf(NSP + 'presence-') === 0) onPresence(topic, str);
       else if (topic.indexOf(NSP + 'typing-') === 0) onTyping(topic, str);
+      else if (topic.indexOf(NSP + 'rcpt-') === 0) onRcpt(topic, str);
       else if (topic.indexOf(myCallPrefix()) === 0) onCallMessage(topic, str);
       return;
     }
@@ -5307,6 +5411,39 @@ function renderMembers() {
     if (peer === curChat) setChatBar();
   }
 
+  /* 🆕 READ RECEIPT: parh liya -> dost ke paas neela tick ✓✓ */
+  var dmReadSent = {}, dmReadPend = {}, dmReadTimer = null;
+  function dmSendRead(peer) {
+    peer = normCode(peer); if (!peer) return;
+    var arr = S.chats[peer] || [], mx = 0;
+    for (var i = 0; i < arr.length; i++) { var mm = arr[i]; if (mm && mm.d === 'in' && (mm.ts || 0) > mx) mx = mm.ts || 0; }
+    if (!mx || mx <= (dmReadSent[peer] || 0)) return;
+    dmReadPend[peer] = mx;
+    if (dmReadTimer) return;
+    dmReadTimer = setTimeout(function () {
+      dmReadTimer = null;
+      if (!connected()) { dmReadPend = {}; return; }
+      Object.keys(dmReadPend).forEach(function (pc) {
+        var v = dmReadPend[pc]; delete dmReadPend[pc];
+        if (v <= (dmReadSent[pc] || 0)) return;
+        dmReadSent[pc] = v;
+        try { mc().publish(NSP + 'rcpt-' + h36(normCode(S.code)), JSON.stringify({ p: pc, ts: v, at: nowMs() }), { qos: 1, retain: true }); } catch (e) {}
+      });
+    }, 900);
+  }
+  function onRcpt(topic, str) {
+    if (!str) return;
+    var h = topic.slice((NSP + 'rcpt-').length);
+    var peer = null;
+    Object.keys(S.friends).forEach(function (c) { if (h36(c) === h) peer = c; });
+    if (!peer) return;
+    try {
+      var p = JSON.parse(str);
+      if (!p || !p.ts) return;
+      if (p.p && normCode(p.p) !== normCode(S.code)) return;   /* ye kisi aur chat ki khabar hai */
+      if (p.ts > (S.reads[peer] || 0)) { S.reads[peer] = p.ts; save(); if (curChat === peer) renderThread(); }
+    } catch (e) {}
+  }
   function ping(name, text, code) {
     if (!BGMODE) { toast('💬 ' + name + ': ' + String(text || '').slice(0, 60)); beep(); }
     /* v26/v28: app peeche ya band ho to system notification (native bridge) */
@@ -5341,6 +5478,7 @@ function renderMembers() {
       S.friends[peer].lrt = newLrt;
       save();
     } catch(e){ try { S.friends[peer].un=0; S.friends[peer].lrt=nowMs(); save(); } catch(e2){} }
+    try { dmSendRead(peer); } catch (e3) {}
   }
   /* v28: unread ko messages se gino (do WebView ke state merge ke baad sahi rahe) */
   /* FIX v49: future timestamp + undefined lrt handling - 10 new badge bug fix */
@@ -5367,7 +5505,7 @@ function renderMembers() {
     if (!connected()) return;
     var topics = [myInboxPrefix() + '#'];
     if (!BGMODE) topics.push(myCallPrefix() + '#');
-    Object.keys(S.friends).forEach(function (c) { topics.push(NSP + 'presence-' + h36(c)); topics.push(NSP + 'typing-' + h36(c)); });
+    Object.keys(S.friends).forEach(function (c) { topics.push(NSP + 'presence-' + h36(c)); topics.push(NSP + 'typing-' + h36(c)); topics.push(NSP + 'rcpt-' + h36(c)); });
 
     try { mc().subscribe(topics, { qos: 1 }, function () { subscribed = true; }); } catch (e) {}
   }
@@ -5717,15 +5855,17 @@ function renderMembers() {
 
   function d4day(ts) {
     var d = new Date(ts || nowMs()), n = new Date();
-    if (d.toDateString() === n.toDateString()) return 'Aaj';
-    if (d.toDateString() === new Date(n.getTime() - 86400000).toDateString()) return 'Kal';
-    return d.getDate() + '/' + (d.getMonth() + 1) + '/' + String(d.getFullYear()).slice(2);
+    if (d.toDateString() === n.toDateString()) return 'Today';
+    if (d.toDateString() === new Date(n.getTime() - 86400000).toDateString()) return 'Yesterday';
+    var MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return d.getDate() + ' ' + MO[d.getMonth()] + (d.getFullYear() !== n.getFullYear() ? ' ' + d.getFullYear() : '');
   }
   function d4prev(m) {
     var t = m.t || 'text';
     if (t === 'photo') return '🖼️ Photo';
     if (t === 'gif') return 'GIF';
     if (t === 'voice') return '🎤 Voice message';
+    if (t === 'call') return String(m.x || '📞 Call');
     return String(m.x || '');
   }
   function d4setReply(m) {
@@ -5863,6 +6003,7 @@ function renderMembers() {
       return;
     }
     var lastDay = '';
+    var _rdTs = (S.reads && S.reads[curChat]) ? S.reads[curChat] : 0;
     arr.forEach(function (m) {
       var day = d4day(m.ts);
       if (day !== lastDay) {
@@ -5872,6 +6013,9 @@ function renderMembers() {
       var type = m.t || 'text';
       if (type === 'sys') {
         var s1 = document.createElement('div'); s1.className = 'd4sys'; s1.textContent = m.x || ''; t.appendChild(s1); return;
+      }
+      if (type === 'call') {   /* 🆕 call ka nishan chat me */
+        var c1 = document.createElement('div'); c1.className = 'd4sys'; c1.textContent = m.x || '\uD83D\uDCDE Call'; t.appendChild(c1); return;
       }
       var own = m.d === 'out';
       var nm = own ? 'You' : peerName(curChat);
@@ -5889,7 +6033,8 @@ function renderMembers() {
       sd.style.color = own ? '#f9a8d4' : peerColor(curChat);
       var bub = d4bubbleEl(m);
       var tm = document.createElement('div'); tm.className = 'time';
-      tm.textContent = timeShort(m.ts) + (own ? ' ✓✓' : '');
+      var _rd = own && _rdTs && (m.ts || 0) <= _rdTs;
+      tm.innerHTML = esc(timeShort(m.ts)) + (own ? ' <span class="tk' + (_rd ? ' read' : '') + '">\u2713\u2713</span>' : '');
       var rxb = document.createElement('div'); rxb.className = 'rx4';
       try { paintRx4(rxb, m); } catch (e) {}
       wrap.appendChild(sd); wrap.appendChild(bub); wrap.appendChild(rxb); wrap.appendChild(tm);
@@ -6142,7 +6287,8 @@ function renderMembers() {
   }
   async function dmGifLoad(q) {
     var grid = $('dm-g4g'); if (!grid) return;
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;font-size:11.5px;opacity:.8;padding:14px">⏳ GIFs aa rahe hain...</div>';
+    grid.innerHTML = '';
+    for (var _gsk = 0; _gsk < 9; _gsk++) { var _gs = document.createElement('div'); _gs.className = 'gsk'; grid.appendChild(_gs); }
     var key = (typeof KLIPY_KEY !== 'undefined') ? KLIPY_KEY : '';
     if (!key) { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;font-size:11.5px;padding:14px">GIF available nahi</div>'; return; }
     try {
