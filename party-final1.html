@@ -6798,46 +6798,56 @@ function renderMembers() {
   }
 
   /* ---------------- expose ---------------- */
-  /* ================= 🆕 3-TAB BAR: Party | Chat | Call ================= */
+  /* ================= 🆕 3-TAB BAR (aesthetic): Party | Chat | Call ================= */
   (function ypBarInit() {
-    if (BGMODE) return;                       /* chhupa bg page par bar nahi chahiye */
+    if (BGMODE) return;                       /* chhupa bg page par bar nahi */
     try {
+      var ICO = {
+        party: '<rect x="3" y="5" width="18" height="14" rx="3.4"/><path d="M10.2 9.4l4.6 2.6-4.6 2.6z" fill="currentColor" stroke="none"/>',
+        chat: '<path d="M20.2 11.7c0 4-3.7 7.2-8.3 7.2-1 0-2-.2-2.9-.5L4.6 20l1.2-3.7A6.9 6.9 0 0 1 3.6 11.7c0-4 3.7-7.2 8.3-7.2s8.3 3.2 8.3 7.2z"/>',
+        call: '<path d="M6.4 3.6h2.9l1.4 3.8-1.9 1.4a11.4 11.4 0 0 0 5 5l1.4-1.9 3.8 1.4v2.9a1.9 1.9 0 0 1-2.1 1.9A16.6 16.6 0 0 1 4.5 5.7 1.9 1.9 0 0 1 6.4 3.6z"/>'
+      };
+      function ic(k) { return '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + ICO[k] + '</svg>'; }
+
       var css = ''
-        + '#yp-bar{position:fixed;left:0;right:0;bottom:0;z-index:90;display:none;align-items:stretch;'
-        +   'background:#150c26;border-top:1px solid rgba(255,255,255,.10);'
-        +   'padding:7px 4px calc(9px + env(safe-area-inset-bottom));}'
-        + '#yp-bar .yp-t{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#8f7cb5;'
-        +   'font-size:9.5px;font-weight:750;position:relative;cursor:pointer;padding:3px 2px;}'
-        + '#yp-bar .yp-t .e{font-size:20px;line-height:1.1;filter:grayscale(.4) opacity(.8);}'
+        + '#yp-bar{position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:90;display:none;align-items:stretch;padding:5px;border-radius:22px;'
+        +   'border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,rgba(42,25,72,.93),rgba(26,14,46,.95));'
+        +   'backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);'
+        +   'box-shadow:0 14px 34px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.10);}'
+        + '#yp-bar .yp-pill{position:absolute;top:5px;bottom:5px;left:5px;width:calc((100% - 10px)/3);border-radius:17px;z-index:1;'
+        +   'background:linear-gradient(135deg,rgba(168,85,247,.45),rgba(236,72,153,.36));border:1px solid rgba(255,255,255,.18);'
+        +   'box-shadow:0 8px 20px rgba(168,85,247,.35),inset 0 1px 0 rgba(255,255,255,.20);transition:transform .32s cubic-bezier(.22,.9,.24,1);}'
+        + '#yp-bar .yp-t{flex:1;position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:3px;color:#9c8ac2;'
+        +   'font-size:9.5px;font-weight:750;letter-spacing:.25px;cursor:pointer;padding:8px 2px 6px;transition:color .22s;}'
+        + '#yp-bar .yp-t svg{display:block;transition:transform .26s cubic-bezier(.2,.9,.2,1);}'
         + '#yp-bar .yp-t.on{color:#fff;}'
-        + '#yp-bar .yp-t.on .e{filter:none;}'
-        + '#yp-bar .yp-t.on::before{content:"";position:absolute;top:-8px;width:28px;height:3px;border-radius:99px;'
-        +   'background:linear-gradient(90deg,#a855f7,#ec4899);}'
-        + '#yp-bar .yp-t b{position:absolute;top:-2px;right:calc(50% - 20px);min-width:18px;height:18px;line-height:18px;'
-        +   'padding:0 5px;border-radius:99px;background:#ec4899;color:#fff;font-size:10px;font-weight:800;display:none;text-align:center;}'
+        + '#yp-bar .yp-t.on svg{transform:translateY(-1px);filter:drop-shadow(0 0 8px rgba(236,72,153,.5));}'
+        + '#yp-bar .yp-t b{position:absolute;top:2px;right:calc(50% - 22px);min-width:18px;height:18px;line-height:18px;padding:0 5px;border-radius:99px;'
+        +   'background:linear-gradient(135deg,#ec4899,#f43f5e);color:#fff;font-size:10px;font-weight:800;display:none;text-align:center;'
+        +   'box-shadow:0 3px 10px rgba(236,72,153,.45);}'
         + '#yp-bar .yp-t b.on{display:block;}'
-        + 'body.yp-joined #app{height:calc(100vh - 58px);}'
-        + 'body.yp-joined #dm-view-inbox .dm-list{padding-bottom:70px;}'
-        + '#yp-calls .yp-crow{display:flex;align-items:center;gap:10px;padding:10px 6px;cursor:pointer;'
-        +   'border-bottom:1px solid rgba(255,255,255,.055);}'
-        + '#yp-calls .yp-av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;'
+        + '#yp-calls{padding:2px 10px 74px;}'
+        + '#yp-calls .yp-crow{display:flex;align-items:center;gap:10px;padding:11px 6px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.055);}'
+        + '#yp-calls .yp-av{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;'
         +   'background:linear-gradient(160deg,#4ade80,#16a34a);color:#08240f;font-weight:800;font-size:15px;}'
         + '#yp-calls .yp-in{flex:1 1 auto;min-width:0;}'
         + '#yp-calls .yp-in b{font-size:13px;display:block;}'
-        + '#yp-calls .yp-in s{text-decoration:none;font-size:11px;color:#a291c6;display:block;margin-top:2px;'
-        +   'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
-        + '#yp-calls .yp-tt{font-size:10px;color:#8b78b3;flex:0 0 auto;}'
-        + '#yp-calls .yp-cb{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;'
-        +   'background:linear-gradient(135deg,#22c55e,#10b981);font-size:15px;}'
-        + '#yp-calls .yp-empty{padding:26px 12px;text-align:center;color:#8f7cb5;font-size:12px;line-height:1.7;}';
+        + '#yp-calls .yp-in s{text-decoration:none;font-size:11px;color:#a291c6;display:block;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
+        + '#yp-calls .yp-miss .yp-in s{color:#fb7185;}'
+        + '#yp-calls .yp-tt{font-size:10px;color:#8b78b3;flex:0 0 auto;text-align:right;line-height:1.35;max-width:78px;}'
+        + '#yp-calls .yp-cb{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;'
+        +   'background:linear-gradient(135deg,#22c55e,#10b981);font-size:15px;box-shadow:0 4px 12px rgba(16,185,129,.35);}'
+        + '#yp-calls .yp-empty{padding:26px 12px;text-align:center;color:#8f7cb5;font-size:12px;line-height:1.7;}'
+        + 'body.yp-joined #dm-view-inbox .dm-list{padding-bottom:74px;}';
       var st = document.createElement('style'); st.id = 'yp-bar-css'; st.textContent = css;
       document.head.appendChild(st);
 
       var bar = document.createElement('div');
       bar.id = 'yp-bar';
-      bar.innerHTML = '<div class="yp-t" data-yp="party"><span class="e">🎬</span><span class="l">Party</span></div>'
-                    + '<div class="yp-t on" data-yp="chat"><span class="e">💬</span><span class="l">Chat</span><b id="yp-badge"></b></div>'
-                    + '<div class="yp-t" data-yp="call"><span class="e">📞</span><span class="l">Call</span></div>';
+      bar.innerHTML = '<span class="yp-pill" id="yp-pillbg"></span>'
+        + '<div class="yp-t" data-yp="party">' + ic('party') + '<span class="l">Party</span></div>'
+        + '<div class="yp-t" data-yp="chat">' + ic('chat') + '<span class="l">Chat</span><b id="yp-badge"></b></div>'
+        + '<div class="yp-t" data-yp="call">' + ic('call') + '<span class="l">Call</span></div>';
       document.body.appendChild(bar);
 
       var sheet = $('dm-sheet');
@@ -6848,36 +6858,44 @@ function renderMembers() {
         sheet.appendChild(cv);
       }
 
+      /* ---------- Call history: HAR call, direction + duration + time ---------- */
       function ypRenderCalls() {
         var w = $('yp-calls'); if (!w) return;
         var rows = [];
         Object.keys(S.chats || {}).forEach(function (c) {
-          var arr = S.chats[c] || [], last = null;
-          for (var i = arr.length - 1; i >= 0; i--) { var m = arr[i]; if (m && m.t === 'call') { last = m; break; } }
-          if (last) rows.push({ c: c, m: last });
+          var arr = S.chats[c] || [];
+          for (var i = 0; i < arr.length; i++) { var m = arr[i]; if (m && m.t === 'call') rows.push({ c: c, m: m }); }
         });
         rows.sort(function (a, b) { return (b.m.ts || 0) - (a.m.ts || 0); });
+        if (rows.length > 100) rows = rows.slice(0, 100);
         if (!rows.length) {
-          w.innerHTML = '<div class="yp-empty">📞 Abhi koi call nahi hui<br><small style="opacity:.75">Chat khol kar 📞 dabao — call ki history yahan aayegi</small></div>';
+          w.innerHTML = '<div class="yp-empty">📞 Abhi koi call nahi hui<br><small style="opacity:.75">Chat khol kar 📞 dabao — poori history yahan aayegi</small></div>';
           return;
         }
         w.innerHTML = rows.map(function (r) {
-          var nm = ''; try { nm = peerName(r.c); } catch (e) { nm = r.c; }
-          var txt = ''; try { txt = String(r.m.x || '📞 Call'); } catch (e) {}
-          var tt = ''; try { tt = timeShort(r.m.ts); } catch (e) {}
-          return '<div class="yp-crow" data-c="' + r.c + '">'
-               +   '<div class="yp-av">' + esc((nm || '?').slice(0, 1).toUpperCase()) + '</div>'
-               +   '<div class="yp-in"><b>' + esc(nm) + '</b><s>' + esc(txt.slice(0, 60)) + '</s></div>'
-               +   '<span class="yp-tt">' + esc(tt) + '</span>'
+          var c = r.c, m = r.m;
+          var nm = c; try { nm = peerName(c) || c; } catch (e) {}
+          var x = String(m.x || '');
+          var dur = ''; var k = x.indexOf('·'); if (k >= 0) dur = x.slice(k + 1).trim();
+          var missed = /missed/i.test(x), noluck = /nahi lagi/i.test(x), out = (m.d === 'out');
+          var dir = missed ? '❌ Missed call'
+                  : noluck ? (out ? '↗ Call nahi lagi' : '↙ Chhoot gayi')
+                  : ((out ? '↗ Outgoing' : '↙ Incoming') + (dur ? ' · ' + dur : ''));
+          var when = ''; try { when = (typeof d4day === 'function' ? d4day(m.ts) + '<br>' : '') + timeShort(m.ts); }
+          catch (e) { try { when = timeShort(m.ts); } catch (e2) {} }
+          return '<div class="yp-crow' + (missed ? ' yp-miss' : '') + '" data-c="' + c + '">'
+               +   '<div class="yp-av">' + esc(String(nm || '?').slice(0, 1).toUpperCase()) + '</div>'
+               +   '<div class="yp-in"><b>' + esc(nm) + '</b><s>' + esc(dir) + '</s></div>'
+               +   '<span class="yp-tt">' + when + '</span>'
                +   '<span class="yp-cb">📞</span></div>';
         }).join('');
         Array.prototype.forEach.call(w.querySelectorAll('.yp-crow'), function (rowEl) {
-          rowEl.onclick = function () { try { openChat(rowEl.getAttribute('data-c')); } catch (e) { } ypSync(); };
+          rowEl.onclick = function () { try { openChat(rowEl.getAttribute('data-c')); } catch (e) {} ypSync(); };
           var cb = rowEl.querySelector('.yp-cb');
           if (cb) cb.onclick = function (ev) {
             if (ev && ev.stopPropagation) ev.stopPropagation();
-            try { openChat(rowEl.getAttribute('data-c')); } catch (e) { }
-            try { startVoiceCall(); } catch (e) { }
+            try { openChat(rowEl.getAttribute('data-c')); } catch (e) {}
+            try { startVoiceCall(); } catch (e) {}
             ypSync();
           };
         });
@@ -6887,6 +6905,7 @@ function renderMembers() {
         while (el) { if (el.getAttribute && el.getAttribute('data-yp')) return el.getAttribute('data-yp'); el = el.parentNode; }
         return null;
       }
+      /* 🆕 Watchparty (room) me bar chhupi rehti hai — DM sheet khulne par wapas aati hai */
       function ypSync() {
         try {
           var joined = document.body.classList.contains('yp-joined');
@@ -6894,11 +6913,13 @@ function renderMembers() {
           var sheetOn = !!(sh && sh.classList.contains('on'));
           var chatView = !!(cvw && cvw.classList.contains('on'));
           var callsView = !!(clw && clw.classList.contains('on'));
-          var show = joined && !(sheetOn && chatView);       /* apni chat ke andar bar nahi */
+          var show = joined && sheetOn && !chatView;         /* party me nahi · apni chat ke andar bhi nahi */
           bar.style.display = show ? 'flex' : 'none';
-          var want = callsView ? 'call' : (sheetOn ? 'chat' : 'party');
+          var want = callsView ? 'call' : 'chat';
+          var idx = (want === 'call') ? 2 : 1;
+          var bg = $('yp-pillbg'); if (bg) bg.style.transform = 'translateX(' + (idx * 100) + '%)';
           Array.prototype.forEach.call(bar.children, function (el) {
-            var k = el.getAttribute('data-yp');
+            var k = el.getAttribute && el.getAttribute('data-yp'); if (!k) return;
             el.classList.toggle('on', k === want);
           });
           var bd = $('yp-badge');
@@ -6912,7 +6933,7 @@ function renderMembers() {
       bar.onclick = function (ev) {
         var k = ypTabOf(ev && ev.target); if (!k) return;
         try {
-          if (k === 'party') { closeSheet(); }
+          if (k === 'party') { closeSheet(); }                 /* wapas watchparty */
           else if (k === 'chat') { openSheet(); showView('dm-view-inbox'); }
           else { openSheet(); showView('dm-view-calls'); ypRenderCalls(); }
         } catch (e) {}
@@ -6922,6 +6943,7 @@ function renderMembers() {
         try { openSheet(); showView('dm-view-inbox'); } catch (e) {}
         ypSync();
       };
+      window.ypCallRefresh = ypRenderCalls;
       setInterval(ypSync, 500);
       ypSync();
     } catch (e) {}
