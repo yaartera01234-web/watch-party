@@ -1155,6 +1155,30 @@ body.pc-mini-on .sync-row { display: none !important; }
 .dm-call-top-spacer { width: 40px; flex: 0 0 40px; }
 .dm-call-top-title { font-size: 13px; font-weight: 700; }
 .dm-call-top-lock { min-width: 40px; display: flex; justify-content: flex-end; align-items: center; font-size: 11px; color: #b8f4d4; white-space: nowrap; }
+
+/* 🆕 CALL MINIMIZE — top-left ⬇️ button + neeche floating bar (call chalti rehti hai) */
+.dm-call-screen { transition: transform .28s ease, opacity .28s ease; }
+.dm-call-screen.mini { opacity: 0; transform: translateY(30px) scale(.96); pointer-events: none; }
+.dm-call-min { width: 40px; height: 40px; flex: 0 0 40px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.16); border-radius: 12px; background: rgba(255,255,255,.08); color: #e9e4ff; cursor: pointer; padding: 0; }
+.dm-call-min:active { transform: scale(.94); }
+.dm-call-min svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+#dm-call-bar { position: fixed; z-index: 118; left: 50%; transform: translateX(-50%); bottom: calc(74px + env(safe-area-inset-bottom, 0px)); width: min(92%, 480px); display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 18px; border: 1px solid rgba(195,138,255,.34); background: linear-gradient(135deg,rgba(24,16,45,.96),rgba(16,26,48,.96)); box-shadow: 0 14px 38px rgba(0,0,0,.5); backdrop-filter: blur(14px); transition: transform .28s ease, opacity .28s ease; }
+#dm-call-bar .mini { position: relative; width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%; display: grid; place-items: center; }
+#dm-call-bar .mini .dm-call-bar-av-inner { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; overflow: hidden; font-weight: 800; font-size: 15px; color: #180c2e; }
+#dm-call-bar .mini .dm-call-bar-av-inner img { width: 100%; height: 100%; object-fit: cover; }
+#dm-call-bar .mini .dot { position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%; background: #34d399; border: 2px solid #101a30; animation: wpBarBlink 1.6s ease-in-out infinite; }
+@keyframes wpBarBlink { 50% { opacity: .35 } }
+#dm-call-bar .info { flex: 1; min-width: 0; cursor: pointer; }
+#dm-call-bar .info b { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#dm-call-bar .info span { font-size: 11px; color: #b9b2df; font-variant-numeric: tabular-nums; }
+#dm-call-bar .acts { display: flex; gap: 6px; align-items: center; }
+#dm-call-bar .acts button { width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,.14); color: #fff; background: rgba(255,255,255,.08); display: grid; place-items: center; cursor: pointer; padding: 0; }
+#dm-call-bar .acts button:active { transform: scale(.94); }
+#dm-call-bar .acts button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
+#dm-call-bar .acts button.is-on { background: linear-gradient(135deg,rgba(84,232,255,.35),rgba(195,138,255,.35)); border-color: rgba(195,138,255,.55); }
+#dm-call-bar .acts button.end { background: linear-gradient(135deg,#ff5d76,#ed245a); border: 0; }
+#dm-call-bar .acts button.end svg { transform: rotate(135deg); }
+#dm-call-bar.gone { opacity: 0; transform: translateX(-50%) translateY(24px); pointer-events: none; }
 .dm-call-center { position: relative; z-index: 1; flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 0 18px; text-align: center; }
 .dm-call-avatar-ring { position: relative; width: 162px; height: 162px; display: grid; place-items: center; margin-bottom: 25px; }
 .dm-call-avatar-ring:before, .dm-call-avatar-ring:after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(173,145,255,.34); animation: dm-call-pulse 2.8s ease-out infinite; }
@@ -4344,7 +4368,7 @@ function renderMembers() {
   </div>
 </div>
 <section class="dm-call-screen hidden" id="dm-call-screen" role="dialog" aria-modal="true" aria-label="Private voice call">
-  <div class="dm-call-top"><span class="dm-call-top-spacer" aria-hidden="true"></span><span class="dm-call-top-title">Private voice call</span><span class="dm-call-top-lock">🔒 E2E</span></div>
+  <div class="dm-call-top"><button class="dm-call-min" id="dm-call-min" type="button" aria-label="Minimize call"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><span class="dm-call-top-title">Private voice call</span><span class="dm-call-top-lock">🔒 E2E</span></div>
   <div class="dm-call-center">
     <div class="dm-call-avatar-ring"><div class="dm-call-avatar" id="dm-call-avatar"></div></div>
     <h2 id="dm-call-name">Friend</h2>
@@ -4364,6 +4388,18 @@ function renderMembers() {
   </div>
   <audio id="dm-call-remote" autoplay playsinline></audio>
 </section>
+<!-- 🆕 minimized call bar — call chalti rehti hai, page free rehta hai -->
+<div id="dm-call-bar" class="gone" aria-label="Call minimized">
+  <div class="mini"><div id="dm-call-bar-av" class="dm-call-bar-av-inner"></div><span class="dot"></span></div>
+  <div class="info" id="dm-call-bar-info" role="button" aria-label="Open call">
+    <b id="dm-call-bar-name">Friend</b><span>🔒 <span id="dm-call-bar-timer">00:00</span></span>
+  </div>
+  <div class="acts">
+    <button id="dm-call-bar-mute" type="button" aria-label="Mute microphone"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/></svg></button>
+    <button id="dm-call-bar-speaker" type="button" aria-label="Turn speaker on"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7m3-10a9 9 0 0 1 0 13"/></svg></button>
+    <button class="end" id="dm-call-bar-end" type="button" aria-label="End call"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.24.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2Z"/></svg></button>
+  </div>
+</div>
 <div id="dm-toast"></div>
 
 <script>
@@ -4711,11 +4747,25 @@ function renderMembers() {
     var s = Math.max(0, Math.floor((Date.now() - ctx.startedAt) / 1000));
     return ('0' + Math.floor(s / 60)).slice(-2) + ':' + ('0' + (s % 60)).slice(-2);
   }
+  var wpCallMin = false;                                  /* 🆕 call minimized? */
+  function wpCallMinimize() { if (!dmCall) return; wpCallMin = true; callRender(); try { if (navigator.vibrate) navigator.vibrate(12); } catch (e) {} }
+  function wpCallExpand() { if (!dmCall) return; wpCallMin = false; callRender(); }
   function callRender() {
     var screen = $('dm-call-screen'); if (!screen) return;
-    if (!dmCall) { screen.classList.add('hidden'); return; }
+    var bar = $('dm-call-bar');
+    if (!dmCall) { screen.classList.add('hidden'); screen.classList.remove('mini'); if (bar) bar.classList.add('gone'); return; }
     var c = dmCall, state = c.state || 'calling';
+    if (state === 'incoming' || state === 'calling') wpCallMin = false;   /* ring/outgoing hamesha full screen */
     screen.classList.remove('hidden'); screen.setAttribute('data-state', state);
+    screen.classList.toggle('mini', !!wpCallMin);                        /* 🆕 minimize slide */
+    if (bar) {
+      bar.classList.toggle('gone', !wpCallMin);                          /* 🆕 bar sirf minimized halat me */
+      var bAv = $('dm-call-bar-av'); if (bAv) bAv.innerHTML = avatarHTML(c.peer, 'dm-call-bar-av-inner');
+      var bNm = $('dm-call-bar-name'); if (bNm) bNm.textContent = peerName(c.peer);
+      var bTm = $('dm-call-bar-timer'); if (bTm) bTm.textContent = callElapsed(c);
+      var bMu = $('dm-call-bar-mute'); if (bMu) bMu.classList.toggle('is-on', !!c.muted);
+      var bSp = $('dm-call-bar-speaker'); if (bSp) bSp.classList.toggle('is-on', !!c.speaker);
+    }
     var av = $('dm-call-avatar'); if (av) av.innerHTML = avatarHTML(c.peer, 'dm-call-avatar-inner');
     var nm = $('dm-call-name'); if (nm) nm.textContent = peerName(c.peer);
     var status = $('dm-call-status');
@@ -4799,7 +4849,7 @@ function renderMembers() {
       var cs = pc.connectionState || '', is = pc.iceConnectionState || '';
       if (cs === 'connected' || is === 'connected' || is === 'completed') {
         callClearTimer(); ctx.state = 'active'; if (!ctx.startedAt) ctx.startedAt = Date.now(); callRender();
-        if (!dmCallTicker) dmCallTicker = setInterval(function () { if (!dmCall) return; var t = $('dm-call-timer'); if (t) t.textContent = callElapsed(dmCall); }, 1000);
+        if (!dmCallTicker) dmCallTicker = setInterval(function () { if (!dmCall) return; var t = $('dm-call-timer'); if (t) t.textContent = callElapsed(dmCall); var bt = $('dm-call-bar-timer'); if (bt) bt.textContent = callElapsed(dmCall); }, 1000);
       } else if (cs === 'disconnected' || is === 'disconnected') {
         ctx.state = 'reconnecting'; callRender();
         callTimeout(ctx, 12000, function () { callSend(ctx.peer, ctx.id, 'hangup'); callFinish(false); toast('📡 Call connection chali gayi'); });
@@ -6196,6 +6246,18 @@ function renderMembers() {
     if (callEndBtn) callEndBtn.onclick = callEnd;
     var callMuteBtn = $('dm-call-mute'); if (callMuteBtn) callMuteBtn.onclick = callToggleMute;
     var callSpeakerBtn = $('dm-call-speaker'); if (callSpeakerBtn) callSpeakerBtn.onclick = callToggleSpeaker;
+    /* 🆕 minimize + bar wiring */
+    var callMinBtn = $('dm-call-min'); if (callMinBtn) callMinBtn.onclick = wpCallMinimize;
+    var callBarInfo = $('dm-call-bar-info'); if (callBarInfo) callBarInfo.onclick = wpCallExpand;
+    var callBarMute = $('dm-call-bar-mute'); if (callBarMute) callBarMute.onclick = callToggleMute;
+    var callBarSpk = $('dm-call-bar-speaker'); if (callBarSpk) callBarSpk.onclick = callToggleSpeaker;
+    var callBarEnd = $('dm-call-bar-end'); if (callBarEnd) callBarEnd.onclick = callEnd;
+    var callScr = $('dm-call-screen');
+    if (callScr && !callScr._wpSwipe) {                    /* neeche swipe = minimize */
+      callScr._wpSwipe = true; var _cy0 = null;
+      callScr.addEventListener('touchstart', function (e) { _cy0 = e.touches[0].clientY; }, { passive: true });
+      callScr.addEventListener('touchend', function (e) { if (_cy0 !== null && (e.changedTouches[0].clientY - _cy0) > 70) wpCallMinimize(); _cy0 = null; }, { passive: true });
+    }
     var ov = $('dm-ov'); if (ov) ov.onclick = closeSheet;
     var x = $('dm-close-btn'); if (x) x.onclick = closeSheet;
     var addb = $('dm-add-btn'); if (addb) addb.onclick = function () { $('dm-my-code').textContent = S.code; showView('dm-view-add'); };
