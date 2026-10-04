@@ -1947,15 +1947,55 @@ function setStatus(t) { /* silent */ }
 /* ---------- 📻 TOWER CONNECTION (auto-fallback) ---------- */
 function ensureLib(ok) {
   if (typeof mqtt !== 'undefined') { ok(); return; }
-  // backup CDN
-  const s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/mqtt/dist/mqtt.min.js';
-  s.onload = () => (typeof mqtt !== 'undefined') ? ok() : setStatus('❌ Library load nahi hui — net check karke refresh karo! 🔄');
-  s.onerror = () => setStatus('❌ Library load nahi hui — net check karke refresh karo! 🔄');
-  document.head.appendChild(s);
+  /* 🆕 boss: koi bhi tower connect na hone ki ek badi wajah — CDN se library load na hona.
+     Ab 3 CDN ek ke baad ek try hote hain, aur sab fail hon to 6 sec baad poora chain dobara chalta hai. */
+  const urls = [
+    'https://cdn.jsdelivr.net/npm/mqtt/dist/mqtt.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.16.0/mqtt.min.js',
+    'https://unpkg.com/mqtt/dist/mqtt.min.js'
+  ];
+  let k = 0, rounds = 0;
+  const next = () => {
+    if (typeof mqtt !== 'undefined') { ok(); return; }
+    if (k >= urls.length) {
+      k = 0; rounds++;
+      setStatus('📻 Library load nahi hui — dobara koshish kar raha...');
+      try { if (typeof toast === 'function') toast('⚠️ Net slow hai — library dobara try kar raha hoon...'); } catch (e) {}
+      if (rounds <= 20) setTimeout(next, 6000);
+      return;
+    }
+    const s = document.createElement('script');
+    s.src = urls[k++];
+    s.onload = () => { if (typeof mqtt !== 'undefined') ok(); else next(); };
+    s.onerror = next;
+    document.head.appendChild(s);
+  };
+  next();
+}
+/* 🆕 TOWER AUTO-FALLBACK: ek tower na mile to khud agla (EMQX -> HiveMQ -> Mosquitto).
+   Poora cycle fail ho to 8 sec baad dobara shuru — kabhi atka nahi rehta. */
+let brokerFails = 0, brokerRetryT = 0;
+function towerFail(i) {
+  try {
+    if (i !== brokerIdx || mqttUp) return;
+    brokerFails++;
+    if (brokerFails < BROKERS.length) {
+      const ni = (i + 1) % BROKERS.length;
+      setStatus('📻 ' + BROKERS[i].name + ' nahi mila — ' + BROKERS[ni].name + ' try kar raha...');
+      try { if (typeof toast === 'function') toast('📻 ' + BROKERS[i].name + ' nahi mila — ' + BROKERS[ni].name + ' try kar raha hoon...'); } catch (e) {}
+      connectBroker(ni);
+    } else {
+      brokerFails = 0;
+      setStatus('❌ Koi tower nahi mila — dobara koshish...');
+      try { if (typeof toast === 'function') toast('❌ Tower nahi mil raha — net check karo! Agla khud try kar raha hoon... 🔄'); } catch (e) {}
+      clearTimeout(brokerRetryT);
+      brokerRetryT = setTimeout(() => { try { if (!mqttUp) connectBroker(brokerIdx); } catch (e) {} }, 8000);
+    }
+  } catch (e) {}
 }
 function connectBroker(i) {
   brokerIdx = i;
+  try { towerInput.value = String(i); } catch (e) {}   /* jo tower chal raha/switch hua wahi select me nazar aaye */
   if (i >= BROKERS.length) {
     setStatus('❌ Koi tower nahi mila — net check karke page refresh karo! 🔄');
     return;
@@ -1971,7 +2011,8 @@ function connectBroker(i) {
     });
   } catch (e) { alert('\u274C Tower error! Dusra tower select karo! 🔄'); return; }
   clearTimeout(watchdog);
-  watchdog = setTimeout(() => { if (!mqttUp) { try { client.end(true); } catch (e) {} alert('\u274C ' + BROKERS[i].name + ' nahi mil raha! Dusra tower select karo! 🔄'); } }, 11000);
+  /* 🆕 boss: fail hone par native alert nahi — khud agla tower try karo (auto-fallback) */
+  watchdog = setTimeout(() => { if (!mqttUp && i === brokerIdx) { try { client.end(true); } catch (e) {} towerFail(i); } }, 11000);
   client.on('connect', onConnect);
   client.on('message', function (topic, buf) {
     /* 🆕 DM topics ab is client par nahi aate — DM ka apna EMQX client hai (connectDmTower) */
@@ -2012,7 +2053,10 @@ function connectDmTower() {
 
 function onConnect() {
   mqttUp = true;
+  brokerFails = 0;
   clearTimeout(watchdog);
+  clearTimeout(brokerRetryT);
+  try { savePrefs(); } catch (e) {}   /* 🆕 jo tower chal gaya wahi agle boot par yaad rahe */
   subscribeRoom();
   try { if (wpSleepPend) wpSleepFire(); } catch (e) {}   /* 🌙 tower band tha -> connect hote hi pause dobara */
   /* 🆕 DM is tower se juda nahi — uska apna EMQX client hai (upar connectDmTower) */
@@ -2055,7 +2099,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-04-15';
+const WP_BUILD = '2026-10-04-16';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
