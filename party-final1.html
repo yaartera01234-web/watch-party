@@ -4573,9 +4573,15 @@ function renderMembers() {
       if (!prev || typeof prev !== 'object') return;
       Object.keys(prev.chats || {}).forEach(function (c) {
         var mine = S.chats[c] || (S.chats[c] = []), have = {};
-        mine.forEach(function (m) { if (m && m.mid) have[m.mid] = 1; });
+        /* 🆕 mid ke bina wale msg (purane/sys/call) bhi merge hon — pehle sirf mid wale aate the */
+        var keyOf = function (m) {
+          if (!m) return 'x';
+          return m.mid ? ('m' + m.mid) : ('k' + (m.ts || 0) + '|' + (m.d || '') + '|' + (m.t || '') + '|' + String(m.x || '').slice(0, 40));
+        };
+        mine.forEach(function (m) { have[keyOf(m)] = 1; });
         (prev.chats[c] || []).forEach(function (m) {
-          if (m && m.mid && !have[m.mid]) { mine.push(m); have[m.mid] = 1; }
+          if (!m) return; var k = keyOf(m);
+          if (!have[k]) { mine.push(m); have[k] = 1; }
         });
         mine.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
         if (mine.length > MAX_MSGS) S.chats[c] = mine.slice(-MAX_MSGS);
@@ -5388,6 +5394,7 @@ function renderMembers() {
           if (S.friends[peer] && body.rx && body.rx !== '1') {
             if (rxApply(peer, body.rx, body.x || '', 'peer') && curChat === peer) renderThread();
           }
+          try { dmMarkPeerReplied(peer); } catch (eR) {}
           /* Seen + mailbox clear sirf decrypt aur local apply ke BAAD — warna crash ke baad msg kho sakta tha. */
           S.seen[msgId] = 1; save(); clearRetained(topic);
           return;
@@ -5436,6 +5443,7 @@ function renderMembers() {
           if (p.k) S.friends[peer].color = p.k;
           if (p.a) S.friends[peer].avatar = p.a;
           appendMsg(peer, { d: 'in', t: body.t, x: body.x, u: body.u || '', dv: body.dv || '', dur: body.dur || 0, rq: body.rq || null, mid: body.mid || msgId, ts: body.ts || p.ts || nowMs() });
+          try { dmMarkPeerReplied(peer); } catch (eR) {}
           if (curChat === peer && sheetOpen()) { markRead(peer); renderThread(); }
           else { S.friends[peer].un = (S.friends[peer].un || 0) + 1; ping(p.n || peer, body.x || '', peer); }
         }
@@ -5467,8 +5475,23 @@ function renderMembers() {
     if (peer === curChat) setChatBar();
   }
 
-  /* 🆕 READ RECEIPT: parh liya -> dost ke paas neela tick ✓✓ */
+  /* 🆕 READ RECEIPT: parh liya -> dost ke paas neela tick */
   var dmReadSent = {}, dmReadPend = {}, dmReadTimer = null;
+  function dmSendReadFlush() {
+    dmReadTimer = null;
+    if (!connected()) {
+      /* 🆕 socket band tha to receipt PHENKO mat — thori der baad dobara koshish (pehle yahan sab zaya ho jata tha) */
+      if (Object.keys(dmReadPend).length) dmReadTimer = setTimeout(dmSendReadFlush, 900);
+      return;
+    }
+    Object.keys(dmReadPend).forEach(function (pc) {
+      var p0 = dmReadPend[pc]; delete dmReadPend[pc];
+      if (!p0 || !p0.ts) return;
+      if (!p0.force && p0.ts <= (dmReadSent[pc] || 0)) return;
+      dmReadSent[pc] = Math.max(dmReadSent[pc] || 0, p0.ts);
+      try { mc().publish(NSP + 'rcpt-' + h36(normCode(S.code)), JSON.stringify({ p: pc, ts: p0.ts, at: nowMs() }), { qos: 1, retain: true }); } catch (e) {}
+    });
+  }
   function dmSendRead(peer, force) {
     peer = normCode(peer); if (!peer) return;
     /* 🆕 pehle store se merge — doosre WebView ne jo naye messages liye wo bhi "parhe" ginay jayein */
@@ -5483,17 +5506,21 @@ function renderMembers() {
     if (!force && mx <= (dmReadSent[peer] || 0)) return;
     dmReadPend[peer] = { ts: mx, force: !!force };
     if (dmReadTimer) return;
-    dmReadTimer = setTimeout(function () {
-      dmReadTimer = null;
-      if (!connected()) { dmReadPend = {}; return; }
-      Object.keys(dmReadPend).forEach(function (pc) {
-        var p0 = dmReadPend[pc]; delete dmReadPend[pc];
-        if (!p0 || !p0.ts) return;
-        if (!p0.force && p0.ts <= (dmReadSent[pc] || 0)) return;
-        dmReadSent[pc] = Math.max(dmReadSent[pc] || 0, p0.ts);
-        try { mc().publish(NSP + 'rcpt-' + h36(normCode(S.code)), JSON.stringify({ p: pc, ts: p0.ts, at: nowMs() }), { qos: 1, retain: true }); } catch (e) {}
-      });
-    }, 250);
+    dmReadTimer = setTimeout(dmSendReadFlush, 250);
+  }
+  /* 🆕 dost ne jawab diya ya reaction di = usne tumhara message DEKHA -> tumhare outgoing par neela tick,
+     chahe uska receipt gum ho gaya ho (ghari ka andaza nahi lagta, sirf apne msg ka ts use hota hai) */
+  function dmMarkPeerReplied(peer) {
+    try {
+      peer = normCode(peer); if (!peer) return;
+      var arr = S.chats[peer] || [], mx = 0;
+      for (var i = 0; i < arr.length; i++) {
+        var mm = arr[i];
+        if (mm && mm.d === 'out' && (mm.ts || 0) > mx) mx = mm.ts || 0;
+      }
+      if (!mx) return;
+      if (mx > (S.reads[peer] || 0)) { S.reads[peer] = mx; save(); if (curChat === peer) renderThread(); }
+    } catch (e) {}
   }
   function onRcpt(topic, str) {
     if (!str) return;
