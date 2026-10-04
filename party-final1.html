@@ -4561,12 +4561,47 @@ function renderMembers() {
       }
       S.reqs = _uniq;
     } catch(e){}
+    /* 🆕 unread ko lrt se dobara gino (stored "un" purana ya kisi doosre WebView ka ho sakta hai) */
+    try { Object.keys(S.friends).forEach(function (c) { if (S.friends[c] && typeof S.friends[c].lrt !== 'undefined') recountUn(c); }); } catch (e) {}
     save();
+  }
+  /* 🆕 Dono WebView (foreground + background) ek hi store likhte hain. Likhne se PEHLE
+     purana copy parh kar merge karo — warna ek page ka purana copy doosre ki "parhi hui"
+     halat (lrt) aur naye messages mita deta tha, jis se parhe message dobara unread dikhte the. */
+  function mergeIntoStore(prev) {
+    try {
+      if (!prev || typeof prev !== 'object') return;
+      Object.keys(prev.chats || {}).forEach(function (c) {
+        var mine = S.chats[c] || (S.chats[c] = []), have = {};
+        mine.forEach(function (m) { if (m && m.mid) have[m.mid] = 1; });
+        (prev.chats[c] || []).forEach(function (m) {
+          if (m && m.mid && !have[m.mid]) { mine.push(m); have[m.mid] = 1; }
+        });
+        mine.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+        if (mine.length > MAX_MSGS) S.chats[c] = mine.slice(-MAX_MSGS);
+      });
+      Object.keys(prev.friends || {}).forEach(function (c) {
+        var pf = prev.friends[c], f = S.friends[c];
+        if (!pf) return;
+        if (!f) { S.friends[c] = pf; return; }
+        if ((pf.lrt || 0) > (f.lrt || 0)) f.lrt = pf.lrt;      /* parhna kabhi peeche nahi jata */
+        if ((pf.ts || 0) > (f.ts || 0)) f.ts = pf.ts;
+        if (pf.name && !f.name) f.name = pf.name;
+        if (pf.color && !f.color) f.color = pf.color;
+        if (pf.avatar && !f.avatar) f.avatar = pf.avatar;
+      });
+      Object.keys(prev.reads || {}).forEach(function (c) {
+        var pv = prev.reads[c] || 0;
+        if (pv > (S.reads[c] || 0)) S.reads[c] = pv;           /* blue tick bhi peeche nahi jata */
+      });
+      Object.keys(prev.seen || {}).forEach(function (k) { if (!S.seen[k]) S.seen[k] = 1; });
+    } catch (e) {}
   }
   function save() {
     try {
       var keys = Object.keys(S.seen);
       if (keys.length > 400) { var nk = {}; keys.slice(-200).forEach(function (k) { nk[k] = 1; }); S.seen = nk; }
+      try { mergeIntoStore(JSON.parse(localStorage.getItem(DKEY) || 'null')); } catch (e0) {}
       localStorage.setItem(DKEY, JSON.stringify(S));
     } catch (e) {}
   }
@@ -4604,9 +4639,16 @@ function renderMembers() {
           if (g.color) f.color = g.color;
           if (g.avatar) f.avatar = g.avatar;
         }
+        /* 🆕 parhai (lrt) max — pehle ye merge nahi hota tha, is liye unread wapas aa jate the */
+        if ((g.lrt || 0) > (f.lrt || 0)) { f.lrt = g.lrt; ch = true; }
       });
       Object.keys(d.seen || {}).forEach(function (midKey) {
         if (!S.seen[midKey]) { S.seen[midKey] = 1; ch = true; }
+      });
+      /* 🆕 blue-tick state ka max (reload ke baad bhi tick na khoye) */
+      Object.keys(d.reads || {}).forEach(function (c) {
+        var pv = d.reads[c] || 0;
+        if (pv > (S.reads[c] || 0)) { S.reads[c] = pv; ch = true; }
       });
       (d.reqs || []).forEach(function (r) {
         if (!r || !r.code) return;
@@ -5429,6 +5471,8 @@ function renderMembers() {
   var dmReadSent = {}, dmReadPend = {}, dmReadTimer = null;
   function dmSendRead(peer, force) {
     peer = normCode(peer); if (!peer) return;
+    /* 🆕 pehle store se merge — doosre WebView ne jo naye messages liye wo bhi "parhe" ginay jayein */
+    try { mergeIntoStore(JSON.parse(localStorage.getItem(DKEY) || 'null')); } catch (e0) {}
     var arr = S.chats[peer] || [], mx = 0;
     for (var i = 0; i < arr.length; i++) {
       var mm = arr[i];
