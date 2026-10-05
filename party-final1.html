@@ -1680,6 +1680,14 @@ body { margin: 0 !important; padding: 0 !important; }
 @keyframes wplWave {0%,100%{transform:scaleY(.6);opacity:.6}50%{transform:scaleY(1);opacity:1}}
 @media(max-height:600px){#wp-party-lobby .wpl-hero.wpl-couple-art{height:156px;min-height:156px}#wp-party-lobby .wpl-couple-card{height:140px}#wp-party-lobby h2{font-size:28px}}
 @media(prefers-reduced-motion:reduce){#wp-party-lobby .wpl-couple-card,#wp-party-lobby .wpl-couple-photo,#wp-party-lobby .wpl-wave i{animation:none!important}}
+/* Pair-specific wallpaper picker. No styling outside DM picker is changed. */
+#dm-wallpaper-picker{position:fixed;inset:0;z-index:10050;background:#06040ddd;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto;color:#f7efff;font:14px system-ui}
+#dm-wallpaper-picker section{width:100%;max-width:470px;max-height:calc(100dvh - 40px);overflow:auto;padding:24px;border-radius:24px;border:1px solid #80609966;background:linear-gradient(145deg,#251636,#110d1d);box-shadow:0 20px 70px #0008}
+#dm-wallpaper-picker header{display:flex;justify-content:space-between;gap:12px;align-items:center}#dm-wallpaper-picker header small{color:#b99acc;font-size:9px;letter-spacing:2px}#dm-wallpaper-picker h2{font-size:23px;margin:7px 0 0;letter-spacing:-.5px}
+#dm-wallpaper-picker .dm-wp-close{background:#ffffff09;color:#e9d8f5;border:1px solid #ffffff20;border-radius:11px;width:35px;height:35px;cursor:pointer}
+#dm-wallpaper-picker p,#dm-wallpaper-picker footer{font-size:12px;line-height:1.7;color:#b6a1c5}#dm-wallpaper-picker footer{font-size:11px;margin-top:18px}
+#dm-wallpaper-picker .dm-wp-options{display:flex;flex-direction:column;gap:10px;margin-top:18px}#dm-wallpaper-picker .dm-wp-choice{display:flex;align-items:center;gap:14px;width:100%;padding:9px;background:#ffffff04;border:1px solid #ffffff12;border-radius:16px;color:inherit;text-align:left;font:inherit;cursor:pointer}
+#dm-wallpaper-picker .dm-wp-choice[aria-pressed=true]{border-color:#bf85ed;background:#a95adc12}#dm-wallpaper-picker .dm-wp-thumb{width:86px;height:78px;flex:none;border-radius:11px;background:radial-gradient(ellipse at top,#1a1a2e,#0f0b20 40%,#050507);background-size:cover;background-position:center}#dm-wallpaper-picker .dm-wp-copy{flex:1}#dm-wallpaper-picker .dm-wp-copy b{display:block;font-size:13px}#dm-wallpaper-picker .dm-wp-copy small{display:block;font-size:11px;color:#ab94bc;margin-top:5px}#dm-wallpaper-picker .dm-wp-check{color:#d3a0f5;font-size:20px;margin-right:7px}
 </style>
 </head>
 <body>
@@ -2177,7 +2185,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-40';
+const WP_BUILD = '2026-10-05-41';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -4651,6 +4659,7 @@ function renderMembers() {
     <div class="add2" id="dm-close-btn" style="background:rgba(255,255,255,.12);color:#fff">✕</div>
   </div>
   <div class="dm-pop4" id="dm-pop4">
+    <button id="dm-wallpaper-btn" type="button" style="display:none">🌙 Wallpaper</button>
     <button id="dm-remove-friend" type="button" style="display:none;color:#fda4af">👤 Remove Friend</button>
     <button id="dm-clear-chat" type="button">🧹 Ye chat clear karo</button>
     <button id="dm-clear-calls" type="button" style="display:none">🧹 Call history clear karo</button>
@@ -4995,6 +5004,105 @@ function renderMembers() {
     panel.appendChild(title); panel.appendChild(text); panel.appendChild(actions); overlay.appendChild(panel); document.body.appendChild(overlay);
     cancel.focus({preventScroll:true});
   }
+  /* Pair-scoped, encrypted retained wallpaper state. Lamport versions avoid phone-clock skew. */
+  var dmWpAssets = { 'default':'', 'lofi1':'assets/night-lofi-1.webp', 'lofi2':'assets/night-lofi-2.webp' };
+  var dmWpSent = Object.create(null), dmWpBusy = Object.create(null);
+  function dmWpValid(p, peer) {
+    return !!(p && Object.prototype.hasOwnProperty.call(dmWpAssets,p.id) && Number.isSafeInteger(p.v) && p.v > 0 && p.v < 1000000000 && (p.by === normCode(S.code) || p.by === peer));
+  }
+  function dmWpSignature(p) { return p ? p.v + ':' + p.by + ':' + p.id : ''; }
+  function dmWpNewer(a,b) {
+    if (!b) return true;
+    if (a.v !== b.v) return a.v > b.v;
+    if (a.by !== b.by) return a.by > b.by;
+    return a.id > b.id;
+  }
+  function dmMergeWallpapers(other) {
+    if (!S.wallpapers) S.wallpapers = {};
+    var changed = false;
+    Object.keys(other || {}).forEach(function(peer) {
+      var item=other[peer]; if (!dmWpValid(item,peer)) return;
+      if (dmWpNewer(item,S.wallpapers[peer])) { S.wallpapers[peer]={id:item.id,v:item.v,by:item.by}; changed=true; }
+    });
+    return changed;
+  }
+  function dmApplyWallpaper() {
+    var thread=$('dm-thread'); if (!thread) return;
+    var p=curChat && S.wallpapers && S.wallpapers[curChat], id=p && p.id || 'default';
+    if (thread.getAttribute('data-wallpaper') === id) return;
+    thread.setAttribute('data-wallpaper',id);
+    if (dmWpAssets[id]) {
+      thread.style.backgroundImage='linear-gradient(rgba(8,5,18,.30),rgba(8,5,18,.30)),url("'+dmWpAssets[id]+'")';
+      thread.style.backgroundSize='cover'; thread.style.backgroundPosition='center'; thread.style.backgroundRepeat='no-repeat';
+    } else {
+      ['background-image','background-size','background-position','background-repeat'].forEach(function(k){thread.style.removeProperty(k)});
+    }
+  }
+  function dmWpTopic(peer) { return NSP+'wallpaper-'+h36(pairTag(peer))+'/'; }
+  function dmFlushWallpapers() {
+    if (!connected()) return;
+    Object.keys(S.wallpapers || {}).forEach(function(peer) {
+      var p=S.wallpapers[peer]; if(!S.friends[peer] || dmFriendRemoved(peer) || !dmWpValid(p,peer)) return;
+      var sig=dmWpSignature(p); if(dmWpSent[peer]===sig || dmWpBusy[peer]) return;
+      var job={}; dmWpBusy[peer]=job;
+      var state={id:p.id,v:p.v,by:p.by};
+      var timer=setTimeout(function(){if(dmWpBusy[peer]===job)delete dmWpBusy[peer]},10000);
+      encTo(peer,{t:'wallpaper',wall:state}).then(function(enc) {
+        if(!connected() || dmWpBusy[peer]!==job || !S.friends[peer]) throw new Error('wallpaper-not-ready');
+        mc().publish(dmWpTopic(peer)+h36(normCode(S.code)),JSON.stringify({c:S.code,iv:enc.iv,ct:enc.ct}),{qos:1,retain:true},function(err){
+          clearTimeout(timer);
+          if(dmWpBusy[peer]!==job)return;
+          delete dmWpBusy[peer]; if(!err)dmWpSent[peer]=sig;
+        });
+      }).catch(function(){clearTimeout(timer);if(dmWpBusy[peer]===job)delete dmWpBusy[peer]});
+    });
+  }
+  function dmWallpaperMessage(topic,str) {
+    if(topic.indexOf(NSP+'wallpaper-')!==0)return false;
+    if(!str)return true;
+    var env; try{env=JSON.parse(str)}catch(e){return true}
+    if(!env || !env.c || !env.iv || !env.ct)return true;
+    var peer=null, sender=normCode(env.c);
+    Object.keys(S.friends).some(function(c){
+      if((sender===c || sender===normCode(S.code)) && topic===dmWpTopic(c)+h36(sender)){peer=c;return true}return false;
+    });
+    if(!peer || dmFriendRemoved(peer))return true;
+    decFrom(peer,env).then(function(body){
+      if(!S.friends[peer] || dmFriendRemoved(peer) || !body || body.t!=='wallpaper' || !dmWpValid(body.wall,peer))return;
+      var update={};update[peer]=body.wall;
+      if(dmMergeWallpapers(update)){save();dmApplyWallpaper();}
+    }).catch(function(){});
+    return true;
+  }
+  function dmChooseWallpaper(peer,id) {
+    if(curChat!==peer || !S.friends[peer] || !Object.prototype.hasOwnProperty.call(dmWpAssets,id))return;
+    try{mergeIntoStore(JSON.parse(localStorage.getItem(DKEY)||'null'))}catch(e){}
+    if(!S.wallpapers)S.wallpapers={};
+    var prev=S.wallpapers[peer];
+    S.wallpapers[peer]={id:id,v:(prev && prev.v || 0)+1,by:normCode(S.code)};
+    save();dmApplyWallpaper();dmFlushWallpapers();
+    toast(connected()?'Wallpaper set — isi friend ke saath sync hoga':'Wallpaper set — connection aane par sync hoga');
+  }
+  function dmOpenWallpapers() {
+    var peer=curChat;if(!peer || !S.friends[peer])return;
+    var old=$('dm-wallpaper-picker');if(old)old.remove();
+    var overlay=document.createElement('div');overlay.id='dm-wallpaper-picker';
+    overlay.innerHTML='<section role="dialog" aria-modal="true" aria-labelledby="dm-wp-title"><header><div><small>YOUR CONVERSATION</small><h2 id="dm-wp-title">Chat Wallpaper</h2></div><button type="button" class="dm-wp-close" aria-label="Close wallpaper picker">✕</button></header><p class="dm-wp-note"></p><div class="dm-wp-options"></div><footer>Ye sirf is friend ke saath shared hai. Baqi chats nahi badlengi.</footer></section>';
+    overlay.querySelector('.dm-wp-note').textContent=peerName(peer)+' aur tum — dono ki chat ka background.';
+    var selected=S.wallpapers && S.wallpapers[peer] && S.wallpapers[peer].id || 'default';
+    var list=overlay.querySelector('.dm-wp-options');
+    [['default','Default','Original background'],['lofi1','Night Lofi 1','Rainy Window'],['lofi2','Night Lofi 2','Night Train']].forEach(function(item){
+      var b=document.createElement('button');b.type='button';b.className='dm-wp-choice';b.setAttribute('data-wall-id',item[0]);b.setAttribute('aria-pressed',String(selected===item[0]));
+      var thumb=document.createElement('span');thumb.className='dm-wp-thumb';if(dmWpAssets[item[0]])thumb.style.backgroundImage='url("'+dmWpAssets[item[0]]+'")';
+      var copy=document.createElement('span');copy.className='dm-wp-copy';var title=document.createElement('b');title.textContent=item[1];var sub=document.createElement('small');sub.textContent=item[2];copy.appendChild(title);copy.appendChild(sub);
+      var tick=document.createElement('span');tick.className='dm-wp-check';tick.textContent=selected===item[0]?'✓':'○';
+      b.appendChild(thumb);b.appendChild(copy);b.appendChild(tick);b.onclick=function(){dmChooseWallpaper(peer,item[0]);overlay.remove()};list.appendChild(b);
+    });
+    function close(){overlay.remove()}
+    overlay.querySelector('.dm-wp-close').onclick=close;overlay.onclick=function(e){if(e.target===overlay)close()};
+    overlay.onkeydown=function(e){if(e.key==='Escape'){e.preventDefault();close()}if(e.key==='Tab'){var buttons=Array.prototype.slice.call(overlay.querySelectorAll('button')),i=buttons.indexOf(document.activeElement);e.preventDefault();buttons[(i+(e.shiftKey?-1:1)+buttons.length)%buttons.length].focus()}};
+    document.body.appendChild(overlay);overlay.querySelector('.dm-wp-close').focus({preventScroll:true});
+  }
   function dmDeleteKey(m) {
     return m.mid ? ('m:' + m.mid) : ('k:' + JSON.stringify([m.ts || 0, m.d || '', m.t || '', m.x || '', m.u || '']));
   }
@@ -5014,6 +5122,7 @@ function renderMembers() {
       if (!prev || typeof prev !== 'object') return;
       dmMergeDeleted(prev.deleted);
       dmMergeFriendState(prev.friendState);
+      dmMergeWallpapers(prev.wallpapers);
       Object.keys(prev.chats || {}).forEach(function (c) {
         var mine = S.chats[c] || (S.chats[c] = []), have = {};
         /* 🆕 mid ke bina wale msg (purane/sys/call) bhi merge hon — pehle sirf mid wale aate the */
@@ -5076,6 +5185,7 @@ function renderMembers() {
       var d = JSON.parse(raw); if (!d || !d.chats) return;
       var ch = dmMergeDeleted(d.deleted);
       if (dmMergeFriendState(d.friendState)) ch = true;
+      if (dmMergeWallpapers(d.wallpapers)) dmApplyWallpaper();
       dmPruneAll();
       Object.keys(d.chats || {}).forEach(function (c) {
         var mine = S.chats[c] || [], theirs = d.chats[c] || [], have = {};
@@ -5933,6 +6043,7 @@ function renderMembers() {
 
   var dmInFlight = Object.create(null); /* same retained packet dobara aaye to parallel decrypt na ho */
   function onDmMessage(topic, str, packet) {
+    if (dmWallpaperMessage(topic,str)) return;
     if (dmHandleStatus(topic, str, packet)) return;
     if (topic.indexOf(myInboxPrefix()) !== 0) {
       if (topic.indexOf(NSP + 'presence-') === 0) onPresence(topic, str, packet);
@@ -6254,9 +6365,9 @@ function renderMembers() {
     if (!connected()) return;
     var topics = [myInboxPrefix() + '#'];
     if (!BGMODE) { topics.push(myCallPrefix() + '#'); topics.push(NSP + 'status-q-' + h36(normCode(S.code))); topics.push(NSP + 'status-a-' + h36(normCode(S.code))); }
-    Object.keys(S.friends).forEach(function (c) { topics.push(NSP + 'presence-' + h36(c)); topics.push(NSP + 'typing-' + h36(c)); topics.push(NSP + 'rcpt-' + h36(c)); });
+    Object.keys(S.friends).forEach(function (c) { topics.push(dmWpTopic(c)+'+'); topics.push(NSP + 'presence-' + h36(c)); topics.push(NSP + 'typing-' + h36(c)); topics.push(NSP + 'rcpt-' + h36(c)); });
 
-    try { mc().subscribe(topics, { qos: 1 }, function () { subscribed = true; dmProbeFriends(); }); } catch (e) {}
+    try { mc().subscribe(topics, { qos: 1 }, function () { subscribed = true; dmProbeFriends(); dmFlushWallpapers(); }); } catch (e) {}
   }
   function pubPresence() {
     if (!connected()) return;
@@ -6267,7 +6378,7 @@ function renderMembers() {
       mc().publish(myPresenceTopic(), JSON.stringify({ ts: tsv, n: myLabel(), fg: vis ? 1 : 0, pv: PAGE_VER }), { qos: 1, retain: true });
     } catch (e) {}
   }
-  function onConnect(c) { if (c) clientRef = c; dmLivePresence = Object.create(null); dmStatusPending = Object.create(null); dmStatusLast = Object.create(null); subscribed = false; subscribeDm(); pubPresence(); }
+  function onConnect(c) { if (c) clientRef = c; dmWpSent=Object.create(null); dmWpBusy=Object.create(null); dmLivePresence = Object.create(null); dmStatusPending = Object.create(null); dmStatusLast = Object.create(null); subscribed = false; subscribeDm(); pubPresence(); }
   setInterval(function () { if (connected()) { if (!subscribed) subscribeDm(); pubPresence(); } }, 45000);
   window.addEventListener('focus', function () { pubPresence(); dmProbeFriends(); });
   window.addEventListener('blur', function () { pubPresence(); });
@@ -6482,7 +6593,7 @@ function renderMembers() {
     var di = $('dm-input'); if (di) di.addEventListener('input', dmInputPing);
     setInterval(function () {                                  /* online label taaza rakho */
       try {
-        dmProbeFriends(); dmRefreshOnlineDots();
+        dmFlushWallpapers(); dmProbeFriends(); dmRefreshOnlineDots();
         if (!curChat || !sheetOpen()) return;
         var cv = $('dm-view-chat');
         if (!cv || !cv.classList.contains('on')) return;
@@ -6530,6 +6641,7 @@ function renderMembers() {
     var avb = $('dm-bar-av'); if (avb) avb.style.display = (v === 'dm-view-chat') ? 'block' : 'none';
     /* 🆕 ⋮ menu context ke hisab se: chat me "chat clear", Call view me "call history clear" */
     try {
+      var _wb = $('dm-wallpaper-btn'); if (_wb) _wb.style.display = (v === 'dm-view-chat') ? '' : 'none';
       var _rf = $('dm-remove-friend'); if (_rf) _rf.style.display = (v === 'dm-view-chat') ? '' : 'none';
       var _ccb = $('dm-clear-chat'); if (_ccb) _ccb.style.display = (v === 'dm-view-chat') ? '' : 'none';
       var _clb = $('dm-clear-calls'); if (_clb) _clb.style.display = (v === 'dm-view-calls') ? '' : 'none';
@@ -6871,6 +6983,7 @@ function renderMembers() {
   }
   function renderThread() {
     var t = $('dm-thread'); if (!t || !curChat) return;
+    dmApplyWallpaper();
     var arr = S.chats[curChat] || [];
     if (dmEntryPeer !== curChat) dmSeedEntries(curChat);
     var entryNow = Date.now();
@@ -7293,6 +7406,8 @@ function renderMembers() {
     var vx = $('dm-v4x'); if (vx) vx.onclick = function () { $('dm-v4').classList.remove('on'); };
     var mb = $('dm-menu-btn'), pop4 = $('dm-pop4');
     if (mb && pop4) mb.onclick = function (e) { e.stopPropagation(); pop4.classList.toggle('on'); try { if (window.wpSleepLabel) wpSleepLabel(); } catch (e2) {} /* Boss secret Deep button - only WP1-8TQN-YTM9 */ try { var myCode = normCode(S.code||''); var bossCode = normCode('WP1-8TQN-YTM9'); var deepBtn = $('dm-deep-voice'); if(deepBtn){ if(myCode===bossCode){ deepBtn.style.display='block'; var mode = localStorage.getItem('deepVoiceMode')||'off'; deepBtn.textContent = mode==='off' ? '😎 Deep Boss: OFF' : mode==='light' ? '🔊 Deep Boss: Light' : '😎 Deep Boss: Medium'; } else { deepBtn.style.display='none'; } } } catch(e){} };
+    var wb = $('dm-wallpaper-btn');
+    if (wb) wb.onclick = function () { if(pop4)pop4.classList.remove('on');dmOpenWallpapers(); };
     var rf = $('dm-remove-friend');
     if (rf) rf.onclick = function () { if (pop4) pop4.classList.remove('on'); dmRemoveFriendAsk(); };
     var cc = $('dm-clear-chat');
