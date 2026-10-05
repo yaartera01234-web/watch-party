@@ -2107,7 +2107,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-24';
+const WP_BUILD = '2026-10-05-25';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -6037,10 +6037,57 @@ function renderMembers() {
 
   // Boss fix: gesture back se exit na ho - history API (bina build)
   var _wpHistoryHandling = false;
+  /* Navigation-only motion. No startup CSS, visibility or pointer-event changes. */
+  var dmNavMotion = null;
+  function dmNavStop() {
+    if (!dmNavMotion) return;
+    var old = dmNavMotion; dmNavMotion = null;
+    if (old.animation) try { old.animation.cancel(); } catch (e) {}
+    old.restore();
+  }
+  function dmNavPrepare() {
+    dmNavStop();
+    try {
+      if (!document.body.classList.contains('yp-joined') || document.body.classList.contains('yp-nofx')) return null;
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
+      var ae = document.activeElement;
+      if (ae && (/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) || ae.isContentEditable)) return null;
+      var vv = window.visualViewport;
+      if (vv && window.innerHeight - vv.height > 120) return null;
+      var sh = $('dm-sheet');
+      if (!sh || typeof sh.animate !== 'function') return null;
+      var nodes = [sh].concat(Array.prototype.slice.call(sh.querySelectorAll('.dm-view')));
+      var saved = nodes.map(function (el) { return [el, el.style.getPropertyValue('transition'), el.style.getPropertyPriority('transition')]; });
+      nodes.forEach(function (el) { el.style.setProperty('transition', 'none', 'important'); });
+      var restored = false;
+      var motion = { animation: null, restore: function () {
+        if (restored) return; restored = true;
+        saved.forEach(function (v) { if (v[1]) v[0].style.setProperty('transition', v[1], v[2]); else v[0].style.removeProperty('transition'); });
+      }};
+      dmNavMotion = motion;
+      return motion;
+    } catch (e) { dmNavStop(); return null; }
+  }
+  function dmNavPlay(motion, el, mode) {
+    if (!motion || dmNavMotion !== motion) return;
+    if (!el) { dmNavStop(); return; }
+    try {
+      // Commit final layout before animating. Hidden panels remain off-screen.
+      void el.offsetWidth;
+      var frames = mode === 'party' ? [{ opacity: .35 }, { opacity: 1 }] :
+        mode === 'sheet' ? [{ opacity: 0, transform: 'scale(.98)' }, { opacity: 1, transform: 'none' }] :
+        [{ opacity: 0, translate: (mode === 'left' ? '-18px' : '18px') + ' 0' }, { opacity: 1, translate: '0 0' }];
+      var a = el.animate(frames, { duration: mode === 'left' || mode === 'right' ? 210 : 220, easing: 'cubic-bezier(.22,.75,.25,1)' });
+      motion.animation = a;
+      function done() { if (dmNavMotion === motion) { dmNavMotion = null; motion.restore(); } }
+      a.onfinish = done; a.oncancel = done;
+    } catch (e) { dmNavStop(); }
+  }
   function openSheet() {
     try {
       var ov = $('dm-ov'), sh = $('dm-sheet');
       if (!sh) return;
+      var nav = !sh.classList.contains('on') ? dmNavPrepare() : null;
       var ts = document.getElementById('wp-sheet'); if (ts) ts.className = 'wp-sheet';
       var ss = document.getElementById('wp-ssheet'); if (ss) ss.className = 'wp-sheet';
       if (ov) ov.classList.add('on');
@@ -6049,15 +6096,18 @@ function renderMembers() {
       subscribeDm(); pubPresence(); renderAll();
       // Push for gesture back
       try { history.pushState({wp:'dm', view:'dm-view-inbox'}, '', '#dm'); } catch(e){}
+      dmNavPlay(nav, sh, 'sheet');
       console.log('[DM] openSheet ok');
     } catch(e){ console.log('openSheet err', e); }
   }
   function closeSheet() {
     try {
       var ov = $('dm-ov'), sh = $('dm-sheet');
+      var nav = sh && sh.classList.contains('on') ? dmNavPrepare() : null;
       if (ov) ov.classList.remove('on');
       if (sh) sh.classList.remove('on');
       if (curChat) { markRead(curChat); renderAll(); }
+      dmNavPlay(nav, $('app'), 'party');
       console.log('[DM] closeSheet ok');
     } catch(e){ console.log('closeSheet err', e); }
   }
@@ -6117,6 +6167,8 @@ function renderMembers() {
   })();
 
   function showView(v, noHistory) {
+    var previous = $('dm-sheet') && $('dm-sheet').querySelector('.dm-view.on');
+    var nav = !dmNavMotion && sheetOpen() && previous && previous.id !== v ? dmNavPrepare() : null;
     ['dm-view-inbox', 'dm-view-add', 'dm-view-chat', 'dm-view-calls'].forEach(function (k) {
       var e = $(k); if (!e) return;
       e.classList.remove('on'); e.classList.remove('first');
@@ -6156,6 +6208,7 @@ function renderMembers() {
     else if (v === 'dm-view-chat') { setChatBar(); }
     else { title.textContent = '💬 Messages'; if(sub){ sub.textContent=''; sub.style.display='none'; } }
     try { fitSheet(); } catch (e) {}
+    dmNavPlay(nav, $(v), v === 'dm-view-inbox' ? 'left' : 'right');
   }
 
   // Simple back fix - DM back -> room, Room back -> exit (boss: minimize popup kaafi hai)
@@ -7370,6 +7423,7 @@ function renderMembers() {
       }
       bar.onclick = function (ev) {
         var k = ypTabOf(ev && ev.target); if (!k) return;
+        dmNavStop();
         try {
           if (k === 'party') {
             /* 🆕 Party icon = asli join. Pehle join (presence + Joined Party + video sync), phir room. */
@@ -7378,8 +7432,8 @@ function renderMembers() {
             }
             closeSheet();                                     /* wapas watchparty */
           }
-          else if (k === 'chat') { openSheet(); showView('dm-view-inbox'); }
-          else { openSheet(); showView('dm-view-calls'); ypRenderCalls(); }
+          else if (k === 'chat') { if (!sheetOpen()) openSheet(); showView('dm-view-inbox'); }
+          else { if (!sheetOpen()) openSheet(); showView('dm-view-calls'); ypRenderCalls(); }
         } catch (e) {}
         ypSync();
       };
