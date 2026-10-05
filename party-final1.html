@@ -2094,9 +2094,9 @@ function connectDmTower() {
     dmMqttUp = true;
     try { if (window.DM && window.DM.onConnect) window.DM.onConnect(dmClient); } catch (e) {}
   });
-  dmClient.on('message', function (topic, buf) {
+  dmClient.on('message', function (topic, buf, packet) {
     try {
-      if (window.DM && topic && topic.indexOf('YaarParty786/x7k2/dm/') === 0) window.DM.onMessage(topic, buf.toString());
+      if (window.DM && topic && topic.indexOf('YaarParty786/x7k2/dm/') === 0) window.DM.onMessage(topic, buf.toString(), packet);
     } catch (e) {}
   });
   dmClient.on('error', function () {});
@@ -2150,7 +2150,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-34';
+const WP_BUILD = '2026-10-05-35';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -5905,9 +5905,10 @@ function renderMembers() {
   function myTypingTopic() { return NSP + 'typing-' + h36(normCode(S.code)); }
 
   var dmInFlight = Object.create(null); /* same retained packet dobara aaye to parallel decrypt na ho */
-  function onDmMessage(topic, str) {
+  function onDmMessage(topic, str, packet) {
+    if (dmHandleStatus(topic, str, packet)) return;
     if (topic.indexOf(myInboxPrefix()) !== 0) {
-      if (topic.indexOf(NSP + 'presence-') === 0) onPresence(topic, str);
+      if (topic.indexOf(NSP + 'presence-') === 0) onPresence(topic, str, packet);
       else if (topic.indexOf(NSP + 'typing-') === 0) onTyping(topic, str);
       else if (topic.indexOf(NSP + 'rcpt-') === 0) onRcpt(topic, str);
       else if (topic.indexOf(myCallPrefix()) === 0) onCallMessage(topic, str);
@@ -5928,6 +5929,7 @@ function renderMembers() {
         var body;
         try { body = await decFrom(peer, p); } catch (e) { return; } /* unlock na ho to retained packet bachao */
         if (!body) return;
+        dmProbePeer(peer, true); // A received DM triggers a fresh status check, never a clock-based guess.
 
         /* P43: reaction aayi -> naya bubble nahi, us purane message pe chip lagao */
         if (body.t === 'react') {
@@ -5998,27 +6000,75 @@ function renderMembers() {
     })();
   }
 
-  var dmLivePresence = Object.create(null); // Session-only; stored activity timestamps are not online proof.
-  function onPresence(topic, str) {
-    var h = topic.slice((NSP + 'presence-').length);
-    var peer = null;
+  var dmLivePresence = Object.create(null), dmStatusPending = Object.create(null), dmStatusLast = Object.create(null);
+  function dmStatusNow() { return performance.now(); } // No dependence on either phone's wall clock.
+  function dmForeground() {
+    return !isBg() && !document.hidden && (!document.hasFocus || document.hasFocus());
+  }
+  function dmStatusRefresh() {
+    dmRefreshOnlineDots();
+    if (curChat && d4ChatVisible()) setChatBar();
+  }
+  function dmStatusRecord(peer, active) {
+    dmLivePresence[peer] = { active: !!active, expires: dmStatusNow() + 100000, verified: true };
+    dmStatusRefresh();
+  }
+  function dmProbePeer(peer, force) {
+    if (BGMODE || !connected() || document.hidden || !S.friends[peer]) return;
+    var now = dmStatusNow(), pending = dmStatusPending[peer];
+    if (pending && now - pending.at < 8000) return;
+    if (typeof dmStatusLast[peer] === 'number' && now - dmStatusLast[peer] < (force ? 3000 : 20000)) return;
+    var nonce = mid() + '-' + Math.random().toString(36).slice(2);
+    dmStatusPending[peer] = { nonce: nonce, at: now }; dmStatusLast[peer] = now;
+    try { mc().publish(NSP + 'status-q-' + h36(peer), JSON.stringify({ from:S.code, nonce:nonce }), { qos:0, retain:false }); } catch (e) {}
+    setTimeout(function () {
+      var q = dmStatusPending[peer]; if (!q || q.nonce !== nonce) return;
+      delete dmStatusPending[peer];
+      var state = dmLivePresence[peer];
+      // Missing evidence is not proof of Offline. Never guess from stored timestamps.
+      if (!state || dmStatusNow() >= state.expires) dmLivePresence[peer] = { active:false, verified:false, expires:0 };
+      dmStatusRefresh();
+    }, 8200);
+  }
+  function dmProbeFriends() {
+    if (!connected() || BGMODE || document.hidden) return;
+    Object.keys(S.friends).forEach(function (peer) { dmProbePeer(peer, false); });
+  }
+  function dmHandleStatus(topic, str, packet) {
+    var own = h36(normCode(S.code));
+    var isQ = topic === NSP + 'status-q-' + own, isA = topic === NSP + 'status-a-' + own;
+    if (!isQ && !isA) return false;
+    if (BGMODE || (packet && packet.retain)) return true;
+    try {
+      var p = JSON.parse(str), peer = normCode(p.from);
+      if (!S.friends[peer] || typeof p.nonce !== 'string' || p.nonce.length > 180) return true;
+      if (isQ) {
+        if (connected()) mc().publish(NSP + 'status-a-' + h36(peer), JSON.stringify({from:S.code,nonce:p.nonce,fg:dmForeground()?1:0}), {qos:0,retain:false});
+      } else {
+        var pending = dmStatusPending[peer];
+        if (!pending || pending.nonce !== p.nonce || dmStatusNow() - pending.at > 8000) return true;
+        delete dmStatusPending[peer]; dmStatusRecord(peer, p.fg === 1);
+      }
+    } catch (e) {}
+    return true;
+  }
+  function onPresence(topic, str, packet) {
+    var h = topic.slice((NSP + 'presence-').length), peer = null;
     Object.keys(S.friends).forEach(function (c) { if (h36(c) === h) peer = c; });
     if (!peer) return;
     try {
       var p = str ? JSON.parse(str) : {ts:0,fg:0};
-      var age = nowMs() - Number(p.ts || 0);
-      var active = p.fg !== 0 && p.fg !== false && p.fg !== '0' && age >= -30000 && age < 90000;
-      dmLivePresence[peer] = { active: active, expires: nowMs() + Math.max(0, 90000 - Math.max(0,age)) };
+      // MQTT marks replayed retained records; only a live delivery proves current activity.
+      if (packet && packet.retain === false && (p.fg === 1 || p.fg === 0)) dmStatusRecord(peer, p.fg === 1);
+      else dmProbePeer(peer, true);
       S.friends[peer].ts = p.ts || 0;
-      if (p.pv) S.friends[peer].pv = String(p.pv);   /* 🆕 dost ke page ka version */
+      if (p.pv) S.friends[peer].pv = String(p.pv);
       var nm = p.n && String(p.n).trim();
       if (nm && !isCodeName(nm, peer) && isCodeName(S.friends[peer].name, peer)) {
-        S.friends[peer].name = nm.slice(0, 20);
-        save(); renderAll();
+        S.friends[peer].name = nm.slice(0, 20); save(); renderAll();
       }
     } catch (e) {}
-    if (peer === curChat) setChatBar();
-    dmRefreshOnlineDots();
+    dmStatusRefresh();
   }
 
   /* 🆕 READ RECEIPT: parh liya -> dost ke paas neela tick */
@@ -6176,22 +6226,25 @@ function renderMembers() {
   function subscribeDm() {
     if (!connected()) return;
     var topics = [myInboxPrefix() + '#'];
-    if (!BGMODE) topics.push(myCallPrefix() + '#');
+    if (!BGMODE) { topics.push(myCallPrefix() + '#'); topics.push(NSP + 'status-q-' + h36(normCode(S.code))); topics.push(NSP + 'status-a-' + h36(normCode(S.code))); }
     Object.keys(S.friends).forEach(function (c) { topics.push(NSP + 'presence-' + h36(c)); topics.push(NSP + 'typing-' + h36(c)); topics.push(NSP + 'rcpt-' + h36(c)); });
 
-    try { mc().subscribe(topics, { qos: 1 }, function () { subscribed = true; }); } catch (e) {}
+    try { mc().subscribe(topics, { qos: 1 }, function () { subscribed = true; dmProbeFriends(); }); } catch (e) {}
   }
   function pubPresence() {
     if (!connected()) return;
     if (isBg()) return;                  /* v39: chhupa bg-WebView "online" publish na kare (warna banda hamesha online dikhta) */
     try {
-      var vis = !document.hidden;                                   /* app saamne hai? */
+      var vis = dmForeground();                                   /* app saamne hai? */
       var tsv = vis ? nowMs() : (nowMs() - 100000);                 /* peeche gaya -> ~50s me Offline dikhe */
       mc().publish(myPresenceTopic(), JSON.stringify({ ts: tsv, n: myLabel(), fg: vis ? 1 : 0, pv: PAGE_VER }), { qos: 1, retain: true });
     } catch (e) {}
   }
-  function onConnect(c) { if (c) clientRef = c; subscribed = false; subscribeDm(); pubPresence(); }
+  function onConnect(c) { if (c) clientRef = c; dmLivePresence = Object.create(null); dmStatusPending = Object.create(null); dmStatusLast = Object.create(null); subscribed = false; subscribeDm(); pubPresence(); }
   setInterval(function () { if (connected()) { if (!subscribed) subscribeDm(); pubPresence(); } }, 45000);
+  window.addEventListener('focus', function () { pubPresence(); dmProbeFriends(); });
+  window.addEventListener('blur', function () { pubPresence(); });
+  window.addEventListener('pagehide', function () { try { if (!BGMODE && connected()) mc().publish(myPresenceTopic(),JSON.stringify({ts:nowMs(),fg:0,n:myLabel(),pv:PAGE_VER}),{qos:1,retain:true}); } catch(e){} });
   /* v39: app saamne aayi / peeche gayi -> foran online/offline signal (45s intezar nahi) */
   try { document.addEventListener('visibilitychange', function () { if (connected()) { pubPresence(); if (!document.hidden && d4ChatVisible()) { try { dmSendRead(curChat, true); } catch (e2) {} } } }); } catch (e) {}
   try { window.addEventListener('pageshow', function () { if (connected()) { pubPresence(); if (d4ChatVisible()) { try { dmSendRead(curChat, true); } catch (e2) {} } } }); } catch (e) {}
@@ -6327,7 +6380,14 @@ function renderMembers() {
   var dmTypTimer = null, dmLastType = 0;
   function dmIsOnline(c) {
     var p = dmLivePresence[c];
-    return !!(connected() && S.friends[c] && p && p.active && nowMs() < p.expires);
+    return !!(connected() && S.friends[c] && p && p.verified && p.active && dmStatusNow() < p.expires);
+  }
+  function dmStatusLabel(peer) {
+    if (!connected()) return 'Connecting…';
+    if (dmIsOnline(peer)) return 'Online';
+    var p = dmLivePresence[peer];
+    if (p && p.verified && !p.active && dmStatusNow() < p.expires) return 'Offline';
+    return dmStatusPending[peer] ? 'Checking…' : 'Status unavailable';
   }
   function dmRefreshOnlineDots() {
     var w = $('dm-chat-wrap'); if (!w) return;
@@ -6350,7 +6410,7 @@ function renderMembers() {
       /* 🆕 dost online hai magar uske page par naya code nahi -> usay app band kar ke kholna hoga */
       var _fpv = S.friends[curChat] && S.friends[curChat].pv;
       var _pvw = (on && (!_fpv || String(_fpv) !== PAGE_VER)) ? ' · <span style="opacity:.7">⚠️ dost ka app purana</span>' : '';
-      sub.innerHTML = '<span class="dot4' + (on ? ' on' : '') + '"></span>' + (on ? 'Online' : 'Offline') + ' · 🔒 E2E' + _pvw;
+      sub.innerHTML = '<span class="dot4' + (on ? ' on' : '') + '"></span>' + dmStatusLabel(curChat) + ' · 🔒 E2E' + _pvw;
     }
   }
   function showTyping(nm) {
@@ -6378,7 +6438,7 @@ function renderMembers() {
     var di = $('dm-input'); if (di) di.addEventListener('input', dmInputPing);
     setInterval(function () {                                  /* online label taaza rakho */
       try {
-        dmRefreshOnlineDots();
+        dmProbeFriends(); dmRefreshOnlineDots();
         if (!curChat || !sheetOpen()) return;
         var cv = $('dm-view-chat');
         if (!cv || !cv.classList.contains('on')) return;
@@ -6386,7 +6446,7 @@ function renderMembers() {
         var on = dmIsOnline(curChat);
         var dot = sub.querySelector ? sub.querySelector('.dot4') : null;
         if (dot) { dot.classList.toggle('on', on); }
-        if (sub.textContent.indexOf(on ? 'Offline' : 'Online') >= 0) setChatBar();
+        if (sub.textContent.indexOf(dmStatusLabel(curChat)) < 0) setChatBar();
       } catch (e) {}
     }, 5000);
   })();
@@ -6931,6 +6991,7 @@ function renderMembers() {
     var active = document.activeElement;
     if (active && (/^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName) || active.isContentEditable)) { try { active.blur(); } catch (e) {} }
     curChat = requested;
+    dmProbePeer(curChat, true);
     d4CancelSnap();
     if (!S.friends[curChat]) S.friends[curChat] = { name: curChat, color: '#8b72ff', avatar: { type: 'letter' }, ts: 0, un: 0 };
     markRead(curChat);
