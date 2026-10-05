@@ -1610,6 +1610,16 @@ body { margin: 0 !important; padding: 0 !important; }
 #wp-party-welcome strong { display:block; font-size:16px; font-weight:700; letter-spacing:.1px; line-height:1.4; }
 #wp-party-welcome small { display:block; font-size:12px; color:#d6c4e7; line-height:1.5; }
 @media(prefers-reduced-motion:reduce) { #wp-party-welcome { transition:none; } }
+/* Old DM rows stay still; only unseen messages get one brief entry. */
+#dm-thread .msg { animation:none !important; }
+#dm-thread .msg.wp-new-message { animation:wpMessageIn 180ms ease-out both !important; animation-delay:var(--wp-message-delay,0ms) !important; }
+@keyframes wpMessageIn { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:none; } }
+@media(prefers-reduced-motion:reduce) { #dm-thread .msg.wp-new-message { animation:none !important; } }
+/* Fullscreen photo viewer: a definite, shrinkable image area prevents tall-image overflow. */
+#dm-v4 { position:fixed; inset:0; z-index:10030; overflow:hidden; }
+#dm-v4 .big4 { position:absolute; top:calc(env(safe-area-inset-top,0px) + 66px); bottom:calc(env(safe-area-inset-bottom,0px) + 18px); left:16px; right:16px; width:auto; height:auto; min-width:0; min-height:0; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+#dm-v4 .big4 img { display:block; width:100%; height:100%; max-width:100%; max-height:100%; min-width:0; min-height:0; object-fit:contain; }
+#dm-v4 button { top:calc(env(safe-area-inset-top,0px) + 14px); z-index:1; }
 </style>
 </head>
 <body>
@@ -2107,7 +2117,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-25';
+const WP_BUILD = '2026-10-05-26';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -6466,6 +6476,8 @@ function renderMembers() {
     });
   }
   function d4view(src) {
+    var viewer = $('dm-v4');
+    if (viewer && viewer.parentNode !== document.body) document.body.appendChild(viewer);
     var box = $('dm-v4img'); if (!box) return;
     box.innerHTML = '<img src="' + esc(src) + '" style="width:100%;height:100%;object-fit:contain;border-radius:16px">';
     if ($('dm-v4')) $('dm-v4').classList.add('on');
@@ -6523,9 +6535,16 @@ function renderMembers() {
     return b;
   }
   var d4JumpBottom = false;                /* P42: chat kholte waqt ek dafa niche jao */
+  var dmEntryTimes = Object.create(null), dmEntryPeer = null;
+  function dmSeedEntries(peer) {
+    dmEntryPeer = peer; dmEntryTimes = Object.create(null);
+    (S.chats[peer] || []).forEach(function (m) { dmEntryTimes[dmDeleteKey(m)] = 0; });
+  }
   function renderThread() {
     var t = $('dm-thread'); if (!t || !curChat) return;
     var arr = S.chats[curChat] || [];
+    if (dmEntryPeer !== curChat) dmSeedEntries(curChat);
+    var entryNow = Date.now();
     /* P45: naya msg hamesha neeche dikhe. Sirf jab tum khud purane messages
        padh rahe ho (upar scroll kiye hue) tab jagah nahi khoti — aur '⬇ Naya message'
        pill aa jati hai, tap karo to seedha neeche. */
@@ -6566,6 +6585,13 @@ function renderMembers() {
       if (m.mid) row.dataset.mid = m.mid;
       var wrap = document.createElement('div');
       wrap.className = 'msg ' + (own ? 'own' : 'other');
+      var entryKey = dmDeleteKey(m);
+      if (!(entryKey in dmEntryTimes)) dmEntryTimes[entryKey] = entryNow;
+      var entryAt = dmEntryTimes[entryKey], elapsed = entryNow - entryAt;
+      if (entryAt && elapsed < 180) {
+        wrap.classList.add('wp-new-message');
+        wrap.style.setProperty('--wp-message-delay', '-' + Math.max(0, elapsed) + 'ms');
+      }
       var sd = document.createElement('div'); sd.className = 'sender';
       sd.textContent = own ? 'You' : nm;
       sd.style.color = own ? '#f9a8d4' : peerColor(curChat);
@@ -6676,6 +6702,7 @@ function renderMembers() {
   /* ---------------- chat open ---------------- */
   function openChat(code) {
     curChat = normCode(code);
+    dmSeedEntries(curChat);
     if (!S.friends[curChat]) S.friends[curChat] = { name: curChat, color: '#8b72ff', avatar: { type: 'letter' }, ts: 0, un: 0 };
     markRead(curChat);
     d4JumpBottom = true; d4AtBottom = true; d4Peek(false);   /* P45: chat khuli -> sab se neeche */
