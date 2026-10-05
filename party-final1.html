@@ -2119,7 +2119,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-31';
+const WP_BUILD = '2026-10-05-32';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -5897,7 +5897,7 @@ function renderMembers() {
           if (p.a) S.friends[peer].avatar = p.a;
           appendMsg(peer, { d: 'in', t: body.t, x: body.x, u: body.u || '', dv: body.dv || '', dur: body.dur || 0, rq: body.rq || null, mid: body.mid || msgId, ts: body.ts || p.ts || nowMs() });
           try { dmMarkPeerReplied(peer); } catch (eR) {}
-          if (curChat === peer && sheetOpen()) { markRead(peer); renderThread(); }
+          if (curChat === peer && d4ChatVisible() && !document.hidden) { markRead(peer); renderThread(); }
           else { S.friends[peer].un = (S.friends[peer].un || 0) + 1; ping(p.n || peer, body.x || '', peer); }
         }
         /* Pehle delivered content persist; uske baad hi retained MQTT mailbox clear. */
@@ -6094,10 +6094,10 @@ function renderMembers() {
   function onConnect(c) { if (c) clientRef = c; subscribed = false; subscribeDm(); pubPresence(); }
   setInterval(function () { if (connected()) { if (!subscribed) subscribeDm(); pubPresence(); } }, 45000);
   /* v39: app saamne aayi / peeche gayi -> foran online/offline signal (45s intezar nahi) */
-  try { document.addEventListener('visibilitychange', function () { if (connected()) { pubPresence(); if (!document.hidden && curChat && sheetOpen()) { try { dmSendRead(curChat, true); } catch (e2) {} } } }); } catch (e) {}
-  try { window.addEventListener('pageshow', function () { if (connected()) { pubPresence(); if (curChat && sheetOpen()) { try { dmSendRead(curChat, true); } catch (e2) {} } } }); } catch (e) {}
+  try { document.addEventListener('visibilitychange', function () { if (connected()) { pubPresence(); if (!document.hidden && d4ChatVisible()) { try { dmSendRead(curChat, true); } catch (e2) {} } } }); } catch (e) {}
+  try { window.addEventListener('pageshow', function () { if (connected()) { pubPresence(); if (d4ChatVisible()) { try { dmSendRead(curChat, true); } catch (e2) {} } } }); } catch (e) {}
   /* 🆕 tick bharosemand: chat khuli ho to har 12s receipt dobara (chaho to gum ho jaye, phir bhi pahunche) */
-  setInterval(function () { try { if (curChat && sheetOpen() && connected()) dmSendRead(curChat, true); } catch (e) {} }, 8000);
+  setInterval(function () { try { if (d4ChatVisible() && !document.hidden && connected()) dmSendRead(curChat, true); } catch (e) {} }, 8000);
 
   /* v28: background mode — native service ko batao ke hum zinda hain */
   if (BGMODE) {
@@ -6337,6 +6337,10 @@ function renderMembers() {
     else if (v === 'dm-view-calls') { title.textContent = '📞 Calls'; if(sub){ sub.textContent=''; sub.style.display='none'; } }
     else if (v === 'dm-view-chat') { setChatBar(); }
     else { title.textContent = '💬 Messages'; if(sub){ sub.textContent=''; sub.style.display='none'; } }
+    if (v === 'dm-view-inbox' && !BGMODE) {
+      // Returning from chat/calls/party must never expose a stale inbox snapshot.
+      mergeStore(); renderReqs(); renderChats(); renderBadge();
+    }
     try { fitSheet(); } catch (e) {}
     dmNavPlay(nav, $(v), v === 'dm-view-inbox' ? 'left' : 'right');
   }
@@ -6739,7 +6743,7 @@ function renderMembers() {
     }
     d4LastCount[curChat] = arr.length;
     /* 🆕 chat saamne khuli hai to messages "parhe hue" manein -> tick neela (har render par check) */
-    try { if (!BGMODE && !document.hidden && sheetOpen() && curChat) dmSendRead(curChat); } catch (e) {}
+    try { if (!BGMODE && !document.hidden && d4ChatVisible()) dmSendRead(curChat); } catch (e) {}
   }
 
   function renderAll() {
@@ -6749,9 +6753,9 @@ function renderMembers() {
        ka kaam bachata hai aur long conversation scroll ko incoming DM par jhatka nahi deta.
        Inbox par wapas aate hi showView('dm-view-inbox') ke baad renderAll chalega. */
     var chatView = $('dm-view-chat');
-    var chatIsOpen = !!(chatView && chatView.classList.contains('on'));
+    var chatIsOpen = !!(sheetOpen() && chatView && chatView.classList.contains('on'));
     if (!chatIsOpen) { renderReqs(); renderChats(); }
-    if (sheetOpen() && curChat) renderThread();
+    if (chatIsOpen && curChat) renderThread();
   }
 
   /* ---------------- voice ---------------- */
