@@ -2150,7 +2150,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-35';
+const WP_BUILD = '2026-10-05-36';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -6383,11 +6383,8 @@ function renderMembers() {
     return !!(connected() && S.friends[c] && p && p.verified && p.active && dmStatusNow() < p.expires);
   }
   function dmStatusLabel(peer) {
-    if (!connected()) return 'Connecting…';
-    if (dmIsOnline(peer)) return 'Online';
-    var p = dmLivePresence[peer];
-    if (p && p.verified && !p.active && dmStatusNow() < p.expires) return 'Offline';
-    return dmStatusPending[peer] ? 'Checking…' : 'Status unavailable';
+    // UI only: probing stays unchanged; unconfirmed status uses the Offline label.
+    return dmIsOnline(peer) ? 'Online' : 'Offline';
   }
   function dmRefreshOnlineDots() {
     var w = $('dm-chat-wrap'); if (!w) return;
