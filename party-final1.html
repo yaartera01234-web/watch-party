@@ -2177,7 +2177,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-37';
+const WP_BUILD = '2026-10-05-38';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -7507,7 +7507,18 @@ function renderMembers() {
       }, { passive: true });
     })();
     var ov = $('dm-ov'); if (ov) ov.onclick = closeSheet;
-    var x = $('dm-close-btn'); if (x) x.onclick = closeSheet;
+    var x = $('dm-close-btn'); if (x) x.onclick = function () {
+      // Cross always returns to Messages; never uncover the room or join a party.
+      dmNavStop(); d4CancelSnap();
+      var active = document.activeElement;
+      if (active && (/^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName) || active.isContentEditable)) {
+        try { active.blur(); } catch (e) {}
+      }
+      curChat = null;
+      ['dm-pop4', 'dm-acts4', 'dm-g4p'].forEach(function (id) { var el = $(id); if (el) el.classList.remove('on'); });
+      if (!sheetOpen()) openSheet();
+      showView('dm-view-inbox');
+    };
     var addb = $('dm-add-btn'); if (addb) addb.onclick = function () { $('dm-my-code').textContent = S.code; showView('dm-view-add'); };
     var back = $('dm-bar-back'); if (back) back.onclick = function () {
       // Use history.back() so gesture and arrow same behavior
