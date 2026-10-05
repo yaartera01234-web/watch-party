@@ -1599,6 +1599,10 @@ body { margin: 0 !important; padding: 0 !important; }
 }
 
 
+/* Reply navigation highlights only the original bubble. */
+.quote.wp-quote-link { cursor:pointer; touch-action:manipulation; }
+.quote.wp-quote-link:focus-visible { outline:2px solid #d8a3ff; }
+.msg-row.wp-quote-target .bubble { outline:2px solid #d8a3ff; box-shadow:0 0 20px #a855f755; }
 </style>
 </head>
 <body>
@@ -2096,7 +2100,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-19';
+const WP_BUILD = '2026-10-05-20';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -3454,8 +3458,41 @@ $('gif-view').addEventListener('click', (e) => { if (e.target === $('gif-view'))
 let lpTimer = null, lpFired = false;
 
 /* ---------- ↩️ SWIPE REPLY ---------- */
+/* Shared DM/room quote navigation: scroll only the message list, never the page. */
+window.wpBindQuote = function (quote, ref, getList, beforeJump) {
+  quote.classList.add('wp-quote-link');
+  quote.setAttribute('role', 'button'); quote.tabIndex = 0;
+  quote.setAttribute('aria-label', 'Original message par jao');
+  function jump(ev) {
+    if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+    var list = getList(), target = null;
+    if (list && ref && typeof ref.mid === 'string' && ref.mid) {
+      var rows = list.querySelectorAll('.msg-row[data-mid]');
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i].dataset.mid === ref.mid) { target = rows[i]; break; }
+      }
+    }
+    if (!target) {
+      toast(ref && ref.mid ? 'Original message nahi mila — delete ho gaya ya history mein nahi hai' : 'Is purane reply mein original message ka link save nahi tha');
+      return;
+    }
+    if (beforeJump) beforeJump();
+    var tr = target.getBoundingClientRect(), lr = list.getBoundingClientRect();
+    var top = list.scrollTop + tr.top - lr.top - list.clientTop - Math.max(0, (list.clientHeight - tr.height) / 2);
+    list.scrollTop = Math.max(0, Math.min(top, list.scrollHeight - list.clientHeight));
+    var old = list.querySelectorAll('.wp-quote-target');
+    for (var j = 0; j < old.length; j++) old[j].classList.remove('wp-quote-target');
+    clearTimeout(target._quoteTimer);
+    target.classList.add('wp-quote-target');
+    target._quoteTimer = setTimeout(function () { target.classList.remove('wp-quote-target'); }, 1800);
+  }
+  quote.addEventListener('click', jump);
+  quote.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') jump(ev); });
+  quote.addEventListener('dblclick', function (ev) { ev.preventDefault(); ev.stopPropagation(); });
+};
+
 function setReply(msg) {
-  replyTo = { name: msg.own ? 'You' : msg.name, text: msg.text };
+  replyTo = { mid: msg.mid || '', name: msg.own ? 'You' : msg.name, text: msg.text };
   rbName.textContent = '↩ Replying to ' + replyTo.name;
   rbMsg.textContent = replyTo.text;
   replyBar.classList.add('show');
@@ -3546,6 +3583,7 @@ function addMsg(m) {
     const qn = document.createElement('div'); qn.className = 'q-name'; qn.textContent = reply.name || '';
     const qt = document.createElement('div'); qt.className = 'q-text'; qt.textContent = reply.text || '';
     q.appendChild(qn); q.appendChild(qt); bubble.appendChild(q);
+    window.wpBindQuote(q, reply, function () { return chatBox; });
   }
   if (m.img) {
     const holder = document.createElement('div'); holder.className = 'chat-photo';
@@ -3578,7 +3616,7 @@ function addMsg(m) {
     const keys = Object.keys(msgEls);
     if (keys.length > 400) keys.forEach((k) => { if (!msgEls[k].row.isConnected) delete msgEls[k]; });
   }
-  attachReplyGestures(row, { name: name, text: text || (m.img ? '🖼️ Photo' : (m.gif ? 'GIF' : '')), own: own });
+  attachReplyGestures(row, { mid: m.mid || '', name: name, text: text || (m.img ? '🖼️ Photo' : (m.gif ? 'GIF' : (m.aud ? '🎙️ Voice note' : 'Message'))), own: own });
   if (wasBottom || own) scrollChatDown();
   else newMsgBtn.classList.remove('hidden');
   if (!own) tuneMsg();
@@ -3590,7 +3628,7 @@ async function sendChat() {
   const d = new Date();
   const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   let reply = null;
-  if (replyTo) reply = { name: String(replyTo.name || '').slice(0, 20), text: String(replyTo.text || '').slice(0, 120) };
+  if (replyTo) reply = { mid: replyTo.mid || '', name: String(replyTo.name || '').slice(0, 20), text: String(replyTo.text || '').slice(0, 120) };
   const w = await e2eEnc({ name: myName, color: myColor, text: text.slice(0, 500), reply: reply, time: time, senderId: myId, mid: mid() });
   if (!w) { addSysMsg('🔒 Lock nahi hua — dobara try karo'); return; }
   pub(TP.chat, w, false);
@@ -6297,7 +6335,7 @@ function renderMembers() {
   }
   function d4setReply(m) {
     if (!curChat) return;
-    dmReply = { n: (m.d === 'out' ? 'You' : peerName(curChat)), x: d4prev(m).slice(0, 90) };
+    dmReply = { mid: m.mid || '', n: (m.d === 'out' ? 'You' : peerName(curChat)), x: d4prev(m).slice(0, 90) };
     if ($('dm-rep4n')) $('dm-rep4n').textContent = dmReply.n;
     if ($('dm-rep4t')) $('dm-rep4t').textContent = dmReply.x;
     if ($('dm-rep4')) $('dm-rep4').classList.add('on');
@@ -6393,6 +6431,7 @@ function renderMembers() {
       var qn = document.createElement('div'); qn.className = 'q-name'; qn.textContent = m.rq.n || '';
       var qt = document.createElement('div'); qt.className = 'q-text'; qt.textContent = m.rq.x;
       q.appendChild(qn); q.appendChild(qt); b.appendChild(q);
+      window.wpBindQuote(q, m.rq, function () { return $('dm-thread'); }, function () { d4AtBottom = false; d4JumpBottom = false; });
     }
     if (t === 'photo') {
       var h = document.createElement('div'); h.className = 'chat-photo';
@@ -7128,7 +7167,9 @@ function renderMembers() {
         var emojiGuard = dmEmojiSendGuard(inp2, v);
         inp2.value = '';
         if (!emojiGuard) try { inp2.focus({preventScroll:true}); } catch(er){ try{inp2.focus();}catch(e2){} }
-        sendMsg(curChat, { t: 'text', x: v }, false);
+        var rq = dmReply; dmReply = null;
+        if ($('dm-rep4')) $('dm-rep4').classList.remove('on');
+        sendMsg(curChat, { t: 'text', x: v, rq: rq }, false);
         if (emojiGuard) { emojiGuard(); return; }
         setTimeout(function(){ try { var ii=$('dm-input'); if(ii) ii.focus({preventScroll:true}); } catch(e){} }, 10);
       };
