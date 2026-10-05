@@ -2119,7 +2119,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-27';
+const WP_BUILD = '2026-10-05-28';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -4593,6 +4593,7 @@ function renderMembers() {
     <div class="add2" id="dm-close-btn" style="background:rgba(255,255,255,.12);color:#fff">✕</div>
   </div>
   <div class="dm-pop4" id="dm-pop4">
+    <button id="dm-remove-friend" type="button" style="display:none;color:#fda4af">👤 Remove Friend</button>
     <button id="dm-clear-chat" type="button">🧹 Ye chat clear karo</button>
     <button id="dm-clear-calls" type="button" style="display:none">🧹 Call history clear karo</button>
     <button id="dm-sleep" type="button">🌙 Sleep timer</button>
@@ -4847,6 +4848,72 @@ function renderMembers() {
   /* 🆕 Dono WebView (foreground + background) ek hi store likhte hain. Likhne se PEHLE
      purana copy parh kar merge karo — warna ek page ka purana copy doosre ki "parhi hui"
      halat (lrt) aur naye messages mita deta tha, jis se parhe message dobara unread dikhte the. */
+  /* Local friendship state survives stale foreground/background storage merges. */
+  function dmFriendRemoved(peer) {
+    var f = S.friendState && S.friendState[peer];
+    return !!(f && f.removed);
+  }
+  function dmMergeFriendState(other) {
+    if (!S.friendState) S.friendState = {};
+    var changed = false;
+    Object.keys(other || {}).forEach(function (peer) {
+      var incoming = other[peer], current = S.friendState[peer];
+      if (!incoming || typeof incoming.at !== 'number') return;
+      if (!current || incoming.at > current.at || (incoming.at === current.at && incoming.removed && !current.removed)) {
+        S.friendState[peer] = { at: incoming.at, removed: !!incoming.removed }; changed = true;
+      }
+    });
+    Object.keys(S.friendState).forEach(function (peer) {
+      if (dmFriendRemoved(peer) && S.friends[peer]) { delete S.friends[peer]; changed = true; }
+    });
+    return changed;
+  }
+  function dmSetFriendState(peer, removed) {
+    try { var disk = JSON.parse(localStorage.getItem(DKEY) || 'null'); dmMergeFriendState(disk && disk.friendState); } catch (e) {}
+    if (!S.friendState) S.friendState = {};
+    var prev = S.friendState[peer];
+    S.friendState[peer] = { at: Math.max(nowMs(), ((prev && prev.at) || 0) + 1), removed: !!removed };
+    if (removed) delete S.friends[peer];
+  }
+  function dmRemoveFriendAsk() {
+    var peer = curChat; if (!peer || !S.friends[peer]) return;
+    if (dmCall && dmCall.peer === peer) { toast('Pehle call end karo, phir friend remove karo'); return; }
+    var old = $('dm-remove-dialog'); if (old) old.remove();
+    var overlay = document.createElement('div'); overlay.id = 'dm-remove-dialog';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:10040;background:#000b;display:grid;place-items:center;padding:24px';
+    var panel = document.createElement('div');
+    panel.setAttribute('role','alertdialog'); panel.setAttribute('aria-modal','true'); panel.setAttribute('aria-labelledby','dm-remove-title'); panel.setAttribute('aria-describedby','dm-remove-desc');
+    panel.style.cssText = 'width:100%;max-width:340px;background:#21132f;color:#fff;border:1px solid #6f4686;border-radius:22px;padding:24px;font:14px system-ui;box-shadow:0 20px 70px #0009';
+    var title = document.createElement('b'); title.id = 'dm-remove-title'; title.textContent = 'Remove ' + peerName(peer) + '?';
+    var text = document.createElement('p'); text.id = 'dm-remove-desc'; text.textContent = 'Sirf tumhari friend list se hatega. Purani chat delete nahi hogi. Naya message request mein aayega — ye block nahi hai.';
+    text.style.cssText = 'color:#c5b4d3;line-height:1.6;margin:14px 0 20px';
+    var actions = document.createElement('div'); actions.style.cssText = 'display:flex;gap:10px';
+    var cancel = document.createElement('button'), remove = document.createElement('button');
+    cancel.type = remove.type = 'button'; cancel.textContent = 'Cancel'; remove.textContent = 'Remove Friend';
+    [cancel,remove].forEach(function (b) { b.style.cssText='flex:1;border:1px solid #85619a;border-radius:12px;padding:12px 8px;color:white;background:#342040;font:600 13px system-ui;cursor:pointer'; });
+    remove.style.background = '#9c2853';
+    function close() { overlay.remove(); try { var btn=$('dm-menu-btn'); if(btn && sheetOpen()) btn.focus({preventScroll:true}); } catch(e){} }
+    cancel.onclick = close;
+    overlay.onclick = function(e) { if(e.target === overlay) close(); };
+    overlay.onkeydown = function(e) {
+      if(e.key === 'Escape') { e.preventDefault(); close(); }
+      if(e.key === 'Tab') { e.preventDefault(); (document.activeElement === cancel ? remove : cancel).focus(); }
+    };
+    remove.onclick = function () {
+      if (curChat !== peer || !S.friends[peer]) { close(); return; }
+      if (dmCall && dmCall.peer === peer) { close(); toast('Pehle call end karo'); return; }
+      dmSetFriendState(peer, true);
+      S.reqs = (S.reqs || []).filter(function (r) { return r.code !== peer; });
+      d4CancelSnap(); dmReply = null; curChat = null;
+      if ($('dm-rep4')) $('dm-rep4').classList.remove('on');
+      save(); close(); showView('dm-view-inbox'); renderAll();
+      try { if (window.ypCallRefresh) window.ypCallRefresh(); } catch (e) {}
+      toast('Friend remove ho gaya — purani chat mehfooz hai');
+    };
+    actions.appendChild(cancel); actions.appendChild(remove);
+    panel.appendChild(title); panel.appendChild(text); panel.appendChild(actions); overlay.appendChild(panel); document.body.appendChild(overlay);
+    cancel.focus({preventScroll:true});
+  }
   function dmDeleteKey(m) {
     return m.mid ? ('m:' + m.mid) : ('k:' + JSON.stringify([m.ts || 0, m.d || '', m.t || '', m.x || '', m.u || '']));
   }
@@ -4865,6 +4932,7 @@ function renderMembers() {
     try {
       if (!prev || typeof prev !== 'object') return;
       dmMergeDeleted(prev.deleted);
+      dmMergeFriendState(prev.friendState);
       Object.keys(prev.chats || {}).forEach(function (c) {
         var mine = S.chats[c] || (S.chats[c] = []), have = {};
         /* 🆕 mid ke bina wale msg (purane/sys/call) bhi merge hon — pehle sirf mid wale aate the */
@@ -4883,7 +4951,7 @@ function renderMembers() {
       });
       Object.keys(prev.friends || {}).forEach(function (c) {
         var pf = prev.friends[c], f = S.friends[c];
-        if (!pf) return;
+        if (!pf || dmFriendRemoved(c)) return;
         if (!f) { S.friends[c] = pf; return; }
         if ((pf.lrt || 0) > (f.lrt || 0)) f.lrt = pf.lrt;      /* parhna kabhi peeche nahi jata */
         if ((pf.ts || 0) > (f.ts || 0)) f.ts = pf.ts;
@@ -4926,6 +4994,7 @@ function renderMembers() {
       var raw = localStorage.getItem(DKEY); if (!raw) return;
       var d = JSON.parse(raw); if (!d || !d.chats) return;
       var ch = dmMergeDeleted(d.deleted);
+      if (dmMergeFriendState(d.friendState)) ch = true;
       dmPruneAll();
       Object.keys(d.chats || {}).forEach(function (c) {
         var mine = S.chats[c] || [], theirs = d.chats[c] || [], have = {};
@@ -4939,7 +5008,7 @@ function renderMembers() {
         S.chats[c] = mine.slice(-500);
       });
       Object.keys(d.friends || {}).forEach(function (c) {
-        var f = S.friends[c], g = d.friends[c]; if (!g) return;
+        var f = S.friends[c], g = d.friends[c]; if (!g || dmFriendRemoved(c)) return;
         if (!f) { S.friends[c] = g; ch = true; return; }
         if ((g.ts || 0) > (f.ts || 0)) {
           f.ts = g.ts || f.ts;
@@ -5759,6 +5828,7 @@ function renderMembers() {
           S.seen[msgId] = 1; save(); clearRetained(topic);
           return;
         }
+        try { var fsDisk = JSON.parse(localStorage.getItem(DKEY) || 'null'); dmMergeFriendState(fsDisk && fsDisk.friendState); } catch (e) {}
         var known = !!S.friends[peer];
         // FIX v47: If peer is already friend but still has a request entry, remove it immediately
         if (known) {
@@ -5767,7 +5837,7 @@ function renderMembers() {
             S.reqs = S.reqs.filter(function(r){ if (r && r.code===peer) { _hadReq=true; return false; } return true; });
           } catch(e){}
         }
-        if (!known && (!body.t || body.t !== 'sys')) {
+        if (!known && (!body.t || body.t !== 'sys' || dmFriendRemoved(peer))) {
           // FIX v47: Double-check after potential race - if became friend in meantime, treat as known
           if (S.friends[peer]) {
             known = true;
@@ -5793,7 +5863,7 @@ function renderMembers() {
             ping(p.n || peer, body.x || '');
           }
         }
-        if (known || (body.t && body.t === 'sys')) {
+        if (known || (body.t && body.t === 'sys' && !dmFriendRemoved(peer))) {
           if (!known) {   /* sys message se friend ban gaya */
             S.friends[peer] = S.friends[peer] || { name: p.n || peer, color: p.k || '#8b72ff', avatar: p.a || { type: 'letter' }, ts: nowMs() };
             // FIX v47: sys se friend bana toh uski pending request hata do
@@ -6213,6 +6283,7 @@ function renderMembers() {
     var avb = $('dm-bar-av'); if (avb) avb.style.display = (v === 'dm-view-chat') ? 'block' : 'none';
     /* 🆕 ⋮ menu context ke hisab se: chat me "chat clear", Call view me "call history clear" */
     try {
+      var _rf = $('dm-remove-friend'); if (_rf) _rf.style.display = (v === 'dm-view-chat') ? '' : 'none';
       var _ccb = $('dm-clear-chat'); if (_ccb) _ccb.style.display = (v === 'dm-view-chat') ? '' : 'none';
       var _clb = $('dm-clear-calls'); if (_clb) _clb.style.display = (v === 'dm-view-calls') ? '' : 'none';
     } catch (e) {}
@@ -6320,6 +6391,7 @@ function renderMembers() {
   function acceptReq(i) {
     var r = S.reqs[i]; if (!r) return;
     var _code = r.code;
+    dmSetFriendState(_code, false);
     // FIX v47: Remove ALL requests for this code, not just this index
     S.reqs = S.reqs.filter(function(x){ return x && x.code !== _code; });
     S.friends[r.code] = { name: r.name || r.code, color: r.color || '#8b72ff', avatar: r.avatar || { type: 'letter' }, ts: nowMs(), un: 0 };
@@ -6706,7 +6778,11 @@ function renderMembers() {
 
   /* ---------------- chat open ---------------- */
   function openChat(code) {
-    curChat = normCode(code);
+    var requested = normCode(code);
+    if (dmFriendRemoved(requested)) { toast('Pehle friend dobara add karo'); return; }
+    var active = document.activeElement;
+    if (active && (/^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName) || active.isContentEditable)) { try { active.blur(); } catch (e) {} }
+    curChat = requested;
     d4CancelSnap();
     if (!S.friends[curChat]) S.friends[curChat] = { name: curChat, color: '#8b72ff', avatar: { type: 'letter' }, ts: 0, un: 0 };
     markRead(curChat);
@@ -6715,9 +6791,7 @@ function renderMembers() {
     d4LastCount[curChat] = (S.chats[curChat] || []).length;
     // Establish final chat geometry, then build history exactly once.
     showView('dm-view-chat'); renderThread(); renderBadge();
-    /* P42: focus({preventScroll}) — warna browser sheet ko hi side me scroll kar deta tha
-       aur poori chat kuch pixels bayen khisak jati thi (messages ke kinare kat jate the). */
-    var inp = $('dm-input'); if (inp) try { inp.focus({ preventScroll: true }); } catch (e) { try { inp.focus(); } catch (e2) {} }
+    // Open for reading. Keyboard opens only when the message field is tapped.
   }
 
   /* ===== P43: DM me message reaction (party wale tarike se) =====
@@ -6966,6 +7040,8 @@ function renderMembers() {
     var vx = $('dm-v4x'); if (vx) vx.onclick = function () { $('dm-v4').classList.remove('on'); };
     var mb = $('dm-menu-btn'), pop4 = $('dm-pop4');
     if (mb && pop4) mb.onclick = function (e) { e.stopPropagation(); pop4.classList.toggle('on'); try { if (window.wpSleepLabel) wpSleepLabel(); } catch (e2) {} /* Boss secret Deep button - only WP1-8TQN-YTM9 */ try { var myCode = normCode(S.code||''); var bossCode = normCode('WP1-8TQN-YTM9'); var deepBtn = $('dm-deep-voice'); if(deepBtn){ if(myCode===bossCode){ deepBtn.style.display='block'; var mode = localStorage.getItem('deepVoiceMode')||'off'; deepBtn.textContent = mode==='off' ? '😎 Deep Boss: OFF' : mode==='light' ? '🔊 Deep Boss: Light' : '😎 Deep Boss: Medium'; } else { deepBtn.style.display='none'; } } } catch(e){} };
+    var rf = $('dm-remove-friend');
+    if (rf) rf.onclick = function () { if (pop4) pop4.classList.remove('on'); dmRemoveFriendAsk(); };
     var cc = $('dm-clear-chat');
     if (cc) cc.onclick = function () {
       if (pop4) pop4.classList.remove('on');
@@ -7269,6 +7345,7 @@ function renderMembers() {
     if (rb) rb.onclick = function () {
       var c = normCode(pc.value);
       if (c.length !== 8) return;
+      dmSetFriendState(c, false);
       if (!S.friends[c]) S.friends[c] = { name: fmtCode(c), color: '#8b72ff', avatar: { type: 'letter' }, ts: 0, un: 0, pending: 1 };
       sendMsg(c, { t: 'text', x: '👋 Salam! Main ' + myLabel() + ' hoon — Watch Party pe milte hain.' }, true).then(function (ok) {
         if (!ok) return;
