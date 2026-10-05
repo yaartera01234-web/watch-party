@@ -2119,7 +2119,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-30';
+const WP_BUILD = '2026-10-05-31';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -5910,14 +5910,17 @@ function renderMembers() {
     })();
   }
 
+  var dmLivePresence = Object.create(null); // Session-only; stored activity timestamps are not online proof.
   function onPresence(topic, str) {
-    if (!str) return;
     var h = topic.slice((NSP + 'presence-').length);
     var peer = null;
     Object.keys(S.friends).forEach(function (c) { if (h36(c) === h) peer = c; });
     if (!peer) return;
     try {
-      var p = JSON.parse(str);
+      var p = str ? JSON.parse(str) : {ts:0,fg:0};
+      var age = nowMs() - Number(p.ts || 0);
+      var active = p.fg !== 0 && p.fg !== false && p.fg !== '0' && age >= -30000 && age < 90000;
+      dmLivePresence[peer] = { active: active, expires: nowMs() + Math.max(0, 90000 - Math.max(0,age)) };
       S.friends[peer].ts = p.ts || 0;
       if (p.pv) S.friends[peer].pv = String(p.pv);   /* 🆕 dost ke page ka version */
       var nm = p.n && String(p.n).trim();
@@ -5927,6 +5930,7 @@ function renderMembers() {
       }
     } catch (e) {}
     if (peer === curChat) setChatBar();
+    dmRefreshOnlineDots();
   }
 
   /* 🆕 READ RECEIPT: parh liya -> dost ke paas neela tick */
@@ -6222,7 +6226,19 @@ function renderMembers() {
   }
   /* ---------------- DM v2.4: chat header (naam + online) + typing ---------------- */
   var dmTypTimer = null, dmLastType = 0;
-  function dmIsOnline(c) { var f = S.friends[c]; return !!(f && f.ts && (nowMs() - f.ts < 150000)); }
+  function dmIsOnline(c) {
+    var p = dmLivePresence[c];
+    return !!(connected() && S.friends[c] && p && p.active && nowMs() < p.expires);
+  }
+  function dmRefreshOnlineDots() {
+    var w = $('dm-chat-wrap'); if (!w) return;
+    var rows = w.querySelectorAll('[data-presence-peer]');
+    for (var i=0; i<rows.length; i++) {
+      var row=rows[i], online=dmIsOnline(row.getAttribute('data-presence-peer'));
+      row.classList.toggle('off', !online);
+      var dot=row.querySelector('.ring4 .av3 i'); if(dot) dot.classList.toggle('on', online);
+    }
+  }
   function setChatBar() {
     if (!curChat) return;
     var av = $('dm-bar-av');
@@ -6263,6 +6279,7 @@ function renderMembers() {
     var di = $('dm-input'); if (di) di.addEventListener('input', dmInputPing);
     setInterval(function () {                                  /* online label taaza rakho */
       try {
+        dmRefreshOnlineDots();
         if (!curChat || !sheetOpen()) return;
         var cv = $('dm-view-chat');
         if (!cv || !cv.classList.contains('on')) return;
@@ -6272,7 +6289,7 @@ function renderMembers() {
         if (dot) { dot.classList.toggle('on', on); }
         if (sub.textContent.indexOf(on ? 'Offline' : 'Online') >= 0) setChatBar();
       } catch (e) {}
-    }, 20000);
+    }, 5000);
   })();
 
   function showView(v, noHistory) {
@@ -6475,10 +6492,11 @@ function renderMembers() {
     codes.forEach(function (c) {
       var arr = S.chats[c] || [];
       var last = arr.length ? arr[arr.length - 1] : null;
-      var online = S.friends[c].ts && (nowMs() - S.friends[c].ts < 150000);
+      var online = dmIsOnline(c);
       var un4 = S.friends[c].un || 0;
       var d = document.createElement('div');
       d.className = 'dm-row' + (un4 > 0 ? ' un' : '') + (online ? '' : ' off');
+      d.setAttribute('data-presence-peer', c);
       var avc = avatarHTML(c, 'av3').replace('</div>', '<i class="' + (online ? 'on' : '') + '"></i></div>');
       avc = '<div class="ring4">' + avc + '</div>';
       var tp4 = last ? (last.t || 'text') : '';
