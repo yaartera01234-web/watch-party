@@ -1610,15 +1610,6 @@ body { margin: 0 !important; padding: 0 !important; }
 #wp-party-welcome strong { display:block; font-size:16px; font-weight:700; letter-spacing:.1px; line-height:1.4; }
 #wp-party-welcome small { display:block; font-size:12px; color:#d6c4e7; line-height:1.5; }
 @media(prefers-reduced-motion:reduce) { #wp-party-welcome { transition:none; } }
-/* Soft navigation: transitions interrupt naturally on rapid taps (no queue). */
-#dm-sheet { transform:scale(.98); opacity:0; visibility:hidden; pointer-events:none; transition:opacity 220ms cubic-bezier(.22,.75,.25,1), transform 220ms cubic-bezier(.22,.75,.25,1), visibility 220ms; }
-#dm-sheet.on { transform:none; opacity:1; visibility:visible; pointer-events:auto; }
-#dm-ov { transition:opacity 220ms ease; }
-#dm-sheet .dm-view { transform:translateX(var(--dm-motion-x,18px)) !important; opacity:0; visibility:hidden; pointer-events:none; transition:transform 210ms cubic-bezier(.22,.75,.25,1), opacity 210ms cubic-bezier(.22,.75,.25,1), visibility 210ms; }
-#dm-sheet .dm-view.on { transform:none !important; opacity:1; visibility:visible; pointer-events:auto; }
-#yp-pillbg { transition:transform 210ms cubic-bezier(.22,.75,.25,1); }
-body.yp-nofx #dm-sheet .dm-view { transition:none !important; }
-@media(prefers-reduced-motion:reduce) { #dm-sheet, #dm-ov, #dm-sheet .dm-view, #yp-pillbg { transition:none !important; } }
 </style>
 </head>
 <body>
@@ -2116,7 +2107,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-23';
+const WP_BUILD = '2026-10-05-24';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -6126,10 +6117,6 @@ function renderMembers() {
   })();
 
   function showView(v, noHistory) {
-    /* Inbox left, Calls right; only transform/opacity animate. */
-    ['dm-view-inbox', 'dm-view-add', 'dm-view-chat', 'dm-view-calls'].forEach(function (id) {
-      var el = $(id); if (el) el.style.setProperty('--dm-motion-x', id === 'dm-view-inbox' ? '-18px' : '18px');
-    });
     ['dm-view-inbox', 'dm-view-add', 'dm-view-chat', 'dm-view-calls'].forEach(function (k) {
       var e = $(k); if (!e) return;
       e.classList.remove('on'); e.classList.remove('first');
@@ -7391,8 +7378,8 @@ function renderMembers() {
             }
             closeSheet();                                     /* wapas watchparty */
           }
-          else if (k === 'chat') { if (!sheetOpen()) openSheet(); showView('dm-view-inbox'); }
-          else { if (!sheetOpen()) openSheet(); showView('dm-view-calls'); ypRenderCalls(); }
+          else if (k === 'chat') { openSheet(); showView('dm-view-inbox'); }
+          else { openSheet(); showView('dm-view-calls'); ypRenderCalls(); }
         } catch (e) {}
         ypSync();
       };
