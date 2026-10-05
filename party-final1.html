@@ -1622,6 +1622,8 @@ body { margin: 0 !important; padding: 0 !important; }
 #dm-v4 button { top:calc(env(safe-area-inset-top,0px) + 14px); z-index:1; }
 /* Chat positioning must be immediate; CSS smooth scrolling fights bottom tracking. */
 #dm-thread { scroll-behavior:auto; }
+/* Existing rows must not replay legacy pop on receipt/state refresh. */
+#dm-thread .msg-row { animation:none !important; }
 </style>
 </head>
 <body>
@@ -2119,7 +2121,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-32';
+const WP_BUILD = '2026-10-05-33';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -5935,6 +5937,17 @@ function renderMembers() {
 
   /* 🆕 READ RECEIPT: parh liya -> dost ke paas neela tick */
   var dmReadSent = {}, dmReadPend = {}, dmReadTimer = null;
+  function dmPaintReadTicks(peer) {
+    if (peer !== curChat || !d4ChatVisible()) return;
+    var thread = $('dm-thread'); if (!thread) return;
+    var byId = Object.create(null), readAt = (S.reads && S.reads[peer]) || 0;
+    (S.chats[peer] || []).forEach(function (m) { if (m.mid) byId[m.mid] = m; });
+    var rows = thread.querySelectorAll('.msg-row[data-mid]');
+    for (var i=0;i<rows.length;i++) {
+      var m = byId[rows[i].dataset.mid], tick = rows[i].querySelector('.tk');
+      if (m && tick && m.d === 'out') tick.classList.toggle('read', !!(readAt && (m.ts || 0) <= readAt));
+    }
+  }
   function dmSendReadFlush() {
     dmReadTimer = null;
     if (!connected()) {
@@ -6001,7 +6014,7 @@ function renderMembers() {
         if (mm && mm.d === 'out' && (mm.ts || 0) > mx) mx = mm.ts || 0;
       }
       if (!mx) return;
-      if (mx > (S.reads[peer] || 0)) { S.reads[peer] = mx; save(); if (curChat === peer) renderThread(); }
+      if (mx > (S.reads[peer] || 0)) { S.reads[peer] = mx; save(); dmPaintReadTicks(peer); }
     } catch (e) {}
   }
   function onRcpt(topic, str) {
@@ -6014,7 +6027,7 @@ function renderMembers() {
       var p = JSON.parse(str);
       if (!p || !p.ts) return;
       if (p.p && normCode(p.p) !== normCode(S.code)) return;   /* ye kisi aur chat ki khabar hai */
-      if (p.ts > (S.reads[peer] || 0)) { S.reads[peer] = p.ts; save(); if (curChat === peer) renderThread(); }
+      if (p.ts > (S.reads[peer] || 0)) { S.reads[peer] = p.ts; save(); dmPaintReadTicks(peer); }
     } catch (e) {}
   }
   function ping(name, text, code) {
