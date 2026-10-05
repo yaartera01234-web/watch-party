@@ -2185,7 +2185,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-41';
+const WP_BUILD = '2026-10-05-42';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -5005,10 +5005,12 @@ function renderMembers() {
     cancel.focus({preventScroll:true});
   }
   /* Pair-scoped, encrypted retained wallpaper state. Lamport versions avoid phone-clock skew. */
-  var dmWpAssets = { 'default':'', 'lofi1':'assets/night-lofi-1.webp', 'lofi2':'assets/night-lofi-2.webp' };
+  var dmWpAssets = { 'default':'', 'whisper':'assets/wallpaper-whisper.svg', 'moon':'assets/wallpaper-moon.svg', 'love':'assets/wallpaper-love.svg' };
+  var dmWpSizes = {whisper:'180px 200px',moon:'220px 240px',love:'220px 240px'};
+  function dmWpLegacy(id) { return id === 'lofi1' || id === 'lofi2'; }
   var dmWpSent = Object.create(null), dmWpBusy = Object.create(null);
   function dmWpValid(p, peer) {
-    return !!(p && Object.prototype.hasOwnProperty.call(dmWpAssets,p.id) && Number.isSafeInteger(p.v) && p.v > 0 && p.v < 1000000000 && (p.by === normCode(S.code) || p.by === peer));
+    return !!(p && (Object.prototype.hasOwnProperty.call(dmWpAssets,p.id) || dmWpLegacy(p.id)) && Number.isSafeInteger(p.v) && p.v > 0 && p.v < 1000000000 && (p.by === normCode(S.code) || p.by === peer));
   }
   function dmWpSignature(p) { return p ? p.v + ':' + p.by + ':' + p.id : ''; }
   function dmWpNewer(a,b) {
@@ -5020,8 +5022,10 @@ function renderMembers() {
   function dmMergeWallpapers(other) {
     if (!S.wallpapers) S.wallpapers = {};
     var changed = false;
+    Object.keys(S.wallpapers).forEach(function(peer){if(S.wallpapers[peer] && dmWpLegacy(S.wallpapers[peer].id)){S.wallpapers[peer].id='default';changed=true}});
     Object.keys(other || {}).forEach(function(peer) {
       var item=other[peer]; if (!dmWpValid(item,peer)) return;
+      if(dmWpLegacy(item.id))item={id:'default',v:item.v,by:item.by};
       if (dmWpNewer(item,S.wallpapers[peer])) { S.wallpapers[peer]={id:item.id,v:item.v,by:item.by}; changed=true; }
     });
     return changed;
@@ -5032,8 +5036,8 @@ function renderMembers() {
     if (thread.getAttribute('data-wallpaper') === id) return;
     thread.setAttribute('data-wallpaper',id);
     if (dmWpAssets[id]) {
-      thread.style.backgroundImage='linear-gradient(rgba(8,5,18,.30),rgba(8,5,18,.30)),url("'+dmWpAssets[id]+'")';
-      thread.style.backgroundSize='cover'; thread.style.backgroundPosition='center'; thread.style.backgroundRepeat='no-repeat';
+      thread.style.backgroundImage='url("'+dmWpAssets[id]+'")';
+      thread.style.backgroundSize=dmWpSizes[id]; thread.style.backgroundPosition='center'; thread.style.backgroundRepeat='repeat';
     } else {
       ['background-image','background-size','background-position','background-repeat'].forEach(function(k){thread.style.removeProperty(k)});
     }
@@ -5091,9 +5095,9 @@ function renderMembers() {
     overlay.querySelector('.dm-wp-note').textContent=peerName(peer)+' aur tum — dono ki chat ka background.';
     var selected=S.wallpapers && S.wallpapers[peer] && S.wallpapers[peer].id || 'default';
     var list=overlay.querySelector('.dm-wp-options');
-    [['default','Default','Original background'],['lofi1','Night Lofi 1','Rainy Window'],['lofi2','Night Lofi 2','Night Train']].forEach(function(item){
+    [['default','Default','Original background'],['whisper','Whisper Doodles','Soft music & chat outlines'],['moon','Moon & Stars','Quiet moon, stars & clouds'],['love','Love & Music','Hearts, headphones & notes']].forEach(function(item){
       var b=document.createElement('button');b.type='button';b.className='dm-wp-choice';b.setAttribute('data-wall-id',item[0]);b.setAttribute('aria-pressed',String(selected===item[0]));
-      var thumb=document.createElement('span');thumb.className='dm-wp-thumb';if(dmWpAssets[item[0]])thumb.style.backgroundImage='url("'+dmWpAssets[item[0]]+'")';
+      var thumb=document.createElement('span');thumb.className='dm-wp-thumb';if(dmWpAssets[item[0]]){thumb.style.backgroundImage='url("'+dmWpAssets[item[0]]+'")';thumb.style.backgroundSize=item[0]==='whisper'?'90px 100px':'110px 120px'}
       var copy=document.createElement('span');copy.className='dm-wp-copy';var title=document.createElement('b');title.textContent=item[1];var sub=document.createElement('small');sub.textContent=item[2];copy.appendChild(title);copy.appendChild(sub);
       var tick=document.createElement('span');tick.className='dm-wp-check';tick.textContent=selected===item[0]?'✓':'○';
       b.appendChild(thumb);b.appendChild(copy);b.appendChild(tick);b.onclick=function(){dmChooseWallpaper(peer,item[0]);overlay.remove()};list.appendChild(b);
