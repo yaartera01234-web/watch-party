@@ -2119,7 +2119,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-29';
+const WP_BUILD = '2026-10-05-30';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -6198,6 +6198,7 @@ function renderMembers() {
       var ss = document.getElementById('wp-ssheet'); if (ss) ss.className = 'wp-sheet';
       if (ov) ov.classList.add('on');
       if (sh) sh.classList.add('on');
+      try { if (window.ypSnapBarNow) window.ypSnapBarNow(); } catch (e) {}
       fitSheet(); setTimeout(fitSheet, 90);
       subscribeDm(); pubPresence(); renderAll();
       // Push for gesture back
@@ -6213,6 +6214,7 @@ function renderMembers() {
       var nav = sh && sh.classList.contains('on') ? dmNavPrepare() : null;
       if (ov) ov.classList.remove('on');
       if (sh) sh.classList.remove('on');
+      try { if (window.ypSnapBarNow) window.ypSnapBarNow(); } catch (e) {}
       if (curChat) { markRead(curChat); renderAll(); }
       dmNavPlay(nav, $('app'), 'party');
       console.log('[DM] closeSheet ok');
@@ -6282,6 +6284,8 @@ function renderMembers() {
       e.classList.remove('on'); e.classList.remove('first');
     });
     var t = $(v); if (t) t.classList.add('on');
+    // Bar visibility follows the view in this same task, before any paint.
+    try { if (window.ypSnapBarNow) window.ypSnapBarNow(); } catch (e) {}
     // Push history for gesture back (unless called from popstate)
     if (!noHistory && !_wpHistoryHandling) {
       try {
