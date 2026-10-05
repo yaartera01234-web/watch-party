@@ -1620,6 +1620,8 @@ body { margin: 0 !important; padding: 0 !important; }
 #dm-v4 .big4 { position:absolute; top:calc(env(safe-area-inset-top,0px) + 66px); bottom:calc(env(safe-area-inset-bottom,0px) + 18px); left:16px; right:16px; width:auto; height:auto; min-width:0; min-height:0; display:flex; align-items:center; justify-content:center; overflow:hidden; }
 #dm-v4 .big4 img { display:block; width:100%; height:100%; max-width:100%; max-height:100%; min-width:0; min-height:0; object-fit:contain; }
 #dm-v4 button { top:calc(env(safe-area-inset-top,0px) + 14px); z-index:1; }
+/* Chat positioning must be immediate; CSS smooth scrolling fights bottom tracking. */
+#dm-thread { scroll-behavior:auto; }
 </style>
 </head>
 <body>
@@ -2117,7 +2119,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-26';
+const WP_BUILD = '2026-10-05-27';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -6035,6 +6037,7 @@ function renderMembers() {
       });
       var th = $('dm-thread'); if (th) th.style.minHeight = '0';
       try { sh.scrollLeft = 0; sh.scrollTop = 0; } catch (e) {}
+      d4ScheduleSnap(); // After keyboard/viewport layout settles, only the thread follows.
     } catch (e) {}
   }
   try {
@@ -6111,6 +6114,7 @@ function renderMembers() {
     } catch(e){ console.log('openSheet err', e); }
   }
   function closeSheet() {
+    d4CancelSnap();
     try {
       var ov = $('dm-ov'), sh = $('dm-sheet');
       var nav = sh && sh.classList.contains('on') ? dmNavPrepare() : null;
@@ -6177,6 +6181,7 @@ function renderMembers() {
   })();
 
   function showView(v, noHistory) {
+    if (v !== 'dm-view-chat') d4CancelSnap();
     var previous = $('dm-sheet') && $('dm-sheet').querySelector('.dm-view.on');
     var nav = !dmNavMotion && sheetOpen() && previous && previous.id !== v ? dmNavPrepare() : null;
     ['dm-view-inbox', 'dm-view-add', 'dm-view-chat', 'dm-view-calls'].forEach(function (k) {
@@ -6702,12 +6707,14 @@ function renderMembers() {
   /* ---------------- chat open ---------------- */
   function openChat(code) {
     curChat = normCode(code);
-    dmSeedEntries(curChat);
+    d4CancelSnap();
     if (!S.friends[curChat]) S.friends[curChat] = { name: curChat, color: '#8b72ff', avatar: { type: 'letter' }, ts: 0, un: 0 };
     markRead(curChat);
+    dmSeedEntries(curChat);
     d4JumpBottom = true; d4AtBottom = true; d4Peek(false);   /* P45: chat khuli -> sab se neeche */
     d4LastCount[curChat] = (S.chats[curChat] || []).length;
-    renderThread(); showView('dm-view-chat'); setChatBar(); renderAll();
+    // Establish final chat geometry, then build history exactly once.
+    showView('dm-view-chat'); renderThread(); renderBadge();
     /* P42: focus({preventScroll}) — warna browser sheet ko hi side me scroll kar deta tha
        aur poori chat kuch pixels bayen khisak jati thi (messages ke kinare kat jate the). */
     var inp = $('dm-input'); if (inp) try { inp.focus({ preventScroll: true }); } catch (e) { try { inp.focus(); } catch (e2) {} }
@@ -6756,25 +6763,35 @@ function renderMembers() {
   }
   /* P45: naya msg khud neeche dikhe; purane padh rahe ho to '⬇ Naya message' pill */
   var d4AtBottom = true, d4LastCount = {};
-  function d4Snap() {
+  var d4SnapFrame = null;
+  function d4CancelSnap() {
+    if (d4SnapFrame !== null) cancelAnimationFrame(d4SnapFrame);
+    d4SnapFrame = null;
+  }
+  function d4ChatVisible() {
+    var v = $('dm-view-chat');
+    return !!(curChat && sheetOpen() && v && v.classList.contains('on'));
+  }
+  function d4WriteBottom() {
     var t = $('dm-thread'); if (!t) return;
-    // FIX: Half message hidden bug - scroll with extra offset + multiple retries for keyboard
-    var doSnap = function(){ 
-      try {
-        t.scrollTop = t.scrollHeight + 200;
-        // Also scroll parent if needed
-        var sheet = $('dm-sheet');
-        if(sheet) sheet.scrollTop = sheet.scrollHeight;
-      } catch(e){}
-    };
-    doSnap();
-    requestAnimationFrame(function () { var x = $('dm-thread'); if (x) { x.scrollTop = x.scrollHeight + 200; } });
-    setTimeout(function () { var x = $('dm-thread'); if (x) x.scrollTop = x.scrollHeight + 200; }, 80);
-    setTimeout(function () { var x = $('dm-thread'); if (x) x.scrollTop = x.scrollHeight + 200; }, 200);
-    setTimeout(function () { var x = $('dm-thread'); if (x) x.scrollTop = x.scrollHeight + 200; }, 400);
-    // For mobile keyboard open
-    setTimeout(function () { var x = $('dm-thread'); if (x) x.scrollTop = x.scrollHeight + 300; }, 600);
+    var bottom = Math.max(0, t.scrollHeight - t.clientHeight);
+    if (Math.abs(t.scrollTop - bottom) > 1) t.scrollTop = bottom;
+  }
+  function d4ScheduleSnap() {
+    if (!d4AtBottom || !d4ChatVisible()) return;
+    d4CancelSnap();
+    var peer = curChat;
+    d4SnapFrame = requestAnimationFrame(function () {
+      d4SnapFrame = null;
+      if (peer === curChat && d4AtBottom && d4ChatVisible()) d4WriteBottom();
+    });
+  }
+  function d4Snap() {
+    d4CancelSnap();
+    if (!d4ChatVisible()) return;
     d4AtBottom = true;
+    d4WriteBottom();
+    d4ScheduleSnap(); // One coalesced layout follow-up; no delayed timer chain.
     d4Peek(false);
   }
   function d4Peek(on) {
@@ -7052,7 +7069,7 @@ function renderMembers() {
     /* keyboard khulne/jhapne, screen ghoomne, app wapas aane — bottom pe thay to bottom pe raho */
     if (!window._dmSnapBound) {
       window._dmSnapBound = 1;
-      var snapIfBottom = function () { if (d4AtBottom) setTimeout(function () { if (d4AtBottom) d4Snap(); }, 90); };
+      var snapIfBottom = function () { d4ScheduleSnap(); };
       window.addEventListener('resize', snapIfBottom);
       try { if (window.visualViewport) window.visualViewport.addEventListener('resize', snapIfBottom); } catch (e) {}
       document.addEventListener('visibilitychange', function () { if (!document.hidden) snapIfBottom(); });
@@ -7062,9 +7079,13 @@ function renderMembers() {
     var th = $('dm-thread');
     if (th && !th._scrollBound) {
       th._scrollBound = 1;
+      th.addEventListener('touchstart', d4CancelSnap, { passive: true });
+      th.addEventListener('wheel', d4CancelSnap, { passive: true });
+      // Late photo/GIF sizes: follow only if the reader is still at bottom.
+      th.addEventListener('load', function (ev) { if (ev.target && ev.target.tagName === 'IMG') d4ScheduleSnap(); }, true);
       th.addEventListener('scroll', function () {
         d4AtBottom = (th.scrollHeight - th.scrollTop - th.clientHeight) < 90;
-        if (d4AtBottom) d4Peek(false);
+        if (d4AtBottom) d4Peek(false); else d4CancelSnap();
       }, { passive: true });
     }
     dmBuildRxRow();
