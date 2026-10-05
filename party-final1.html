@@ -2185,7 +2185,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-44';
+const WP_BUILD = '2026-10-05-45';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -8643,6 +8643,79 @@ setInterval(tick,1000);
 })();
 
 })();
+</script>
+<!-- WP_BROWSER_FULLSCREEN_V45 -->
+<script>
+/* v45: browser premium fullscreen only. No native APK or sync-policy changes. */
+(function(){
+'use strict';
+if(window.YaarNative||window.__wpMpvOnly)return;
+var wrap=document.querySelector('.player-wrap'),button=document.getElementById('premium-video-fullscreen');
+if(!wrap||!button)return;
+var style=document.createElement('style');style.id='wp-browser-fullscreen-style';
+style.textContent=`
+.player-wrap.wp-html-fs {
+ position:fixed!important;inset:0!important;margin:0!important;padding:0!important;
+ width:100vw!important;height:100vh!important;height:100dvh!important;
+ min-width:0!important;min-height:0!important;max-width:none!important;max-height:none!important;
+ aspect-ratio:auto!important;border:0!important;border-radius:0!important;box-shadow:none!important;
+ box-sizing:border-box!important;overflow:hidden!important;background:#000!important;
+}
+.player-wrap.wp-html-fs::backdrop {background:#000;}
+.player-wrap.wp-html-fs #premium-video-ui {
+ padding-top:max(12px,env(safe-area-inset-top,0px));
+ padding-right:max(14px,env(safe-area-inset-right,0px));
+ padding-bottom:max(10px,env(safe-area-inset-bottom,0px));
+ padding-left:max(14px,env(safe-area-inset-left,0px));
+}
+.player-wrap.wp-html-fs .premium-video-controls {flex-wrap:wrap;gap:6px;}
+.player-wrap.wp-html-fs .mini-info,.player-wrap.wp-html-fs .pc-collapse {display:none!important;}
+.player-wrap.wp-html-fs #mp4-player {max-width:none;max-height:none;}
+`;
+document.head.appendChild(style);
+var active=false,epoch=0,requestedLock=false,saved=null,viewport=document.querySelector('meta[name="viewport"]'),oldViewport=null;
+function element(){return document.fullscreenElement||document.webkitFullscreenElement||document.webkitCurrentFullScreenElement;}
+function owns(){var el=element();return !!el&&(el===wrap||wrap.contains(el));}
+function cover(){if(!viewport||oldViewport!==null)return;oldViewport=viewport.content;viewport.content=oldViewport.replace(/,?\s*viewport-fit\s*=\s*[^,]+/gi,'')+', viewport-fit=cover';}
+function restoreViewport(){if(viewport&&oldViewport!==null){viewport.content=oldViewport;oldViewport=null;}}
+function say(s){try{toast(s);}catch(e){}}
+function unlock(){try{if(screen.orientation&&screen.orientation.unlock)screen.orientation.unlock();}catch(e){}}
+function landscape(){
+ var token=epoch;
+ if(!screen.orientation||typeof screen.orientation.lock!=='function'){say('Is browser mein auto-rotate supported nahi; phone manually landscape karo.');return;}
+ requestedLock=true;
+ try{Promise.resolve(screen.orientation.lock('landscape')).then(function(){if(token!==epoch&&!active)unlock();}).catch(function(){if(token===epoch&&active)say('Browser ne auto-rotate allow nahi kiya; phone manually landscape karo.');});}
+ catch(e){say('Auto-rotate available nahi; phone manually landscape karo.');}
+}
+function sync(){
+ var on=owns();
+ if(on&&!active){
+  active=true;epoch++;cover();saved={expanded:pcUserExpanded,mini:pcMiniOn};
+  pcUserExpanded=true;pcSetMini(false);wrap.classList.add('wp-html-fs');landscape();
+ }else if(!on&&active){
+  active=false;epoch++;wrap.classList.remove('wp-html-fs');
+  if(requestedLock)unlock();requestedLock=false;restoreViewport();
+  if(saved){pcUserExpanded=saved.expanded;pcSetMini(saved.mini);saved=null;}
+ }
+}
+var oldMini=window.pcSetMini;
+window.pcSetMini=function(on){return oldMini(owns()?false:on);};
+button.onclick=function(){
+ if(owns()){
+  var exit=document.exitFullscreen||document.webkitExitFullscreen||document.webkitCancelFullScreen;
+  if(exit)try{Promise.resolve(exit.call(document)).then(sync).catch(function(){say('Fullscreen exit nahi hua; Back button use karo.');});}catch(e){}
+  return;
+ }
+ var request=wrap.requestFullscreen||wrap.webkitRequestFullscreen;
+ if(!request){say('Is browser mein page fullscreen supported nahi.');return;}
+ cover();
+ try{Promise.resolve(request.call(wrap,{navigationUI:'hide'})).then(sync).catch(function(){if(!owns())restoreViewport();say('Fullscreen allow nahi hua; browser mein page directly kholo.');});}
+ catch(e){restoreViewport();say('Fullscreen available nahi.');}
+};
+['fullscreenchange','webkitfullscreenchange'].forEach(function(e){document.addEventListener(e,sync);});
+window.addEventListener('pagehide',function(){if(requestedLock)unlock();});
+})();
+
 </script>
 </body>
 </html>
