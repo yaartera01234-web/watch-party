@@ -2177,7 +2177,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-38';
+const WP_BUILD = '2026-10-05-39';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -6372,6 +6372,23 @@ function renderMembers() {
       a.onfinish = done; a.oncancel = done;
     } catch (e) { dmNavStop(); }
   }
+  var dmOpenedFromRoom = false;
+  function dmRoomBack() {
+    if (!dmOpenedFromRoom || !sheetOpen()) return false;
+    var inbox = $('dm-view-inbox');
+    if (inbox && inbox.classList.contains('on')) {
+      curChat = null; closeSheet();
+      try { history.replaceState({wp:'room'}, '', location.href); } catch(e) {}
+    } else {
+      curChat = null; showView('dm-view-inbox', true);
+      try { history.replaceState({wp:'dm',view:'dm-view-inbox'}, '', location.href); } catch(e) {}
+    }
+    return true;
+  }
+  window.addEventListener('popstate', function(e) {
+    if (partyLobbyVisible || !dmOpenedFromRoom || !sheetOpen()) return;
+    e.stopImmediatePropagation(); dmRoomBack();
+  }, true);
   function openSheet() {
     try {
       var ov = $('dm-ov'), sh = $('dm-sheet');
@@ -6381,6 +6398,8 @@ function renderMembers() {
       var ss = document.getElementById('wp-ssheet'); if (ss) ss.className = 'wp-sheet';
       if (ov) ov.classList.add('on');
       if (sh) sh.classList.add('on');
+      var backButton = $('dm-bar-back'), inboxView = $('dm-view-inbox');
+      if (backButton && inboxView && inboxView.classList.contains('on')) backButton.style.display = dmOpenedFromRoom ? 'grid' : 'none';
       try { if (window.ypSnapBarNow) window.ypSnapBarNow(); } catch (e) {}
       fitSheet(); setTimeout(fitSheet, 90);
       subscribeDm(); pubPresence(); renderAll();
@@ -6391,6 +6410,7 @@ function renderMembers() {
     } catch(e){ console.log('openSheet err', e); }
   }
   function closeSheet() {
+    dmOpenedFromRoom = false;
     d4CancelSnap();
     try {
       var ov = $('dm-ov'), sh = $('dm-sheet');
@@ -6504,7 +6524,7 @@ function renderMembers() {
     });
     var sh0 = $('dm-sheet'); if (sh0) { sh0.scrollLeft = 0; sh0.scrollTop = 0; }
     var back = $('dm-bar-back');
-    if (back) back.style.display = (v === 'dm-view-inbox') ? 'none' : 'grid';
+    if (back) back.style.display = (v === 'dm-view-inbox' && !dmOpenedFromRoom) ? 'none' : 'grid';
     var addb = $('dm-add-btn');
     if (addb) addb.style.display = (v === 'dm-view-inbox') ? 'grid' : 'none';
     var avb = $('dm-bar-av'); if (avb) avb.style.display = (v === 'dm-view-chat') ? 'block' : 'none';
@@ -7418,7 +7438,10 @@ function renderMembers() {
     var btn2 = $('dm-join-btn');
     if (btn2) btn2.onclick = function () { openSheet(); };
     var btn0 = $('dm-open-btn'); if (btn0) btn0.onclick = function () { openSheet(); };
-    if (btn) btn.onclick = function () { openSheet(); };
+    if (btn) btn.onclick = function () {
+      dmOpenedFromRoom = !!(!sheetOpen() && window.wpRoomJoined && window.wpRoomJoined());
+      curChat = null; openSheet(); showView('dm-view-inbox');
+    };
     var callBtn = $('dm-call-btn'); if (callBtn) callBtn.onclick = startVoiceCall;
     var callAcceptBtn = $('dm-call-accept'); if (callAcceptBtn) callAcceptBtn.onclick = callAccept;
     var callDeclineBtn = $('dm-call-decline'); if (callDeclineBtn) callDeclineBtn.onclick = callDecline;
@@ -7521,6 +7544,7 @@ function renderMembers() {
     };
     var addb = $('dm-add-btn'); if (addb) addb.onclick = function () { $('dm-my-code').textContent = S.code; showView('dm-view-add'); };
     var back = $('dm-bar-back'); if (back) back.onclick = function () {
+      if (dmRoomBack()) return;
       // Use history.back() so gesture and arrow same behavior
       try {
         var st = history.state;
