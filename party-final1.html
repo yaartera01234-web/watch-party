@@ -2119,7 +2119,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-28';
+const WP_BUILD = '2026-10-05-29';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -4885,7 +4885,7 @@ function renderMembers() {
     panel.setAttribute('role','alertdialog'); panel.setAttribute('aria-modal','true'); panel.setAttribute('aria-labelledby','dm-remove-title'); panel.setAttribute('aria-describedby','dm-remove-desc');
     panel.style.cssText = 'width:100%;max-width:340px;background:#21132f;color:#fff;border:1px solid #6f4686;border-radius:22px;padding:24px;font:14px system-ui;box-shadow:0 20px 70px #0009';
     var title = document.createElement('b'); title.id = 'dm-remove-title'; title.textContent = 'Remove ' + peerName(peer) + '?';
-    var text = document.createElement('p'); text.id = 'dm-remove-desc'; text.textContent = 'Sirf tumhari friend list se hatega. Purani chat delete nahi hogi. Naya message request mein aayega — ye block nahi hai.';
+    var text = document.createElement('p'); text.id = 'dm-remove-desc'; text.textContent = 'Friend aur uski poori chat, photo/GIF/voice-note aur call history tumhare phone se delete hogi. Dobara add karne par purani history wapas nahi aayegi. Ye block nahi hai.';
     text.style.cssText = 'color:#c5b4d3;line-height:1.6;margin:14px 0 20px';
     var actions = document.createElement('div'); actions.style.cssText = 'display:flex;gap:10px';
     var cancel = document.createElement('button'), remove = document.createElement('button');
@@ -4902,13 +4902,36 @@ function renderMembers() {
     remove.onclick = function () {
       if (curChat !== peer || !S.friends[peer]) { close(); return; }
       if (dmCall && dmCall.peer === peer) { close(); toast('Pehle call end karo'); return; }
+      // Merge first so a background copy cannot hide messages from the deletion.
+      try { mergeIntoStore(JSON.parse(localStorage.getItem(DKEY) || 'null')); } catch (e) {}
+      var removedAt = nowMs();
+      if (!S.clr) S.clr = {}; if (!S.clrc) S.clrc = {};
+      S.clr[peer] = Math.max(S.clr[peer] || 0, removedAt);
+      S.clrc[peer] = Math.max(S.clrc[peer] || 0, removedAt);
+      dmMergeDeleted({});
+      if (!S.deleted[peer]) S.deleted[peer] = {};
+      var history = (S.chats[peer] || []).slice();
+      (S.reqs || []).forEach(function (r) { if (r.code === peer) history = history.concat(reqItems(r)); });
+      history.forEach(function (m) {
+        S.deleted[peer][dmDeleteKey(m)] = 1; // Also covers future-dated old messages.
+        [dmLocalPhoto, localVoice].forEach(function (cache) {
+          if (!cache || !m.mid || !cache[m.mid]) return;
+          try { if (String(cache[m.mid]).indexOf('blob:') === 0) URL.revokeObjectURL(cache[m.mid]); } catch (e) {}
+          delete cache[m.mid];
+        });
+      });
+      S.chats[peer] = [];
       dmSetFriendState(peer, true);
+      var thread = $('dm-thread'); if (thread) thread.innerHTML = '';
+      if ($('dm-v4')) $('dm-v4').classList.remove('on');
+      if ($('dm-v4img')) $('dm-v4img').innerHTML = '';
+      dmActMsg = null; dmActPeer = null;
       S.reqs = (S.reqs || []).filter(function (r) { return r.code !== peer; });
       d4CancelSnap(); dmReply = null; curChat = null;
       if ($('dm-rep4')) $('dm-rep4').classList.remove('on');
       save(); close(); showView('dm-view-inbox'); renderAll();
       try { if (window.ypCallRefresh) window.ypCallRefresh(); } catch (e) {}
-      toast('Friend remove ho gaya — purani chat mehfooz hai');
+      toast('Friend aur uski chat/call history delete ho gayi');
     };
     actions.appendChild(cancel); actions.appendChild(remove);
     panel.appendChild(title); panel.appendChild(text); panel.appendChild(actions); overlay.appendChild(panel); document.body.appendChild(overlay);
