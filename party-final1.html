@@ -2096,7 +2096,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-18';
+const WP_BUILD = '2026-10-05-19';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -4790,9 +4790,24 @@ function renderMembers() {
   /* 🆕 Dono WebView (foreground + background) ek hi store likhte hain. Likhne se PEHLE
      purana copy parh kar merge karo — warna ek page ka purana copy doosre ki "parhi hui"
      halat (lrt) aur naye messages mita deta tha, jis se parhe message dobara unread dikhte the. */
+  function dmDeleteKey(m) {
+    return m.mid ? ('m:' + m.mid) : ('k:' + JSON.stringify([m.ts || 0, m.d || '', m.t || '', m.x || '', m.u || '']));
+  }
+  function dmMergeDeleted(other) {
+    var changed = false;
+    if (!S.deleted || typeof S.deleted !== 'object') S.deleted = {};
+    Object.keys(other || {}).forEach(function (peer) {
+      var local = S.deleted[peer] || (S.deleted[peer] = {});
+      Object.keys(other[peer] || {}).forEach(function (key) {
+        if (!local[key]) { local[key] = 1; changed = true; }
+      });
+    });
+    return changed;
+  }
   function mergeIntoStore(prev) {
     try {
       if (!prev || typeof prev !== 'object') return;
+      dmMergeDeleted(prev.deleted);
       Object.keys(prev.chats || {}).forEach(function (c) {
         var mine = S.chats[c] || (S.chats[c] = []), have = {};
         /* 🆕 mid ke bina wale msg (purane/sys/call) bhi merge hon — pehle sirf mid wale aate the */
@@ -4853,7 +4868,8 @@ function renderMembers() {
       if (BGMODE) return;
       var raw = localStorage.getItem(DKEY); if (!raw) return;
       var d = JSON.parse(raw); if (!d || !d.chats) return;
-      var ch = false;
+      var ch = dmMergeDeleted(d.deleted);
+      dmPruneAll();
       Object.keys(d.chats || {}).forEach(function (c) {
         var mine = S.chats[c] || [], theirs = d.chats[c] || [], have = {};
         mine.forEach(function (m) { if (m && m.mid) have[m.mid] = 1; });
@@ -5548,6 +5564,7 @@ function renderMembers() {
   function dmDrop(peer, m) {
     try {
       peer = normCode(peer); if (!peer || !m) return false;
+      if (S.deleted && S.deleted[peer] && S.deleted[peer][dmDeleteKey(m)]) return true;
       var c1 = (S.clr && S.clr[peer]) || 0, c2 = (S.clrc && S.clrc[peer]) || 0, ts = m.ts || 0;
       if (c1 && ts <= c1) return true;                              /* poori chat clear thi */
       if (c2 && m.t === 'call' && ts <= c2) return true;            /* sirf call history clear thi */
@@ -5559,7 +5576,7 @@ function renderMembers() {
       peer = normCode(peer);
       var arr = S.chats[peer]; if (!arr || !arr.length) return false;
       var c1 = (S.clr && S.clr[peer]) || 0, c2 = (S.clrc && S.clrc[peer]) || 0;
-      if (!c1 && !c2) return false;
+      if (!c1 && !c2 && !(S.deleted && S.deleted[peer])) return false;
       var out = arr.filter(function (m) { return !dmDrop(peer, m); });
       if (out.length !== arr.length) { S.chats[peer] = out; return true; }
     } catch (e) {}
@@ -5569,6 +5586,7 @@ function renderMembers() {
     try {
       Object.keys(S.clr || {}).forEach(dmPrune);
       Object.keys(S.clrc || {}).forEach(dmPrune);
+      Object.keys(S.deleted || {}).forEach(dmPrune);
     } catch (e) {}
   }
   function appendMsg(peer, m) {
@@ -6851,8 +6869,11 @@ function renderMembers() {
         if (a === 'reply') d4setReply(dmActMsg);
         else if (a === 'copy') { try { navigator.clipboard.writeText(d4prev(dmActMsg)); toast('📋 Copy ho gaya'); } catch (e) { toast(d4prev(dmActMsg)); } }
         else if (a === 'del') {
-          var arr = S.chats[dmActPeer] || [];
-          S.chats[dmActPeer] = arr.filter(function (x) { return x.mid !== dmActMsg.mid; });
+          var peer = normCode(dmActPeer), key = dmDeleteKey(dmActMsg);
+          dmMergeDeleted({});
+          if (!S.deleted[peer]) S.deleted[peer] = {};
+          S.deleted[peer][key] = 1;
+          dmPrune(peer);
           save(); renderThread(); renderChats();
           toast('🗑 Message hata diya (sirf tumhare paas se)');
         }
