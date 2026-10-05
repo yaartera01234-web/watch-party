@@ -2096,7 +2096,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-04-17';
+const WP_BUILD = '2026-10-05-18';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -6734,16 +6734,49 @@ function renderMembers() {
       grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;font-size:11.5px;padding:14px">GIF load nahi hue 🔄</div>';
     }
   }
+  /* Emoji-only send: keep IME focus and restore container scroll, not thread scroll. */
+  function dmEmojiSendGuard(inp, text) {
+    var onlyEmoji = false;
+    try {
+      onlyEmoji = new RegExp('^[\\p{Extended_Pictographic}\\p{Regional_Indicator}\\p{Emoji_Modifier}\\s\\uFE0F\\uFE0E\\u200D\\u20E3\\u{E0020}-\\u{E007F}0-9#*]+$', 'u').test(text) &&
+        new RegExp('[\\p{Extended_Pictographic}\\p{Regional_Indicator}\\u20E3]', 'u').test(text);
+    } catch (e) { return null; }
+    if (!onlyEmoji) return null;
+    var peer = curChat, saved = [], el = inp.parentElement;
+    while (el) {
+      saved.push({ el: el, x: el.scrollLeft, y: el.scrollTop });
+      el = el.parentElement;
+    }
+    var wx = window.scrollX || 0, wy = window.scrollY || 0;
+    function restore() {
+      if (curChat !== peer || !sheetOpen() || document.activeElement !== inp) return;
+      saved.forEach(function (v) {
+        if (v.el.scrollLeft !== v.x) v.el.scrollLeft = v.x;
+        if (v.el.scrollTop !== v.y) v.el.scrollTop = v.y;
+      });
+      if (window.scrollX !== wx || window.scrollY !== wy) window.scrollTo(wx, wy);
+    }
+    return function () {
+      if (document.activeElement !== inp) {
+        try { inp.focus({preventScroll:true}); } catch (e) {}
+      }
+      requestAnimationFrame(restore);
+      setTimeout(restore, 60);
+      setTimeout(restore, 180);
+    };
+  }
   function d4sendText() {
     var inp = $('dm-input'); if (!inp || !curChat) return;
     var v = inp.value.trim(); if (!v) return;
+    var emojiGuard = dmEmojiSendGuard(inp, v);
     inp.value = '';
     // Boss fix: keyboard hide na ho - jhatka khatam (only DM)
-    try { inp.focus({preventScroll:true}); } catch(e) { try { inp.focus(); } catch(e2) {} }
+    if (!emojiGuard) try { inp.focus({preventScroll:true}); } catch(e) { try { inp.focus(); } catch(e2) {} }
     var rq = dmReply; dmReply = null;
     if ($('dm-rep4')) $('dm-rep4').classList.remove('on');
     sendMsg(curChat, { t: 'text', x: v, rq: rq }, false);
-    // Keep focus after send
+    // Normal text flow unchanged; emoji keyboard must not be refocused twice.
+    if (emojiGuard) { emojiGuard(); return; }
     setTimeout(function(){ try { var ii=$('dm-input'); if(ii) ii.focus({preventScroll:true}); } catch(e){} }, 10);
   }
   function d4Wire2() {
@@ -7071,9 +7104,11 @@ function renderMembers() {
         var inp2 = $('dm-input');
         var v = inp2 ? inp2.value.trim() : '';
         if (!v || !curChat) return;
+        var emojiGuard = dmEmojiSendGuard(inp2, v);
         inp2.value = '';
-        try { inp2.focus({preventScroll:true}); } catch(er){ try{inp2.focus();}catch(e2){} }
+        if (!emojiGuard) try { inp2.focus({preventScroll:true}); } catch(er){ try{inp2.focus();}catch(e2){} }
         sendMsg(curChat, { t: 'text', x: v }, false);
+        if (emojiGuard) { emojiGuard(); return; }
         setTimeout(function(){ try { var ii=$('dm-input'); if(ii) ii.focus({preventScroll:true}); } catch(e){} }, 10);
       };
     }
