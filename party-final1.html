@@ -1653,6 +1653,33 @@ body { margin: 0 !important; padding: 0 !important; }
 #wp-party-lobby .wpl-foot { text-align:center;font-size:11px;line-height:1.6;color:#baa2c6;margin:14px 0 0; }
 #wp-party-lobby .wpl-error { color:#fbb7ce; }
 @media(max-height:600px) { #wp-party-lobby .wpl-hero { min-height:100px; } #wp-party-lobby .wpl-orbit { width:100px;height:100px; } #wp-party-lobby .wpl-orb { width:72px;height:72px;border-radius:23px; } #wp-party-lobby h2 { font-size:28px; } }
+/* Approved couple lobby polish; styles stay within the lobby. */
+#wp-party-lobby { background:var(--wp-page-bg,radial-gradient(circle at 8% -10%,#ff64c33d,transparent 32%),radial-gradient(circle at 100% 0%,#5b7eff3d,transparent 31%),linear-gradient(145deg,#080812,#17132f 52%,#0a1127)); }
+#wp-party-lobby .wpl-content { max-width:434px; padding-left:25px; padding-right:25px; }
+#wp-party-lobby .wpl-brand { color:#c4b5fd;font-size:9px;letter-spacing:2.5px; }
+#wp-party-lobby .wpl-back { border-color:#a78bfa30;background:#8b72ff0a;color:#e9ddff; }
+#wp-party-lobby .wpl-hero.wpl-couple-art { height:216px;min-height:216px;margin:16px 0 12px;position:relative; }
+#wp-party-lobby .wpl-couple-glow { position:absolute;inset:32px 10px 12px;background:linear-gradient(110deg,#ff66bd55,#8b5cf650,#54e8ff30);filter:blur(27px);border-radius:40px;pointer-events:none; }
+#wp-party-lobby .wpl-couple-card { width:100%;height:196px;position:relative;overflow:hidden;border-radius:24px;border:1px solid #d5b5ff50;box-shadow:0 18px 35px #0005,inset 0 1px #ffffff30;animation:wplCoupleFloat 7s ease-in-out infinite;background:#17132f; }
+#wp-party-lobby .wpl-couple-photo { display:block;width:100%;height:100%;max-width:none;object-fit:cover;object-position:center 42%;animation:wplCoupleZoom 12s ease-in-out infinite;transform-origin:center 40%; }
+#wp-party-lobby .wpl-couple-shade { position:absolute;inset:0;background:linear-gradient(0deg,#100c29b8,transparent 43%);pointer-events:none; }
+#wp-party-lobby .wpl-couple-caption { position:absolute;bottom:17px;left:17px;color:#f1deff;font-size:8px;font-weight:650;letter-spacing:2.1px;text-shadow:0 1px 5px #000; }
+#wp-party-lobby .wpl-wave { position:absolute;right:13px;bottom:12px;display:flex;align-items:center;gap:3px;height:29px;padding:5px 8px;border:1px solid #ffffff29;background:#17132f99;border-radius:9px; }
+#wp-party-lobby .wpl-wave i { width:3px;border-radius:3px;background:linear-gradient(180deg,#54e8ff,#ff5ebc);height:7px;animation:wplWave 1.8s ease-in-out infinite; }
+#wp-party-lobby .wpl-wave i:nth-child(2){height:15px;animation-delay:.2s}#wp-party-lobby .wpl-wave i:nth-child(3){height:11px;animation-delay:.4s}#wp-party-lobby .wpl-wave i:nth-child(4){height:17px;animation-delay:.1s}#wp-party-lobby .wpl-wave i:nth-child(5){height:8px;animation-delay:.3s}
+#wp-party-lobby h2 { font-size:37px;font-weight:650;letter-spacing:-1.6px; }
+#wp-party-lobby h2 span { background:linear-gradient(90deg,var(--wp-acc1,#ff66bd),var(--wp-acc2,#a477ff) 58%,var(--wp-acc3,#55baff));background-clip:text;-webkit-background-clip:text;color:transparent; }
+#wp-party-lobby .wpl-copy p { color:#b1a5ce; }
+#wp-party-lobby .wpl-room { background:var(--wp-panel-bg,linear-gradient(145deg,#1c183bb8,#0809188c));border-color:#a78bfa30;border-radius:17px; }
+#wp-party-lobby .wpl-room-icon { background:#8b72ff13;border-color:#a78bfa35;color:#c4b5fd; }
+#wp-party-lobby .wpl-enter { background:linear-gradient(110deg,var(--wp-acc1,#ff66bd),var(--wp-acc2,#a477ff) 55%,var(--wp-acc3,#55baff));border-color:#ffffff3d;box-shadow:inset 0 1px #ffffff40,0 8px 28px #8b72ff30; }
+#wp-party-lobby .wpl-enter span:last-child { display:grid;place-items:center;width:27px;height:27px;border-radius:9px;border:1px solid #ffffff20;background:#ffffff0a; }
+#wp-party-lobby .wpl-foot { font-size:10px;color:#bca5c9; }#wp-party-lobby .wpl-error { color:#fbb7ce; }
+@keyframes wplCoupleFloat {0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes wplCoupleZoom {0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+@keyframes wplWave {0%,100%{transform:scaleY(.6);opacity:.6}50%{transform:scaleY(1);opacity:1}}
+@media(max-height:600px){#wp-party-lobby .wpl-hero.wpl-couple-art{height:156px;min-height:156px}#wp-party-lobby .wpl-couple-card{height:140px}#wp-party-lobby h2{font-size:28px}}
+@media(prefers-reduced-motion:reduce){#wp-party-lobby .wpl-couple-card,#wp-party-lobby .wpl-couple-photo,#wp-party-lobby .wpl-wave i{animation:none!important}}
 </style>
 </head>
 <body>
@@ -2150,7 +2177,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-36';
+const WP_BUILD = '2026-10-05-37';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -5200,7 +5227,7 @@ function renderMembers() {
     if (!lobby) {
       lobby = document.createElement('section'); lobby.id = 'wp-party-lobby'; lobby.hidden = true;
       lobby.setAttribute('role','dialog'); lobby.setAttribute('aria-modal','true'); lobby.setAttribute('aria-labelledby','wpl-heading');
-      lobby.innerHTML = '<div class="wpl-content"><div class="wpl-top"><button type="button" class="wpl-back" id="wpl-back" aria-label="Back">‹</button><span class="wpl-brand">THE PARTY LOBBY</span><span style="width:39px" aria-hidden="true"></span></div><div class="wpl-hero" aria-hidden="true"><div class="wpl-orbit"></div><div class="wpl-orb"><svg viewBox="0 0 48 48"><path d="M18 33V13l19-4v20M18 20l19-4"/><ellipse cx="12" cy="34" rx="6" ry="4"/><ellipse cx="31" cy="30" rx="6" ry="4"/></svg></div><span class="wpl-spark">✧</span></div><div class="wpl-copy"><div class="wpl-eyebrow">YOUR PEOPLE. YOUR PLAYLIST.</div><h2 id="wpl-heading">Good company.<br><span>Great music.</span></h2><p>Doston ke saath suno, dekho aur baat karo. Jab ready ho, andar aa jao.</p></div><div class="wpl-room"><div class="wpl-room-icon" aria-hidden="true">♫</div><div><small>YOUR ROOM</small><b id="wpl-room-name"></b></div></div><div class="wpl-bottom"><button type="button" id="wpl-enter" class="wpl-enter"><span>Enter Party</span><span aria-hidden="true">↗</span></button><p id="wpl-status" class="wpl-foot" role="status"></p></div></div>';
+      lobby.innerHTML = '<div class="wpl-content"><div class="wpl-top"><button type="button" class="wpl-back" id="wpl-back" aria-label="Back">‹</button><span class="wpl-brand">THE PARTY LOBBY</span><span style="width:39px" aria-hidden="true"></span></div><div class="wpl-hero wpl-couple-art"><div class="wpl-couple-glow"></div><div class="wpl-couple-card"><img class="wpl-couple-photo" src="assets/lobby-couple.webp" alt="Couple enjoying music together" decoding="async"><div class="wpl-couple-shade"></div><span class="wpl-couple-caption">BETTER TOGETHER</span><div class="wpl-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div></div><div class="wpl-copy"><div class="wpl-eyebrow">YOUR PEOPLE. YOUR PLAYLIST.</div><h2 id="wpl-heading">Good company.<br><span>Great music.</span></h2><p>Doston ke saath suno, dekho aur baat karo. Jab ready ho, andar aa jao.</p></div><div class="wpl-room"><div class="wpl-room-icon" aria-hidden="true">♫</div><div><small>YOUR ROOM</small><b id="wpl-room-name"></b></div></div><div class="wpl-bottom"><button type="button" id="wpl-enter" class="wpl-enter"><span>Enter Party</span><span aria-hidden="true">↗</span></button><p id="wpl-status" class="wpl-foot" role="status"></p></div></div>';
       document.body.appendChild(lobby);
       $('wpl-back').onclick = partyLobbyBack;
       $('wpl-enter').onclick = function () {
@@ -5221,7 +5248,7 @@ function renderMembers() {
     }
     $('wpl-room-name').textContent = (typeof myRoom !== 'undefined' && myRoom) ? myRoom : 'Your room';
     var already = !!(window.wpRoomJoined && window.wpRoomJoined());
-    $('wpl-status').textContent = already ? 'Tum party mein joined ho — Enter par wapas party khulegi.' : 'Abhi join nahi hue · Enter par hi party join hogi';
+    $('wpl-status').textContent = already ? 'Tum party mein joined ho — Enter par wapas party khulegi.' : 'Yet Not Joined, Tap On Enter Party';
     $('wpl-status').classList.remove('wpl-error'); $('wpl-enter').disabled = false;
     partyLobbyEntered = false; partyLobbyVisible = true; lobby.hidden = false;
     try { history.pushState({wp:'party-lobby'},'',location.href); partyLobbyPushed = true; } catch(e) { partyLobbyPushed = false; }
