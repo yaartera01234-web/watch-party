@@ -1603,6 +1603,13 @@ body { margin: 0 !important; padding: 0 !important; }
 .quote.wp-quote-link { cursor:pointer; touch-action:manipulation; }
 .quote.wp-quote-link:focus-visible { outline:2px solid #d8a3ff; }
 .msg-row.wp-quote-target .bubble { outline:2px solid #d8a3ff; box-shadow:0 0 20px #a855f755; }
+/* Scoped party welcome: no layout shift, no blocked controls. */
+#wp-party-welcome { position:fixed; z-index:10020; top:calc(env(safe-area-inset-top, 0px) + 18px); left:50%; width:max-content; max-width:calc(100vw - 32px); display:flex; align-items:center; gap:12px; padding:14px 22px 14px 14px; border:1px solid rgba(216,180,254,.38); border-radius:21px; background:linear-gradient(125deg,rgba(49,25,77,.96),rgba(20,15,36,.96)); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); box-shadow:0 12px 38px #0006, inset 0 1px 0 #ffffff14; color:#fff; font-family:system-ui,sans-serif; pointer-events:none; opacity:0; visibility:hidden; transform:translate(-50%,-12px) scale(.97); transition:opacity .25s ease,transform .3s ease,visibility .3s; }
+#wp-party-welcome.on { opacity:1; visibility:visible; transform:translate(-50%,0) scale(1); }
+#wp-party-welcome .wp-welcome-icon { display:grid; place-items:center; width:42px; height:42px; border-radius:14px; background:linear-gradient(135deg,#a855f733,#ec489933); border:1px solid #d8b4fe33; font-size:23px; }
+#wp-party-welcome strong { display:block; font-size:16px; font-weight:700; letter-spacing:.1px; line-height:1.4; }
+#wp-party-welcome small { display:block; font-size:12px; color:#d6c4e7; line-height:1.5; }
+@media(prefers-reduced-motion:reduce) { #wp-party-welcome { transition:none; } }
 </style>
 </head>
 <body>
@@ -2100,7 +2107,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-20';
+const WP_BUILD = '2026-10-05-21';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -5034,6 +5041,18 @@ function renderMembers() {
     e.textContent = t; e.classList.add('on');
     clearTimeout(toast._t); toast._t = setTimeout(function () { e.classList.remove('on'); }, 2300);
   }
+  function partyWelcome() {
+    var e = $('wp-party-welcome');
+    if (!e) {
+      e = document.createElement('div'); e.id = 'wp-party-welcome';
+      e.setAttribute('role', 'status'); e.setAttribute('aria-live', 'polite');
+      e.innerHTML = '<span class="wp-welcome-icon" aria-hidden="true">✨</span><span><strong>You’re in.</strong><small>Enjoy the party!</small></span>';
+      document.body.appendChild(e);
+    }
+    clearTimeout(partyWelcome._t);
+    requestAnimationFrame(function () { e.classList.add('on'); });
+    partyWelcome._t = setTimeout(function () { e.classList.remove('on'); }, 2800);
+  }
   function beep() {
     try {
       // FIX v49: DM ring same as room chat (tuneMsg) - richer sound
@@ -7355,7 +7374,7 @@ function renderMembers() {
           if (k === 'party') {
             /* 🆕 Party icon = asli join. Pehle join (presence + Joined Party + video sync), phir room. */
             if (window.wpRoomJoined && !window.wpRoomJoined() && window.wpRoomEnter) {
-              try { if (window.wpRoomEnter()) toast('🎉 Party join ho gayi'); } catch (e) {}
+              try { if (window.wpRoomEnter()) partyWelcome(); } catch (e) {}
             }
             closeSheet();                                     /* wapas watchparty */
           }
