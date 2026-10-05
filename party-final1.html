@@ -2185,7 +2185,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-42';
+const WP_BUILD = '2026-10-05-43';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -6960,7 +6960,7 @@ function renderMembers() {
       var qn = document.createElement('div'); qn.className = 'q-name'; qn.textContent = m.rq.n || '';
       var qt = document.createElement('div'); qt.className = 'q-text'; qt.textContent = m.rq.x;
       q.appendChild(qn); q.appendChild(qt); b.appendChild(q);
-      window.wpBindQuote(q, m.rq, function () { return $('dm-thread'); }, function () { d4AtBottom = false; d4JumpBottom = false; });
+      window.wpBindQuote(q, m.rq, function () { return dmQuoteList(m.rq); }, function () { d4CancelSnap();d4AtBottom = false; d4JumpBottom = false;dmLastScroll=-1; });
     }
     if (t === 'photo') {
       var h = document.createElement('div'); h.className = 'chat-photo';
@@ -6985,10 +6985,55 @@ function renderMembers() {
     dmEntryPeer = peer; dmEntryTimes = Object.create(null);
     (S.chats[peer] || []).forEach(function (m) { dmEntryTimes[dmDeleteKey(m)] = 0; });
   }
-  function renderThread() {
+  // v43: 40-message initial window; prepend on demand, reconcile unchanged rows in place.
+  var dmPageSize=40, dmWindowPeer=null, dmWindowFirst=null, dmWindowStart=0;
+  var dmRowCache=new Map(), dmMoreFrame=null, dmWindowGeneration=0, dmLastScroll=-1;
+  function dmResetWindow(peer) {
+    if(dmMoreFrame!==null)cancelAnimationFrame(dmMoreFrame);
+    dmMoreFrame=null;dmWindowGeneration++;dmWindowPeer=peer;dmRowCache=new Map();
+    var arr=S.chats[peer]||[];dmWindowStart=Math.max(0,arr.length-dmPageSize);
+    dmWindowFirst=arr[dmWindowStart]?dmDeleteKey(arr[dmWindowStart]):null;dmLastScroll=-1;
+  }
+  function dmWindowIndex(arr) {
+    if(dmWindowPeer!==curChat)dmResetWindow(curChat);
+    if(dmWindowFirst){var at=arr.findIndex(function(m){return dmDeleteKey(m)===dmWindowFirst});if(at>=0)dmWindowStart=at;}
+    dmWindowStart=Math.min(dmWindowStart,Math.max(0,arr.length-1));
+    dmWindowFirst=arr[dmWindowStart]?dmDeleteKey(arr[dmWindowStart]):null;
+    return dmWindowStart;
+  }
+  function dmOlderMessages() {
+    if(!d4ChatVisible() || dmMoreFrame!==null || dmWindowStart<=0)return;
+    var peer=curChat,gen=dmWindowGeneration;
+    dmMoreFrame=requestAnimationFrame(function(){
+      dmMoreFrame=null;if(peer!==curChat || gen!==dmWindowGeneration || !d4ChatVisible())return;
+      var arr=S.chats[peer]||[];dmWindowIndex(arr);
+      dmWindowStart=Math.max(0,dmWindowStart-dmPageSize);
+      dmWindowFirst=arr[dmWindowStart]?dmDeleteKey(arr[dmWindowStart]):null;
+      d4CancelSnap();d4AtBottom=false;d4JumpBottom=false;renderThread(true);
+    });
+  }
+  function dmQuoteList(ref) {
+    var arr=S.chats[curChat]||[];dmWindowIndex(arr);
+    var at=ref&&ref.mid?arr.findIndex(function(m){return m.mid===ref.mid}):-1;
+    if(at>=0 && at<dmWindowStart){
+      dmWindowStart=Math.max(0,at-5);dmWindowFirst=dmDeleteKey(arr[dmWindowStart]);
+      d4CancelSnap();d4AtBottom=false;d4JumpBottom=false;renderThread(true);
+    }
+    return $('dm-thread');
+  }
+  function dmScrollAnchor(t) {
+    var top=t.getBoundingClientRect().top, list=[];
+    for(var el=t.firstElementChild;el;el=el.nextElementSibling){
+      var r=el.getBoundingClientRect();
+      if(!el._dmOlder && r.bottom>top){list.push({el:el,y:r.top-top});if(list.length===3)break;}
+    }
+    return list;
+  }
+  function renderThread(paging) {
     var t = $('dm-thread'); if (!t || !curChat) return;
     dmApplyWallpaper();
     var arr = S.chats[curChat] || [];
+    var start=dmWindowIndex(arr);
     if (dmEntryPeer !== curChat) dmSeedEntries(curChat);
     var entryNow = Date.now();
     /* P45: naya msg hamesha neeche dikhe. Sirf jab tum khud purane messages
@@ -6999,26 +7044,47 @@ function renderMembers() {
     var liveBottom = (t.scrollHeight - t.scrollTop - t.clientHeight) < 90;
     if (!liveBottom && d4AtBottom && (t.scrollHeight - t.scrollTop - t.clientHeight) > 400) liveBottom = false;
     d4AtBottom = liveBottom;                       /* live naap hamesha sach bole */
-    var wasBottom = liveBottom || d4JumpBottom;
-    t.innerHTML = '';
+    var wasBottom = !paging && (liveBottom || d4JumpBottom);
+    var anchors=wasBottom?[]:dmScrollAnchor(t);
+    var desired=[], nextCache=new Map();
+    function keep(key,node,sig){desired.push(node);nextCache.set(key,{node:node,sig:sig});return node;}
+    var profile=JSON.stringify([peerName(curChat),peerColor(curChat),peerAvatar(curChat),typeof myAvatar!=='undefined'?myAvatar:null]);
     if (!arr.length) {
+      dmRowCache.clear();dmWindowFirst=null;dmWindowStart=0;d4LastCount[curChat]=0;
       t.innerHTML = '<div class="dm-empty"><u>👋</u>' + esc(peerName(curChat)) + ' ko salam bhejo!<br><small>Message phone pe lock ho kar jayega (E2E)</small></div>';
       return;
     }
+    if(start>0){
+      var older=dmRowCache.get('older'),more=older?older.node:document.createElement('button');
+      if(!older){more.type='button';more._dmOlder=true;more.textContent='↑ Purane messages';more.style.cssText='display:block;margin:0 auto 12px;padding:7px 14px;border:1px solid #ffffff18;border-radius:20px;background:#ffffff08;color:inherit;font:inherit;font-size:11px;cursor:pointer';more.onclick=dmOlderMessages;}
+      keep('older',more,'older');
+    }
     var lastDay = '';
     var _rdTs = (S.reads && S.reads[curChat]) ? S.reads[curChat] : 0;
-    arr.forEach(function (m) {
+    arr.slice(start).forEach(function (m) {
       var day = d4day(m.ts);
       if (day !== lastDay) {
         lastDay = day;
-        var dch = document.createElement('div'); dch.className = 'd4day'; dch.textContent = day; t.appendChild(dch);
+        var dayKey='day:'+day+':'+dmDeleteKey(m),dc=dmRowCache.get(dayKey);
+        var dch=dc?dc.node:document.createElement('div');if(!dc){dch.className='d4day';dch.textContent=day;}keep(dayKey,dch,day);
       }
       var type = m.t || 'text';
+      var key='msg:'+dmDeleteKey(m);
+      var sig=JSON.stringify([m.d,m.t,m.x,m.u,m.dv,m.dur,m.rq,m.ts,profile]);
+      var cached=dmRowCache.get(key);
+      if(cached && cached.sig===sig){
+        var kept=keep(key,cached.node,sig),tick=kept.querySelector('.tk'),rx=kept.querySelector('.rx4');
+        if(tick)tick.classList.toggle('read',!!(m.d==='out' && _rdTs && (m.ts||0)<=_rdTs));
+        var rxSig=JSON.stringify(m.rx||{});if(rx && kept._rxSig!==rxSig){paintRx4(rx,m);kept._rxSig=rxSig;}
+        var animated=kept.querySelector('.wp-new-message');
+        if(animated && entryNow-(dmEntryTimes[dmDeleteKey(m)]||0)>=180)animated.classList.remove('wp-new-message');
+        return;
+      }
       if (type === 'sys') {
-        var s1 = document.createElement('div'); s1.className = 'd4sys'; s1.textContent = m.x || ''; t.appendChild(s1); return;
+        var s1 = document.createElement('div'); s1.className = 'd4sys'; s1.textContent = m.x || ''; keep(key,s1,sig); return;
       }
       if (type === 'call') {   /* 🆕 call ka nishan chat me */
-        var c1 = document.createElement('div'); c1.className = 'd4sys'; c1.textContent = m.x || '\uD83D\uDCDE Call'; t.appendChild(c1); return;
+        var c1 = document.createElement('div'); c1.className = 'd4sys'; c1.textContent = m.x || '\uD83D\uDCDE Call'; keep(key,c1,sig); return;
       }
       var own = m.d === 'out';
       var nm = own ? 'You' : peerName(curChat);
@@ -7049,21 +7115,29 @@ function renderMembers() {
       try { paintRx4(rxb, m); } catch (e) {}
       wrap.appendChild(sd); wrap.appendChild(bub); wrap.appendChild(rxb); wrap.appendChild(tm);
       if (own) { row.appendChild(wrap); row.appendChild(avEl); } else { row.appendChild(avEl); row.appendChild(wrap); }
-      t.appendChild(row);
+      row._rxSig=JSON.stringify(m.rx||{});keep(key,row,sig);
       if (type === 'voice') { try { bindVoice(bub, m, curChat); } catch (e) {} }
       if (type === 'photo') { try { d4loadPhoto(bub, m, curChat); } catch (e) {} }
       d4bind(row, m);
     });
-    if (d4JumpBottom || wasBottom) { d4JumpBottom = false; d4Snap(); }
+    // Insert only missing/changed nodes. Existing photos, voice controls and gestures survive.
+    var cursor=t.firstChild;
+    desired.forEach(function(node){if(node===cursor)cursor=cursor.nextSibling;else t.insertBefore(node,cursor);});
+    while(cursor){var next=cursor.nextSibling;t.removeChild(cursor);cursor=next;}
+    dmRowCache=nextCache;
+    if (wasBottom) { d4JumpBottom = false; d4Snap(); }
     else {
-      t.scrollTop = Math.min(keepTop, Math.max(0, t.scrollHeight - t.clientHeight));
+      var anchor=anchors.find(function(a){return a.el.parentNode===t});
+      var wanted=anchor?t.scrollTop+anchor.el.getBoundingClientRect().top-t.getBoundingClientRect().top-anchor.y:keepTop;
+      t.scrollTop=Math.max(0,Math.min(wanted,t.scrollHeight-t.clientHeight));
       /* naya message aaya hai to pill dikhao; warna jo haal tha wahi rahe
          (warna renderAll ka doosra render pill ko foran chhupa deta hai) */
       if (arr.length > prevCount) d4Peek(true);
     }
+    dmLastScroll=t.scrollTop;
     d4LastCount[curChat] = arr.length;
     /* 🆕 chat saamne khuli hai to messages "parhe hue" manein -> tick neela (har render par check) */
-    try { if (!BGMODE && !document.hidden && d4ChatVisible()) dmSendRead(curChat); } catch (e) {}
+    try { if (!paging && !BGMODE && !document.hidden && d4ChatVisible()) dmSendRead(curChat); } catch (e) {}
   }
 
   function renderAll() {
@@ -7157,6 +7231,7 @@ function renderMembers() {
     if (!S.friends[curChat]) S.friends[curChat] = { name: curChat, color: '#8b72ff', avatar: { type: 'letter' }, ts: 0, un: 0 };
     markRead(curChat);
     dmSeedEntries(curChat);
+    dmResetWindow(curChat);
     d4JumpBottom = true; d4AtBottom = true; d4Peek(false);   /* P45: chat khuli -> sab se neeche */
     d4LastCount[curChat] = (S.chats[curChat] || []).length;
     // Establish final chat geometry, then build history exactly once.
@@ -7532,6 +7607,8 @@ function renderMembers() {
       // Late photo/GIF sizes: follow only if the reader is still at bottom.
       th.addEventListener('load', function (ev) { if (ev.target && ev.target.tagName === 'IMG') d4ScheduleSnap(); }, true);
       th.addEventListener('scroll', function () {
+        var upward=dmLastScroll>=0 && th.scrollTop<dmLastScroll;dmLastScroll=th.scrollTop;
+        if(upward && th.scrollTop<160)dmOlderMessages();
         d4AtBottom = (th.scrollHeight - th.scrollTop - th.clientHeight) < 90;
         if (d4AtBottom) d4Peek(false); else d4CancelSnap();
       }, { passive: true });
