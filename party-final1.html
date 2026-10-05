@@ -1624,6 +1624,35 @@ body { margin: 0 !important; padding: 0 !important; }
 #dm-thread { scroll-behavior:auto; }
 /* Existing rows must not replay legacy pop on receipt/state refresh. */
 #dm-thread .msg-row { animation:none !important; }
+/* Party lobby is absent until requested; never covers the first/Enter page. */
+#wp-party-lobby { position:fixed;inset:0;z-index:10010;display:flex;overflow:auto;background:radial-gradient(ellipse at 70% 15%,#56216c55,transparent 50%),radial-gradient(ellipse at 10% 80%,#213d6b33,transparent 50%),#100b18;color:#f8f3ff;font:14px system-ui; }
+#wp-party-lobby[hidden] { display:none !important; }
+#wp-party-lobby * { box-sizing:border-box; }
+#wp-party-lobby .wpl-content { width:100%;max-width:460px;margin:auto;min-height:min(680px,100dvh);padding:calc(20px + env(safe-area-inset-top,0px)) 24px calc(22px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column; }
+#wp-party-lobby .wpl-top { display:flex;align-items:center;justify-content:space-between;gap:12px; }
+#wp-party-lobby .wpl-back { flex:none;border:1px solid #ffffff19;background:#ffffff07;border-radius:13px;color:#e6d9f3;width:39px;height:39px;padding:0;cursor:pointer;font:24px system-ui; }
+#wp-party-lobby .wpl-brand { font-size:10px;font-weight:650;letter-spacing:2px;color:#bea6cd; }
+#wp-party-lobby .wpl-hero { position:relative;min-height:166px;display:grid;place-items:center;margin:16px 0 3px; }
+#wp-party-lobby .wpl-orbit { width:142px;height:142px;position:absolute;border:1px solid #ac7bd023;border-radius:50%; }
+#wp-party-lobby .wpl-orbit:before { content:'';position:absolute;inset:14px;border:1px dashed #b08cca33;border-radius:50%; }
+#wp-party-lobby .wpl-orb { width:98px;height:98px;display:grid;place-items:center;border-radius:30px;background:linear-gradient(145deg,#633387,#291b45);border:1px solid #b692e04d;box-shadow:0 0 65px #8b41b527,inset 0 1px #ead2ff28;transform:rotate(-8deg); }
+#wp-party-lobby svg { transform:rotate(8deg);width:48px;stroke:#e8c9fa;fill:none;stroke-width:1.5; }
+#wp-party-lobby .wpl-spark { position:absolute;left:calc(50% + 53px);top:17px;color:#e9b7e8;font-size:18px; }
+#wp-party-lobby .wpl-copy { text-align:center; }
+#wp-party-lobby .wpl-eyebrow { font-size:9px;color:#bd94cf;letter-spacing:3px;margin:7px 0 12px; }
+#wp-party-lobby h2 { font-size:35px;letter-spacing:-1.5px;font-weight:750;line-height:1.12;margin:0; }
+#wp-party-lobby h2 span { color:#cda1e9; }
+#wp-party-lobby .wpl-copy p { font-size:12px;line-height:1.7;max-width:270px;margin:15px auto 25px;color:#a998b5; }
+#wp-party-lobby .wpl-room { border:1px solid #aa80bd26;border-radius:18px;padding:16px;background:linear-gradient(120deg,#ffffff07,#ffffff02);display:flex;align-items:center;gap:12px;margin-bottom:22px; }
+#wp-party-lobby .wpl-room-icon { flex:none;height:37px;width:37px;display:grid;place-items:center;background:#ba77ec13;border:1px solid #c491e82a;border-radius:12px;color:#d9b4f2;font-size:18px; }
+#wp-party-lobby .wpl-room small { font-size:8px;letter-spacing:1.5px;color:#a68db7; }
+#wp-party-lobby .wpl-room b { display:block;font-size:14px;margin-top:4px;overflow-wrap:anywhere; }
+#wp-party-lobby .wpl-bottom { margin-top:auto;padding-top:10px; }
+#wp-party-lobby .wpl-enter { width:100%;border:1px solid #e6c0ff42;border-radius:17px;color:white;background:linear-gradient(110deg,#a146bc,#7549bf);box-shadow:0 8px 28px #a046c32a,inset 0 1px #ffffff27;padding:17px 20px;display:flex;justify-content:space-between;align-items:center;font:650 14px system-ui;cursor:pointer; }
+#wp-party-lobby .wpl-enter:active { transform:scale(.98); }
+#wp-party-lobby .wpl-foot { text-align:center;font-size:11px;line-height:1.6;color:#baa2c6;margin:14px 0 0; }
+#wp-party-lobby .wpl-error { color:#fbb7ce; }
+@media(max-height:600px) { #wp-party-lobby .wpl-hero { min-height:100px; } #wp-party-lobby .wpl-orbit { width:100px;height:100px; } #wp-party-lobby .wpl-orb { width:72px;height:72px;border-radius:23px; } #wp-party-lobby h2 { font-size:28px; } }
 </style>
 </head>
 <body>
@@ -2121,7 +2150,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-05-33';
+const WP_BUILD = '2026-10-05-34';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -5147,6 +5176,63 @@ function renderMembers() {
     e.textContent = t; e.classList.add('on');
     clearTimeout(toast._t); toast._t = setTimeout(function () { e.classList.remove('on'); }, 2300);
   }
+  var partyLobbyVisible = false, partyLobbyPushed = false, partyLobbyEntered = false;
+  function partyLobbyHide() {
+    var lobby = $('wp-party-lobby'); if (lobby) lobby.hidden = true;
+    partyLobbyVisible = false; partyLobbyPushed = false;
+    try { if (window.ypSnapBarNow) window.ypSnapBarNow(); } catch (e) {}
+    if (partyLobbyEntered) {
+      partyLobbyEntered = false;
+      closeSheet(); partyWelcome();
+    }
+  }
+  function partyLobbyBack() {
+    if (partyLobbyPushed) history.back(); else partyLobbyHide();
+  }
+  function partyLobbyShow() {
+    if (partyLobbyVisible || !document.body.classList.contains('yp-joined')) return;
+    var active = document.activeElement;
+    if (active && typeof active.blur === 'function') active.blur();
+    dmNavStop();
+    var welcome = $('wp-party-welcome'); if (welcome) welcome.classList.remove('on');
+    clearTimeout(partyWelcome._t);
+    var lobby = $('wp-party-lobby');
+    if (!lobby) {
+      lobby = document.createElement('section'); lobby.id = 'wp-party-lobby'; lobby.hidden = true;
+      lobby.setAttribute('role','dialog'); lobby.setAttribute('aria-modal','true'); lobby.setAttribute('aria-labelledby','wpl-heading');
+      lobby.innerHTML = '<div class="wpl-content"><div class="wpl-top"><button type="button" class="wpl-back" id="wpl-back" aria-label="Back">‹</button><span class="wpl-brand">THE PARTY LOBBY</span><span style="width:39px" aria-hidden="true"></span></div><div class="wpl-hero" aria-hidden="true"><div class="wpl-orbit"></div><div class="wpl-orb"><svg viewBox="0 0 48 48"><path d="M18 33V13l19-4v20M18 20l19-4"/><ellipse cx="12" cy="34" rx="6" ry="4"/><ellipse cx="31" cy="30" rx="6" ry="4"/></svg></div><span class="wpl-spark">✧</span></div><div class="wpl-copy"><div class="wpl-eyebrow">YOUR PEOPLE. YOUR PLAYLIST.</div><h2 id="wpl-heading">Good company.<br><span>Great music.</span></h2><p>Doston ke saath suno, dekho aur baat karo. Jab ready ho, andar aa jao.</p></div><div class="wpl-room"><div class="wpl-room-icon" aria-hidden="true">♫</div><div><small>YOUR ROOM</small><b id="wpl-room-name"></b></div></div><div class="wpl-bottom"><button type="button" id="wpl-enter" class="wpl-enter"><span>Enter Party</span><span aria-hidden="true">↗</span></button><p id="wpl-status" class="wpl-foot" role="status"></p></div></div>';
+      document.body.appendChild(lobby);
+      $('wpl-back').onclick = partyLobbyBack;
+      $('wpl-enter').onclick = function () {
+        if (partyLobbyEntered) return;
+        var status = $('wpl-status');
+        // Stay in the lobby on failure; never auto-switch the selected tower.
+        if (typeof mqttUp === 'undefined' || !mqttUp) { status.textContent = 'Tower se connect ho raha hai — thori der baad Enter dobara dabao.'; status.classList.add('wpl-error'); return; }
+        try {
+          if (!window.wpRoomEnter || !window.wpRoomEnter()) { status.textContent = 'Party join nahi hui. Enter dobara try karo.'; status.classList.add('wpl-error'); return; }
+          partyLobbyEntered = true; this.disabled = true;
+          partyLobbyBack();
+        } catch (e) { status.textContent = 'Join nahi ho saka. Dobara try karo.'; status.classList.add('wpl-error'); }
+      };
+      lobby.addEventListener('keydown',function(e){
+        if(e.key === 'Escape') { e.preventDefault(); partyLobbyBack(); }
+        if(e.key === 'Tab') { e.preventDefault(); (document.activeElement === $('wpl-back') ? $('wpl-enter') : $('wpl-back')).focus(); }
+      });
+    }
+    $('wpl-room-name').textContent = (typeof myRoom !== 'undefined' && myRoom) ? myRoom : 'Your room';
+    var already = !!(window.wpRoomJoined && window.wpRoomJoined());
+    $('wpl-status').textContent = already ? 'Tum party mein joined ho — Enter par wapas party khulegi.' : 'Abhi join nahi hue · Enter par hi party join hogi';
+    $('wpl-status').classList.remove('wpl-error'); $('wpl-enter').disabled = false;
+    partyLobbyEntered = false; partyLobbyVisible = true; lobby.hidden = false;
+    try { history.pushState({wp:'party-lobby'},'',location.href); partyLobbyPushed = true; } catch(e) { partyLobbyPushed = false; }
+    try { if (window.ypSnapBarNow) window.ypSnapBarNow(); } catch (e) {}
+    $('wpl-back').focus({preventScroll:true});
+  }
+  // Consume only the lobby's Back event. Existing room/chat Back logic stays unchanged.
+  window.addEventListener('popstate',function(e){
+    if (!partyLobbyVisible) return;
+    e.stopImmediatePropagation(); partyLobbyHide();
+  },true);
   function partyWelcome() {
     var e = $('wp-party-welcome');
     if (!e) {
@@ -7589,7 +7675,7 @@ function renderMembers() {
           var sheetOn = !!(sh && sh.classList.contains('on'));
           var chatView = !!(cvw && cvw.classList.contains('on'));
           var callsView = !!(clw && clw.classList.contains('on'));
-          var show = joined && sheetOn && !chatView;         /* party me nahi · apni chat ke andar bhi nahi */
+          var show = joined && sheetOn && !chatView && !partyLobbyVisible;         /* party me nahi · apni chat ke andar bhi nahi */
           bar.style.display = show ? 'flex' : 'none';
           var want = callsView ? 'call' : 'chat';
           var idx = (want === 'call') ? 2 : 1;
@@ -7613,11 +7699,7 @@ function renderMembers() {
         dmNavStop();
         try {
           if (k === 'party') {
-            /* 🆕 Party icon = asli join. Pehle join (presence + Joined Party + video sync), phir room. */
-            if (window.wpRoomJoined && !window.wpRoomJoined() && window.wpRoomEnter) {
-              try { if (window.wpRoomEnter()) partyWelcome(); } catch (e) {}
-            }
-            closeSheet();                                     /* wapas watchparty */
+            partyLobbyShow(); // Actual presence/event/media join waits for Enter Party.
           }
           else if (k === 'chat') { if (!sheetOpen()) openSheet(); showView('dm-view-inbox'); }
           else { if (!sheetOpen()) openSheet(); showView('dm-view-calls'); ypRenderCalls(); }
