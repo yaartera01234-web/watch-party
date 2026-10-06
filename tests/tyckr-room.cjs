@@ -1,0 +1,11 @@
+const fs=require('fs'),cp=require('child_process'),assert=require('assert');
+const html=fs.readFileSync('party-final1.html','utf8');
+const baseline=cp.execFileSync('git',['show','a27707e158f17d4dcf9657b57b48e4183860cf57:party-final1.html'],{encoding:'utf8'});
+const restored=html.replace('<option value="2">🗼 tyckr</option>','<option value="2">🗼 Mosquitto</option>').replace("{ name: 'tyckr 🗼', url: 'wss://mqtt.tyckr.io:8081' }","{ name: 'Mosquitto 🗼', url: 'wss://test.mosquitto.org:8081' }").replaceAll('2026-10-06-53','2026-10-06-52');
+assert.equal(restored,baseline,'Only third room broker, option label and version may change');
+const brokers=Function('return '+html.match(/const BROKERS = (\[[\s\S]*?\]);/)[1])();
+assert.deepEqual(brokers.map(b=>b.url),['wss://broker.emqx.io:8084/mqtt','wss://broker.hivemq.com:8884/mqtt','wss://mqtt.tyckr.io:8081']);
+assert(html.includes('dmClient = mqtt.connect(BROKERS[0].url'));
+assert(html.includes('if (p.tower !== undefined && BROKERS[+p.tower]) towerInput.value = p.tower;'));
+assert(html.includes('connectBroker(brokerIdx)'));
+console.log('PASS only room slot2 replaced; EMQX/HiveMQ/default DM/saved index/retry logic and all other main source unchanged.');

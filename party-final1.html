@@ -2022,7 +2022,7 @@ html[data-wp-theme="amoled"] #dm-mic-btn{color:#291b07!important}
     <select id="tower-input">
       <option value="0">🗼 EMQX (tez!)</option>
       <option value="1">🗼 HiveMQ</option>
-      <option value="2">🗼 Mosquitto</option>
+      <option value="2">🗼 tyckr</option>
     </select>
     <div id="wp-themebar" class="wp-themebar">
       <span class="wp-tb-ico">🎨</span>
@@ -2204,7 +2204,7 @@ try { BGMODE = /(?:^|[?&])bg=1(?:&|$)/.test(location.search || ''); } catch (e) 
 const BROKERS = [
   { name: 'EMQX 🗼', url: 'wss://broker.emqx.io:8084/mqtt' },
   { name: 'HiveMQ 🗼', url: 'wss://broker.hivemq.com:8884/mqtt' },
-  { name: 'Mosquitto 🗼', url: 'wss://test.mosquitto.org:8081' }
+  { name: 'tyckr 🗼', url: 'wss://mqtt.tyckr.io:8081' }
 ];
 const ROOM_BASE = 'YaarParty786/x7k2/room-';
 let ROOM = ROOM_BASE + 'main';
@@ -2491,7 +2491,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-06-52';
+const WP_BUILD = '2026-10-06-53';
 /* Only a strictly newer published build is an update; stale CDN markers are not. */
 function wpIsNewerBuild(candidate, current) {
   var pattern = /^(\d{4})-(\d{2})-(\d{2})-(\d+)$/;

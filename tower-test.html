@@ -51,7 +51,7 @@
   <b>Kaise parhna hai:</b><br>
   🟢 <b>Green</b> = ye tower aap ke network par <b>chal raha hai</b> — connection aur message dono OK. App mein available tower hi select karna.<br>
   🔴 <b>Red</b> = is browser/network se test fail hua — zaroori nahi globally down ho.<br><br>
-  <b>tyckr abhi sirf test hai — main app mein add/replace nahi kiya.</b><br><br>
+  <b>tyckr Party/room ka third tower hai. Messages ka default EMQX unchanged hai.</b><br><br>
   <b>Yaad rakho:</b> party me sab doston ko <b>ek hi tower</b> select karna hai, warna room alag ho jayega.
 </div>
 
@@ -87,7 +87,7 @@ function loadLib() {
 }
 
 var TOWERS = [
-  { id:'tyckr',     nm:'tyckr (naya candidate · test only)', url:'wss://mqtt.tyckr.io:8081' },
+  { id:'tyckr',     nm:'tyckr (Party/room tower)', url:'wss://mqtt.tyckr.io:8081' },
   { id:'emqx',      nm:'EMQX (app ka default)', url:'wss://broker.emqx.io:8084/mqtt' },
   { id:'hivemq',    nm:'HiveMQ',               url:'wss://broker.hivemq.com:8884/mqtt' },
   { id:'mosquitto', nm:'Mosquitto',            url:'wss://test.mosquitto.org:8081/mqtt' },
@@ -187,7 +187,7 @@ function run() {
       if (i >= TOWERS.length) {
         if (okc > 0) {
           big.style.borderColor = 'rgba(74,222,128,.55)';
-          big.textContent = '🟢 ' + okc + ' tower ka test pass — tyckr abhi sirf candidate hai';
+          big.textContent = '🟢 ' + okc + ' tower ka test pass — Party ke sab dost same tower chunein';
         } else {
           big.style.borderColor = 'rgba(251,113,133,.5)';
           big.textContent = '🔴 Koi test pass nahi hua — browser, network ya broker availability ka masla ho sakta hai';
