@@ -1679,6 +1679,43 @@ body { margin: 0 !important; padding: 0 !important; }
 #dm-wallpaper-picker p,#dm-wallpaper-picker footer{font-size:12px;line-height:1.7;color:#b6a1c5}#dm-wallpaper-picker footer{font-size:11px;margin-top:18px}
 #dm-wallpaper-picker .dm-wp-options{display:flex;flex-direction:column;gap:10px;margin-top:18px}#dm-wallpaper-picker .dm-wp-choice{display:flex;align-items:center;gap:14px;width:100%;padding:9px;background:#ffffff04;border:1px solid #ffffff12;border-radius:16px;color:inherit;text-align:left;font:inherit;cursor:pointer}
 #dm-wallpaper-picker .dm-wp-choice[aria-pressed=true]{border-color:#bf85ed;background:#a95adc12}#dm-wallpaper-picker .dm-wp-thumb{width:86px;height:78px;flex:none;border-radius:11px;background:radial-gradient(ellipse at top,#1a1a2e,#0f0b20 40%,#050507);background-size:cover;background-position:center}#dm-wallpaper-picker .dm-wp-copy{flex:1}#dm-wallpaper-picker .dm-wp-copy b{display:block;font-size:13px}#dm-wallpaper-picker .dm-wp-copy small{display:block;font-size:11px;color:#ab94bc;margin-top:5px}#dm-wallpaper-picker .dm-wp-check{color:#d3a0f5;font-size:20px;margin-right:7px}
+
+/* WP_NEON_THEME_START — opt-in paint only; original layout/text/logic untouched. */
+html[data-wp-theme="neon"] #dm-sheet,
+html[data-wp-theme="neon"] #dm-view-chat,
+html[data-wp-theme="neon"] .dm-call-screen{background:var(--wp-page-bg);border-color:#b18bff24}
+html[data-wp-theme="neon"] #dm-sheet::before{background:radial-gradient(ellipse at 100% 25%,#51164d18,transparent 60%)}
+html[data-wp-theme="neon"] .dm-bar,
+html[data-wp-theme="neon"] #dm-sheet.dm-chat .dm-bar{background:var(--wp-head-bg);border-color:#b18bff20}
+html[data-wp-theme="neon"] .dm-row{background:linear-gradient(130deg,#17142d80,#11182e80)!important;border-color:#b18bff24!important;box-shadow:0 4px 18px #0002}
+html[data-wp-theme="neon"] .dm-row:hover{background:linear-gradient(130deg,#251b3a,#152039)!important}
+html[data-wp-theme="neon"] .dm-row.un{background:linear-gradient(110deg,#85299f22,#395b991c)!important;border-color:#c875e740!important}
+html[data-wp-theme="neon"] .dm-search input{background:#131329!important;border-color:#a37bc12e!important;color:#f6f1ff}
+html[data-wp-theme="neon"] .dm-sec{color:#c394ed!important}
+html[data-wp-theme="neon"] .dm-pop4,
+html[data-wp-theme="neon"] #dm-wallpaper-picker section{background:var(--wp-menu-bg);border-color:#a87bc63b}
+html[data-wp-theme="neon"] .dm-inbar{background:var(--wp-inputbar-bg)!important;border-color:#b18bff24!important}
+html[data-wp-theme="neon"] .ig4pill{background:var(--wp-input-bg);border-color:#b58fe331}
+html[data-wp-theme="neon"] #dm-send-btn,
+html[data-wp-theme="neon"] #dm-join-btn,
+html[data-wp-theme="neon"] #queue-btn,
+html[data-wp-theme="neon"] #dm-gif-btn,
+html[data-wp-theme="neon"] #dm-photo-btn,
+html[data-wp-theme="neon"] #dm-mic-btn{background:var(--wp-fill2)!important;color:#fff!important;box-shadow:0 4px 17px #9235b824}
+html[data-wp-theme="neon"] #load-btn{background:linear-gradient(115deg,#247b84,#4867c7)!important;color:#fff}
+html[data-wp-theme="neon"] #yp-bar{background:linear-gradient(100deg,#111b32ee,#25132dee,#111d31ee);border-color:#ac7dd633;box-shadow:0 8px 25px #0005,0 0 18px #872cc41a}
+html[data-wp-theme="neon"] #yp-bar .yp-pill{background:linear-gradient(100deg,#c845db30,#8154e835);border-color:#d28cff35;box-shadow:0 0 16px #b14bd822}
+html[data-wp-theme="neon"] #yp-bar .yp-t{color:#a697b8}
+html[data-wp-theme="neon"] #yp-bar .yp-t.on{color:#f1dcff}
+html[data-wp-theme="neon"] .dm-call-action:not(.dm-call-answer):not(.dm-call-decline){background:#7c4ea115;border-color:#a87ed338;color:#f0dcff}
+html[data-wp-theme="neon"] #dm-call-bar{background:linear-gradient(110deg,#19152ef5,#111b31f5);border-color:#a87ed338}
+html[data-wp-theme="neon"] .dm-call-action.is-on,
+html[data-wp-theme="neon"] #dm-call-bar .acts button.is-on{background:#c05ae637;border-color:#c57cdd55}
+html[data-wp-bubble="neon"] #dm-thread .msg.other .bubble,
+html[data-wp-bubble="neon"] #dm-thread .dm-m:not(.own) .bub4{background:linear-gradient(125deg,#1c1834,#121d31)!important;color:#e5dff0!important;border-color:#b893da19!important;box-shadow:0 4px 17px #0002!important}
+html[data-wp-bubble="neon"] #dm-thread .msg.own .bubble,
+html[data-wp-bubble="neon"] #dm-thread .dm-m.own .bub4{background:linear-gradient(115deg,#a335c5,#7139cb 70%,#514cb1)!important;color:#fff!important;box-shadow:0 4px 17px #9235b815!important}
+/* WP_NEON_THEME_END */
 </style>
 </head>
 <body>
@@ -2176,7 +2213,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-06-49';
+const WP_BUILD = '2026-10-06-50';
 /* Only a strictly newer published build is an update; stale CDN markers are not. */
 function wpIsNewerBuild(candidate, current) {
   var pattern = /^(\d{4})-(\d{2})-(\d{2})-(\d+)$/;
@@ -4233,6 +4270,15 @@ function renderMembers() {
 /* ===== Theme + Bubble picker: sirf rang badalta hai (layout / tablet / native sab waisa) ===== */
 (function () {
   var THEMES = {
+    neon: { name: 'Lobby Neon', bg: ['#050719','#111329','#080b1d'], acc: '#c394ed', j: ['#ed4bde','#9656ff','#50d7f3'], ab: ['rgba(223,62,216,.94)','rgba(150,80,242,.94)'], card: 'linear-gradient(115deg,#df3ed8,#9650f2 57%,#43bfe9)',
+      page: 'radial-gradient(ellipse at 100% 20%,#51164d35,transparent 55%),radial-gradient(ellipse at 0 100%,#174f632a,transparent 55%),#050719',
+      jcard: 'linear-gradient(130deg,#17142de8,#11182ee8)', panel: 'linear-gradient(130deg,#11142be8,#0b1022e8)',
+      head: '#07091be8', soft: '#17142d80', soft2: '#10152980', chip: '#9656ff14',
+      inputbar: '#0b1022e8', input: 'linear-gradient(110deg,#19152e,#111b31)', menu: '#141025fa',
+      music: 'radial-gradient(ellipse at 10% 0,#d642dc44,transparent 60%),radial-gradient(ellipse at 100% 100%,#28bad133,transparent 60%),#15112b',
+      fill: 'linear-gradient(90deg,#ed4bde,#9656ff,#50d7f3)', fill2: 'linear-gradient(115deg,#df3ed8,#9650f2 57%,#43bfe9)', dot: '#ed4bde',
+      art: 'linear-gradient(140deg,#9c2ba8,#533ab6,#2282a1)', bigplay: 'linear-gradient(115deg,#df3ed8,#9650f2 57%,#43bfe9)',
+      bar: 'linear-gradient(180deg,#50d7f3,#d580e9)', focus: '#c960e6' },
     purple:  { name: 'Night Purple (default)', bg: ['#0f0c29','#302b63','#24243e'], acc: '#a78bfa', j: ['#ff66bd','#a477ff','#55baff'], ab: ['rgba(255,103,190,0.92)','rgba(146,111,255,0.94)'], card: 'linear-gradient(135deg,#3a3170,#241f4d)',
       page: 'radial-gradient(circle at 8% -10%, rgba(255,100,195,0.24), transparent 32%), radial-gradient(circle at 100% 0%, rgba(91,126,255,0.24), transparent 31%), radial-gradient(circle at 50% 115%, rgba(111,73,217,0.18), transparent 36%), linear-gradient(145deg, #080812 0%, #17132f 52%, #0a1127 100%)',
       jcard: 'linear-gradient(145deg, rgba(33,27,68,0.84), rgba(12,13,31,0.82))',
@@ -4286,6 +4332,7 @@ function renderMembers() {
   };
   /* bubble jodi: dono rang door door (hue gap 146-175 deg) - same-family shades reject the */
   var BUBBLES = {
+    neon: { name: 'Lobby Neon · Violet + Midnight', own: ['#a335c5','#514cb1'], oth: ['#1c1834','#171a33','#121d31'], ownTxt: '#fff', othTxt: '#e5dff0', ownGlow: 'rgba(146,53,184,.08)', othGlow: 'rgba(0,0,0,.12)' },
     now: { name: '1 · Pink + Cyan (default)', own: ['#f472b6','#a78bfa'], oth: ['#51c9c2','#7182e9','#aa7ced'], ownTxt: '#fff', othTxt: '#fff', ownGlow: 'rgba(167,139,250,0.25)', othGlow: 'rgba(82,145,220,0.40)' },
     ob:  { name: '2 · Orange + Blue',   own: ['#fb923c','#ea580c'], oth: ['#38bdf8','#3b82f6','#1d4ed8'], ownTxt: '#3a1a04', othTxt: '#fff', ownGlow: 'rgba(251,146,60,0.40)', othGlow: 'rgba(59,130,246,0.40)' },
     gm:  { name: '3 · Green + Magenta', own: ['#22c55e','#15803d'], oth: ['#f472b6','#e11d48','#be123c'], ownTxt: '#02240f', othTxt: '#fff', ownGlow: 'rgba(34,197,94,0.40)', othGlow: 'rgba(225,29,72,0.40)' },
@@ -4302,11 +4349,14 @@ function renderMembers() {
               '--wp-oth1','--wp-oth2','--wp-oth3','--wp-othtxt','--wp-othbd','--wp-othsh'];
   var GLOSS_OWN = '1px solid rgba(255,255,255,0.22)', GLOSS_OTH = '1px solid rgba(255,255,255,0.26)';
   var curT = 'purple', curB = 'now';
+  var beforeNeonB = read('wp_neon_prev_bubble');
 
   function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function read(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 
   function applyAll() {
+    document.documentElement.setAttribute('data-wp-theme', curT);
+    document.documentElement.setAttribute('data-wp-bubble', curB);
     var s = document.documentElement.style, i, t = THEMES[curT], b = BUBBLES[curB];
     for (i = 0; i < VARS.length; i++) s.removeProperty(VARS[i]);   // default = kuch bhi override nahi
     if (curT !== 'purple') {
@@ -4323,11 +4373,11 @@ function renderMembers() {
     }
     if (curB !== 'now') {
       s.setProperty('--wp-own1', b.own[0]); s.setProperty('--wp-own2', b.own[1]); s.setProperty('--wp-owntxt', b.ownTxt);
-      s.setProperty('--wp-ownbd', GLOSS_OWN);
+      s.setProperty('--wp-ownbd', curB === 'neon' ? '0' : GLOSS_OWN);
       s.setProperty('--wp-ownsh', '0 9px 23px ' + b.ownGlow + ', inset 0 1px 0 rgba(255,255,255,0.25)');
       s.setProperty('--wp-oth1', b.oth[0]); s.setProperty('--wp-oth2', b.oth[1]); s.setProperty('--wp-oth3', b.oth[2]);
       s.setProperty('--wp-othtxt', b.othTxt);
-      s.setProperty('--wp-othbd', GLOSS_OTH);
+      s.setProperty('--wp-othbd', curB === 'neon' ? '1px solid #b893da19' : GLOSS_OTH);
       s.setProperty('--wp-othsh', '0 9px 23px ' + b.othGlow + ', inset 0 1px 0 rgba(255,255,255,0.27)');
     }
     paintSelection();
@@ -4366,7 +4416,12 @@ function renderMembers() {
     for (k in THEMES) {
       c = document.createElement('div'); c.className = 'wp-card'; c.setAttribute('data-kind', 't'); c.setAttribute('data-k', k);
       c.innerHTML = '<div class="th" style="background:' + THEMES[k].card + '"></div><div class="nm">' + THEMES[k].name + '</div>';
-      c.onclick = (function (key) { return function () { curT = key; store('wp_theme', key); applyAll(); }; })(k);
+      c.onclick = (function (key) { return function () { if (key === 'neon' && curT !== 'neon') {
+        beforeNeonB = curB; store('wp_neon_prev_bubble', curB); curB = 'neon'; store('wp_bubble', curB);
+      } else if (key !== 'neon' && curT === 'neon' && curB === 'neon') {
+        var prev = beforeNeonB; curB = prev && BUBBLES[prev] && prev !== 'neon' ? prev : 'now'; store('wp_bubble', curB);
+      }
+      curT = key; store('wp_theme', key); applyAll(); }; })(k);
       tg.appendChild(c);
     }
     for (k in BUBBLES) {
