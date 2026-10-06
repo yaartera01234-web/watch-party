@@ -2176,10 +2176,22 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-06-48';
-function wpShowUpdate() {
+const WP_BUILD = '2026-10-06-49';
+/* Only a strictly newer published build is an update; stale CDN markers are not. */
+function wpIsNewerBuild(candidate, current) {
+  var pattern = /^(\d{4})-(\d{2})-(\d{2})-(\d+)$/;
+  var a = pattern.exec(candidate || ''), b = pattern.exec(current || '');
+  if (!a || !b) return false;
+  for (var i = 1; i <= 4; i++) {
+    var next = Number(a[i]), installed = Number(b[i]);
+    if (!Number.isSafeInteger(next) || !Number.isSafeInteger(installed)) return false;
+    if (next !== installed) return next > installed;
+  }
+  return false;
+}
+function wpShowUpdate(version) {
   try {
-    if (document.getElementById('wp-upd')) return;
+    if (!wpIsNewerBuild(version, WP_BUILD) || document.getElementById('wp-upd')) return;
     var el = document.createElement('div'); el.id = 'wp-upd';
     el.style.cssText = 'position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:2147483000;display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:15px;background:linear-gradient(135deg,rgba(38,20,66,.97),rgba(18,10,38,.97));border:1px solid rgba(120,200,255,.38);color:#fff;font-size:12px;font-weight:700;box-shadow:0 12px 32px rgba(0,0,0,.55);max-width:92vw';
     var sp = document.createElement('span'); sp.textContent = '🔄 Naya update aa gaya';
@@ -2274,7 +2286,7 @@ async function wpVersionCheck() {
     const r = await fetch('wp-ver.txt?t=' + Date.now(), { cache: 'no-store' });
     if (!r.ok) return;
     const v = (await r.text()).trim();
-    if (v && v !== WP_BUILD) wpShowUpdate();
+    if (wpIsNewerBuild(v, WP_BUILD)) wpShowUpdate(v);
   } catch (e) {}
 }
 setTimeout(wpVersionCheck, 6000);
