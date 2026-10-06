@@ -23,7 +23,7 @@ const fixture='<!doctype html><html><head><meta charset="utf-8"><meta name="view
  let n=0;
  async function page(size={width:412,height:915},reduce='no-preference'){
   const p=await browser.newPage({viewport:size,reducedMotion:reduce});
-  await p.route('**/*',r=>r.request().url().endsWith('.webp')?r.fulfill({contentType:'image/webp',body:fs.readFileSync(root+'/assets/lobby-neon-v46.webp')}):r.fulfill({contentType:'text/html',body:fixture}));
+  await p.route('**/*',r=>r.request().url().endsWith('.svg')?r.fulfill({contentType:'image/svg+xml',body:fs.readFileSync(root+'/assets/lobby-tail-v47.svg')}):r.request().url().endsWith('.webp')?r.fulfill({contentType:'image/webp',body:fs.readFileSync(root+'/assets/lobby-neon-v46.webp')}):r.fulfill({contentType:'text/html',body:fixture}));
   await p.goto('http://lobby.test/party-final1.html');return p;
  }
  async function show(p){await p.evaluate(()=>partyLobbyShow());await p.locator('.wpl-art').evaluate(e=>e.decode());}
@@ -40,5 +40,15 @@ const fixture='<!doctype html><html><head><meta charset="utf-8"><meta name="view
  await test('existing membership preserved by Chat arrow',async()=>{let p=await page();await p.evaluate(()=>stats.joined=true);await show(p);await p.locator('#wpl-back').click();await p.waitForFunction(()=>$('wp-party-lobby').hidden);const s=await p.evaluate(()=>stats);assert(s.joined);assert.equal(s.leave,0);assert.equal(s.enter,0);await p.close()});
  await test('reduced-motion preference respected',async()=>{let p=await page(undefined,'reduce');await show(p);assert.equal(await p.locator('.wpl-note').first().evaluate(e=>getComputedStyle(e).animationName),'none');await p.close()});
  for(const [w,h] of [[360,780],[768,1024],[820,390]])await test('responsive layout '+w+'x'+h+' has reachable controls and no horizontal overflow',async()=>{let p=await page({width:w,height:h});await show(p);assert(await p.locator('#wp-party-lobby').evaluate(e=>e.scrollWidth<=e.clientWidth+1));await p.locator('#wpl-enter').scrollIntoViewIfNeeded();assert(await p.locator('#wpl-enter').isVisible());await p.locator('#wpl-back').scrollIntoViewIfNeeded();assert(await p.locator('#wpl-back').isVisible());await p.close()});
+ for(const [w,h] of [[344,727],[360,800],[412,915]])await test('v47 full-height decorative footer '+w+'x'+h+' without image distortion',async()=>{
+  let p=await page({width:w,height:h});await show(p);
+  const art=await p.locator('.wpl-art').boundingBox(),tail=await p.locator('.wpl-tail').boundingBox(),lobby=await p.locator('#wp-party-lobby').boundingBox();
+  assert(Math.abs(art.height/art.width-1607/941)<.005);
+  assert(tail.height>10);assert(Math.abs(tail.y-(art.y+art.height)+1)<1.1);
+  assert(Math.abs(tail.y+tail.height-(lobby.y+lobby.height))<1.1);
+  assert.equal(await p.locator('.wpl-tail').evaluate(e=>getComputedStyle(e).pointerEvents),'none');
+  assert(await p.locator('#wp-party-lobby').evaluate(e=>e.scrollHeight<=e.clientHeight+1));
+  await p.screenshot({path:'/tmp/lobby-v47-'+w+'.png',fullPage:true});await p.close();
+ });
  console.log(n+' actual-Chromium scenarios passed; room/MQTT/DM operations simulated, not handset/broker tests.');await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});

@@ -1650,6 +1650,10 @@ body { margin: 0 !important; padding: 0 !important; }
 @keyframes wpl46Shine{0%,5%{transform:translateX(-70%);opacity:0}15%{opacity:.9}75%{transform:translateX(70%);opacity:.9}85%,100%{transform:translateX(70%);opacity:0}}
 #wp-party-lobby[hidden] *,#wp-party-lobby[hidden] *:after{animation-play-state:paused!important}
 @media(prefers-reduced-motion:reduce){#wp-party-lobby .wpl-note,#wp-party-lobby .wpl-beat i,#wp-party-lobby .wpl-enter:after{animation:none!important}#wp-party-lobby .wpl-note{opacity:.6}#wp-party-lobby .wpl-enter:after{display:none}}
+/* v47: extend only the decorative waves; never stretch/crop the image or move controls. */
+#wp-party-lobby .wpl-content{display:flex;flex-direction:column;min-height:100%}
+#wp-party-lobby .wpl-scene{flex:0 0 auto}
+#wp-party-lobby .wpl-tail{flex:1 0 0%;min-height:1px;margin-top:-1px;background:url('assets/lobby-tail-v47.svg') center top / 100% 100% no-repeat;pointer-events:none}
 /* WP_LOBBY_V46_END */
 /* Pair-specific wallpaper picker. No styling outside DM picker is changed. */
 #dm-wallpaper-picker{position:fixed;inset:0;z-index:10050;background:#06040ddd;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto;color:#f7efff;font:14px system-ui}
@@ -2156,7 +2160,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-06-46';
+const WP_BUILD = '2026-10-06-47';
 function wpShowUpdate() {
   try {
     if (document.getElementById('wp-upd')) return;
@@ -5320,7 +5324,7 @@ function renderMembers() {
     if (!lobby) {
       lobby = document.createElement('section'); lobby.id = 'wp-party-lobby'; lobby.hidden = true;
       lobby.setAttribute('role','dialog'); lobby.setAttribute('aria-modal','true'); lobby.setAttribute('aria-labelledby','wpl-heading');
-      lobby.innerHTML = "<div class=\"wpl-content\"><div class=\"wpl-scene\"><img class=\"wpl-art\" src=\"assets/lobby-neon-v46.webp\" width=\"941\" height=\"1607\" alt=\"\" aria-hidden=\"true\" decoding=\"async\"><div class=\"wpl-sr\"><h2 id=\"wpl-heading\">The Party Lobby — Good company. Great music.</h2><p>Doston ke saath suno, dekho aur baat karo. Jab ready ho, andar aa jao. Watch together, chat live, listen to music, enjoy with friends.</p></div><button type=\"button\" class=\"wpl-back\" id=\"wpl-back\" aria-label=\"Back to Chat\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M19 12H5m7-7-7 7 7 7\"/></svg></button><b id=\"wpl-room-name\" aria-label=\"Your room\"></b><button type=\"button\" id=\"wpl-enter\" class=\"wpl-enter\" aria-label=\"Enter Party\"><span class=\"wpl-sr\">Enter Party</span></button><p id=\"wpl-status\" class=\"wpl-foot\" role=\"status\"></p><span class=\"wpl-note\" aria-hidden=\"true\" style=\"--x:43%;--y:36%;--delay:-0.3s;--color:#db61ff\">♪</span><span class=\"wpl-note\" aria-hidden=\"true\" style=\"--x:93%;--y:38%;--delay:-1.8s;--color:#5ccfff\">♫</span><span class=\"wpl-note\" aria-hidden=\"true\" style=\"--x:94%;--y:16%;--delay:-2.8s;--color:#d59cff\">♪</span><span class=\"wpl-note\" aria-hidden=\"true\" style=\"--x:81%;--y:90%;--delay:-0.8s;--color:#8a79ff\">♫</span><div class=\"wpl-beat\" aria-hidden=\"true\"><i style=\"--delay:-0.0s\"></i><i style=\"--delay:-0.17s\"></i><i style=\"--delay:-0.34s\"></i><i style=\"--delay:-0.51s\"></i><i style=\"--delay:-0.68s\"></i></div></div></div>";
+      lobby.innerHTML = "<div class=\"wpl-content\"><div class=\"wpl-scene\"><img class=\"wpl-art\" src=\"assets/lobby-neon-v46.webp\" width=\"941\" height=\"1607\" alt=\"\" aria-hidden=\"true\" decoding=\"async\"><div class=\"wpl-sr\"><h2 id=\"wpl-heading\">The Party Lobby — Good company. Great music.</h2><p>Doston ke saath suno, dekho aur baat karo. Jab ready ho, andar aa jao. Watch together, chat live, listen to music, enjoy with friends.</p></div><button type=\"button\" class=\"wpl-back\" id=\"wpl-back\" aria-label=\"Back to Chat\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M19 12H5m7-7-7 7 7 7\"/></svg></button><b id=\"wpl-room-name\" aria-label=\"Your room\"></b><button type=\"button\" id=\"wpl-enter\" class=\"wpl-enter\" aria-label=\"Enter Party\"><span class=\"wpl-sr\">Enter Party</span></button><p id=\"wpl-status\" class=\"wpl-foot\" role=\"status\"></p><span class=\"wpl-note\" aria-hidden=\"true\" style=\"--x:43%;--y:36%;--delay:-0.3s;--color:#db61ff\">♪</span><span class=\"wpl-note\" aria-hidden=\"true\" style=\"--x:93%;--y:38%;--delay:-1.8s;--color:#5ccfff\">♫</span><span class=\"wpl-note\" aria-hidden=\"true\" style=\"--x:94%;--y:16%;--delay:-2.8s;--color:#d59cff\">♪</span><span class=\"wpl-note\" aria-hidden=\"true\" style=\"--x:81%;--y:90%;--delay:-0.8s;--color:#8a79ff\">♫</span><div class=\"wpl-beat\" aria-hidden=\"true\"><i style=\"--delay:-0.0s\"></i><i style=\"--delay:-0.17s\"></i><i style=\"--delay:-0.34s\"></i><i style=\"--delay:-0.51s\"></i><i style=\"--delay:-0.68s\"></i></div></div><div class=\"wpl-tail\" aria-hidden=\"true\"></div></div>";
       document.body.appendChild(lobby);
       $('wpl-back').onclick = function () {
         if (this.disabled || partyLobbyEntered) return;
