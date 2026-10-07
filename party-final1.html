@@ -2505,7 +2505,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-07-56';
+const WP_BUILD = '2026-10-07-57';
 /* Only a strictly newer published build is an update; stale CDN markers are not. */
 function wpIsNewerBuild(candidate, current) {
   var pattern = /^(\d{4})-(\d{2})-(\d{2})-(\d+)$/;
@@ -9152,7 +9152,7 @@ body.wp-mpv-fs #wp-act-feed > .wp-act { display: flex !important; }
   window.__wpActHooked = 1;
 
   /* ── seek "from" (apni seek ke liye): control dabne par position record ── */
-  var seekFromPos = -1, seekFromAt = 0, hist = [];
+  var seekFromPos = -1, seekFromAt = 0, hist = [], ownSeek = { t: NaN, at: 0 };
   function rec() { try { seekFromPos = A.now(); seekFromAt = Date.now(); } catch (e) {} }
   setInterval(function () {
     try { hist.push({ at: Date.now(), pos: A.now() }); if (hist.length > 8) hist.shift(); } catch (e) {}
@@ -9160,6 +9160,10 @@ body.wp-mpv-fs #wp-act-feed > .wp-act { display: flex !important; }
   function seekFrom(target) {
     var now = Date.now();
     if (seekFromPos >= 0 && now - seekFromAt < 2500) { var f = seekFromPos; seekFromPos = -1; return f; }
+    /* v57: abhi (2s ke andar) meri hi pichli seek gayi thi -> uska target hi "from" hai (10:00 -> 20:00 chain) */
+    if (isFinite(ownSeek.t) && now - ownSeek.at < 2000 && Math.abs(ownSeek.t - target) > 1) return ownSeek.t;
+    /* v57: APK (MPV): bridge ki aakhri reported position = seek se PEHLE ki jagah */
+    if (window.__wpMpvLinked) { try { var p = A.now(); if (isFinite(p) && Math.abs(p - target) > 1) return p; } catch (e) {} }
     try {   /* YouTube poll: lastYtTime abhi bhi PURANA sample hota hai (publish ke baad update hota hai) */
       if (typeof lastYtTime === 'number' && lastYtTime > 0 && Math.abs(lastYtTime - target) > 1) return lastYtTime;
     } catch (e) {}
@@ -9206,9 +9210,17 @@ body.wp-mpv-fs #wp-act-feed > .wp-act { display: flex !important; }
             var nm = 'Me';
             try { if (typeof myName === 'string' && myName) nm = myName; } catch (e) {}
             var tm = Number(extra && extra.time);
-            if (window.__wpMpvLinked) tm = A.now();              /* APK: screen par MPV ka time hai */
-            if (action === 'seek') A.show(nm, 'seek', seekFrom(tm), tm);
-            else A.show(nm, action, tm);
+            if (action === 'seek') {
+              /* v57: seek ka "to" = wahi target jo command me ja raha hai (dost bhi yahi apply/dikhate hain).
+                 Pehle APK me yahan MPV ka reported time lagta tha, jo seek se PEHLE ka hota hai -> 10/20 min
+                 wali seek par purana waqt dikhta tha (sirf chhoti ±10s seek theek lagti thi). */
+              if (!isFinite(tm) || tm < 0) tm = A.now();
+              A.show(nm, 'seek', seekFrom(tm), tm);
+              ownSeek = { t: tm, at: Date.now() };
+            } else {
+              if (window.__wpMpvLinked) tm = A.now();            /* APK: play/pause ka waqt MPV ki asli position */
+              A.show(nm, action, tm);
+            }
           }
         } catch (e) {}
         return oldPub.apply(this, arguments);
