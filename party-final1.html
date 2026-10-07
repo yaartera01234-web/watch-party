@@ -181,6 +181,20 @@ main { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 8px; m
 .pl-by { color: #8b8bad; font-size: 11px; flex-shrink: 0; }
 .pl-x { background: rgba(255,23,68,0.15); border: 1px solid rgba(255,23,68,0.3); color: #fff; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; cursor: pointer; flex-shrink: 0; }
 .pl-x:hover { background: rgba(255,23,68,0.35); transform: scale(1.1); }
+/* v56 rename */
+.pl-rn { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.22); font-size: 13px; }
+.pl-rn:hover { background: rgba(255,255,255,0.2); }
+.pl-label .pl-orig { display: block; font-size: 10px; font-weight: 500; color: #8b8bad; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#wp-rn-ov { position: fixed; inset: 0; z-index: 12000; display: none; align-items: center; justify-content: center; background: rgba(5,3,15,0.62); backdrop-filter: blur(4px); padding: 20px; }
+#wp-rn-ov.on { display: flex; }
+.wp-rn-card { width: min(380px, 100%); background: linear-gradient(160deg, rgba(48,43,99,0.97), rgba(20,16,44,0.98)); border: 1px solid rgba(255,255,255,0.16); border-radius: 18px; padding: 16px 16px 14px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); color: #fff; }
+.wp-rn-h { font-size: 15px; font-weight: 800; margin-bottom: 6px; }
+.wp-rn-o { font-size: 11px; color: #b4afd1; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wp-rn-in { width: 100%; height: 42px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff; padding: 0 12px; font-size: 14px; outline: none; }
+.wp-rn-in:focus { border-color: #ff8fd0; }
+.wp-rn-b { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
+.wp-rn-b button { height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.08); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+.wp-rn-b .wp-rn-s { background: linear-gradient(135deg, #ff5ebc, #8b72ff); border-color: transparent; }
 .avatar-pick { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 10px; }
 #avatar-preview { width: 66px; height: 66px; border-radius: 50%; background: linear-gradient(135deg, #f472b6, #a78bfa); display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: bold; overflow: hidden; border: 3px solid rgba(255,255,255,0.3); box-shadow: 0 0 20px rgba(244,114,182,0.4); }
 #avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
@@ -2491,7 +2505,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-07-55';
+const WP_BUILD = '2026-10-07-56';
 /* Only a strictly newer published build is an update; stale CDN markers are not. */
 function wpIsNewerBuild(candidate, current) {
   var pattern = /^(\d{4})-(\d{2})-(\d{2})-(\d+)$/;
@@ -2671,6 +2685,9 @@ function onMsg(topic, buf) {
   if (topic === TP.cmd) {
     let c; try { c = JSON.parse(str); } catch (e) { return; }
     if (!c || c.from === myId || dup(c.rid)) return;
+    /* v56: Party join ke bagair (joined=false) doston ke playback commands apply na hon — warna inbox/background me
+       gaana khud chal parta tha. State (TP.state) alag aata hai, Party dabate hi catch-up (doCatchup) waise hi hota hai. */
+    if (!joined && (c.action === 'load' || c.action === 'play' || c.action === 'pause' || c.action === 'seek' || c.action === 'sync')) return;
     applyCmd(c);
   } else if (topic === TP.state) {
     try { stateLocal = JSON.parse(str); } catch (e) {}
@@ -3336,6 +3353,7 @@ function premiumSeekClick(e) {
 }
 function setMP3Track(data) {
   mp3Title.textContent = mp3Name(data);
+  try { const wpn = wpQueueName(data); if (wpn) mp3Title.textContent = wpn; } catch (e) {}   /* v56 rename */
   mp3Artist.textContent = 'Watch Party · Premium Audio';
   mp3Fill.style.width = '0%';
   mp3Dot.style.left = '0%';
@@ -3373,6 +3391,7 @@ function setPremiumMedia(data) {
   const isYT = data.type === 'youtube';
   premiumVideoBadge.textContent = isYT ? '▶ YOUTUBE' : (data.type === 'hls' ? '📡 HLS STREAM' : '🎞 MP4 VIDEO');
   premiumVideoTitle.textContent = isYT ? 'YouTube · ' + (data.videoId || 'Video') : makeLabel(data).replace(/^(🎞|📡)\s*/, '');
+  try { const wpn = wpQueueName(data); if (wpn) premiumVideoTitle.textContent = wpn; } catch (e) {}   /* v56 rename */
 }
 function loadVideoLocal(data, autoplay) {
   destroyHLS();
@@ -3637,6 +3656,52 @@ function queueRemove(i) {
   renderQueue(items, queueLocal.index);
   pushSys('🗑 ' + myName + ' ne hataya: ' + ((gone && gone.label) || 'item').slice(0, 40));
 }
+/* v56: playlist item ka apna naam — queue ke saath sab ko sync hota hai; asli naam/URL item me waise hi rehta hai */
+function wpQueueName(d) {
+  try {
+    const items = (queueLocal && queueLocal.items) || [];
+    for (const it of items) {
+      if (!it || !it.name || !d) continue;
+      if (d.type === 'youtube' ? (it.videoId && it.videoId === d.videoId) : (it.url && it.url === d.url)) return String(it.name).slice(0, 60);
+    }
+  } catch (e) {}
+  return '';
+}
+function queueRename(i) {
+  const items = queueLocal.items || [];
+  if (i < 0 || i >= items.length) return;
+  const it = items[i];
+  const orig = it.title || it.label || it.videoId || 'video';
+  let ov = document.getElementById('wp-rn-ov');
+  if (!ov) {
+    ov = document.createElement('div'); ov.id = 'wp-rn-ov';
+    ov.innerHTML = '<div class="wp-rn-card"><div class="wp-rn-h">✏️ Naam badlo</div><div class="wp-rn-o"></div><input class="wp-rn-in" maxlength="60" placeholder="Naya naam likho…"><div class="wp-rn-b"><button class="wp-rn-c" type="button">Cancel</button><button class="wp-rn-r" type="button">Asli naam</button><button class="wp-rn-s" type="button">Save</button></div></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', (e) => { if (e.target === ov) ov.classList.remove('on'); });
+  }
+  const inp = ov.querySelector('.wp-rn-in');
+  ov.querySelector('.wp-rn-o').textContent = 'Asli: ' + orig;
+  inp.value = it.name || '';
+  const done = (val) => {
+    ov.classList.remove('on');
+    const cur = queueLocal.items || [];
+    if (cur[i] !== it) return;                                   /* list beech me badal gayi — kuch mat karo */
+    const name = String(val || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+    if (name) it.name = name; else delete it.name;
+    pubQueue();
+    renderQueue(cur, queueLocal.index);
+    if (i === queueLocal.index) {                                /* abhi yahi chal raha hai -> player ka title bhi */
+      try { const t = name || orig.replace(/^(🎞|📡|🎵)\s*/, ''); premiumVideoTitle.textContent = t; mp3Title.textContent = t; } catch (e) {}
+    }
+    pushSys(name ? ('✏️ ' + myName + ' ne naam rakha: ' + name.slice(0, 40)) : ('✏️ ' + myName + ' ne asli naam wapas kiya'));
+  };
+  ov.querySelector('.wp-rn-s').onclick = () => done(inp.value);
+  ov.querySelector('.wp-rn-r').onclick = () => done('');
+  ov.querySelector('.wp-rn-c').onclick = () => ov.classList.remove('on');
+  inp.onkeydown = (e) => { if (e.key === 'Enter') done(inp.value); else if (e.key === 'Escape') ov.classList.remove('on'); };
+  ov.classList.add('on');
+  setTimeout(() => { try { inp.focus(); inp.select(); } catch (e) {} }, 50);
+}
 function queuePlay(i) {
   const items = queueLocal.items || [];
   if (i < 0 || i >= items.length) return;
@@ -3702,13 +3767,21 @@ function renderQueue(items, index) {
       div.appendChild(thumb);
     }
     const num = document.createElement('span'); num.className = 'pl-num'; num.textContent = (i === index ? '▶ ' : '') + (i + 1);
-    const lab = document.createElement('span'); lab.className = 'pl-label'; lab.textContent = it.title || it.label || it.videoId || 'video';
+    const lab = document.createElement('span'); lab.className = 'pl-label';
+    const origName = it.title || it.label || it.videoId || 'video';
     lab.style.cssText = 'flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;font-size:13px;';
+    if (it.name) {   /* v56 rename: apna naam upar, asli naam/URL neeche chhota — dono dikhte hain */
+      const nm = document.createElement('span'); nm.textContent = it.name; nm.style.cssText = 'display:block;overflow:hidden;text-overflow:ellipsis;';
+      const og = document.createElement('span'); og.className = 'pl-orig'; og.textContent = origName;
+      lab.appendChild(nm); lab.appendChild(og); lab.title = origName;
+    } else lab.textContent = origName;
     const by = document.createElement('span'); by.className = 'pl-by'; by.textContent = it.by || '';
     const x = document.createElement('button'); x.className = 'pl-x'; x.textContent = '❌';
     x.onclick = (e) => { e.stopPropagation(); queueRemove(i); };
+    const rn = document.createElement('button'); rn.className = 'pl-x pl-rn'; rn.textContent = '☰'; rn.title = 'Rename';   /* v56 */
+    rn.onclick = (e) => { e.stopPropagation(); queueRename(i); };
     div.onclick = () => queuePlay(i);
-    div.appendChild(num); div.appendChild(lab); div.appendChild(by); div.appendChild(x);
+    div.appendChild(num); div.appendChild(lab); div.appendChild(by); div.appendChild(rn); div.appendChild(x);
     list.appendChild(div);
   });
 }
