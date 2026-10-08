@@ -2510,7 +2510,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-07-59';
+const WP_BUILD = '2026-10-08-60';
 /* Only a strictly newer published build is an update; stale CDN markers are not. */
 function wpIsNewerBuild(candidate, current) {
   var pattern = /^(\d{4})-(\d{2})-(\d{2})-(\d+)$/;
@@ -2687,6 +2687,12 @@ document.addEventListener('visibilitychange', () => {
 });
 
 /* ---------- 📩 MESSAGES ---------- */
+/* ACT6 (v60): native presence client lock screen par bhi room ke cmd/state/queue sunti hai —
+   har message yahan se page ke onMsg tak pahunchta hai. Duplicate delivery ka masla nahi:
+   onMsg ke andar dup(rid/mid) pehle se hai. Page sota ho to native kaan hi kaam karta hai. */
+window.__wpNativeRoomMsg = function (topic, str) {
+  try { onMsg(topic, { toString: function () { return str; } }); } catch (e) {}
+};
 function onMsg(topic, buf) {
   try { if (wpSleepAt) wpSleepTick(); } catch (e) {}   /* 🌙 sote page ka catch-up */
   const str = buf.toString();
