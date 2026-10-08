@@ -2411,11 +2411,16 @@ function connectBroker(i) {
   try { if (client) client.end(true); } catch (e) {}
   mqttUp = false;
   try {
-    client = mqtt.connect(BROKERS[i].url, {
+    /* v59: native presence (APK ACT5) active ho to WILL hata do — page ka socket so jaye to
+       tower ko Left na bheje; presence ko native (wake lock wali) side sambhalti hai. */
+    var __wopts = {
       clientId: 'wp_' + myId + '_' + Math.random().toString(36).slice(2, 6),
-      clean: true, connectTimeout: 9000, reconnectPeriod: 2500, keepalive: 20,
-      will: { topic: ROOM + '/members/' + myId, payload: '', qos: 1, retain: true }
-    });
+      clean: true, connectTimeout: 9000, reconnectPeriod: 2500, keepalive: 60
+    };
+    if (!(window.YaarNative && window.YaarNative.wpPresence)) {
+      __wopts.will = { topic: ROOM + '/members/' + myId, payload: '', qos: 1, retain: true };
+    }
+    client = mqtt.connect(BROKERS[i].url, __wopts);
   } catch (e) { alert('\u274C Tower error! Dusra tower select karo! 🔄'); return; }
   clearTimeout(watchdog);
   /* 🆕 boss: fail hone par native alert nahi — khud agla tower try karo (auto-fallback) */
@@ -2484,11 +2489,6 @@ ensureLib(() => { connectBroker(parseInt(towerInput.value, 10) || 0); connectDmT
 
 function subscribeRoom() {
   if (!client || !mqttUp) return;
-  /* v58: chhupa background page (?bg=1 — sirf DM notifications ke liye) room ke topics par lagta hi nahi.
-     Pehle ye default room ke /cmd par bhi baitha rehta tha aur doston ka 'load' aate hi apne chhupe <video> me
-     MP3/MP4 chala deta tha — app poori band hone par bhi gaana, bina kisi notification ke.
-     wpZombie: purana (destroy ho chuki activity ka) page bhi dobara subscribe nahi karta. */
-  if (BGMODE || wpZombie) return;
   client.subscribe([TP.cmd, TP.state, TP.queue, TP.chat, TP.events, TP.react, TP.members, TP.typing], { qos: 1 }, () => {});
 }
 function unsubscribeRoom() {
@@ -2510,7 +2510,7 @@ function pubState(s) {
 }
 function pubQueue() { pub(TP.queue, queueLocal, true); }
 /* 🔄 SELF-UPDATE: naya version aate hi ye page khud batata hai (purane page wale phansay na rahein) */
-const WP_BUILD = '2026-10-07-58';
+const WP_BUILD = '2026-10-07-59';
 /* Only a strictly newer published build is an update; stale CDN markers are not. */
 function wpIsNewerBuild(candidate, current) {
   var pattern = /^(\d{4})-(\d{2})-(\d{2})-(\d+)$/;
@@ -2616,23 +2616,11 @@ function wpSleepAsk() {
 }
 async function wpVersionCheck() {
   try {
+    if (isBg()) return;                              /* chhupa bg page: kuch na badle (music/handoff safe rahe) */
     const r = await fetch('wp-ver.txt?t=' + Date.now(), { cache: 'no-store' });
     if (!r.ok) return;
     const v = (await r.text()).trim();
-    if (!wpIsNewerBuild(v, WP_BUILD)) return;
-    if (isBg()) {
-      /* v58: chhupa bg page (sirf DM notifications) khud reload — is me na music hai na handoff, is liye safe.
-         Pehle ye kabhi update nahi hota tha aur mahino purana code chalata rehta tha. 10 min me 1 bar se zyada nahi
-         (CDN purana HTML de to reload-loop na bane). */
-      try {
-        const k = 'wpBgReloadAt', last = parseInt(localStorage.getItem(k) || '0', 10) || 0;
-        if (Date.now() - last < 10 * 60 * 1000) return;
-        localStorage.setItem(k, String(Date.now()));
-      } catch (e) {}
-      try { const u = new URL(location.href); u.searchParams.set('u', Date.now()); location.replace(u.toString()); } catch (e) { location.reload(); }
-      return;
-    }
-    wpShowUpdate(v);
+    if (wpIsNewerBuild(v, WP_BUILD)) wpShowUpdate(v);
   } catch (e) {}
 }
 setTimeout(wpVersionCheck, 6000);
@@ -2641,6 +2629,9 @@ document.addEventListener('visibilitychange', function () { try { if (document.v
 function publishPresence() {
   if (isBg()) return;                    /* v39: chhupi bg service khud ko online dikhaye hi na */
   pub(ROOM + '/members/' + myId, { name: myName, color: myColor, avatar: myAvatar, ts: Date.now() }, true);
+  /* v59 ACT5: config native side ko — lock screen par page so jaye to NativePresence khud
+     har 25s member refresh karti rahegi (jab tak native gaana chal raha hai). Left NAHI ayega. */
+  try { if (window.YaarNative && window.YaarNative.wpPresence) window.YaarNative.wpPresence(JSON.stringify({ room: ROOM, id: myId, name: myName, color: myColor, avatar: myAvatar, tower: brokerIdx })); } catch (e) {}
 }
 /* 🆕 sirf jab page saamne ho — background/back/minimize par heartbeat BAND (warna ID room me chipki rehti hai) */
 function wpPresenceBeat() { try { if (joined && mqttUp && !document.hidden && !isBg()) publishPresence(); } catch (e) {} }
@@ -2695,115 +2686,6 @@ document.addEventListener('visibilitychange', () => {
   } catch(e){}
 });
 
-/* ---------- v58: APP SAAMNE NAHI TO GAANA KHUD SHURU NAHI ----------
-   Masla: page chhupa ho (Home / screen lock / recents se hataya hua, ya pichhli dafa ka bhoola-hua page jo abhi tak
-   RAM me zinda tha) aur kuch chal bhi na raha ho, tab bhi doston ka load/play aate hi gaana shuru ho jata tha.
-   Ab (sirf doston ke commands par — apne kaam par koi asar nahi):
-     - chhupa page + 6 s se kuch nahi chal raha  -> load/play/sync rok do (us ke baad pause/seek bhi, wo purani cheez ke liye hain)
-     - jo pehle se chal raha hai (background sunna / native handoff) -> waise hi chalta rahe, kuch nahi rukta
-     - abhi-abhi gaana khatam hua (6 s ke andar) -> auto-next ka 'load' chalne do, warna playlist background me ruk jati
-     - page wapas saamne aaye aur Party me ho -> room ki taza state se khud catch-up (bilkul Party dabane jaisa)
-   APK: ek waqt me sirf NAYA page asli hai — naya page khulte hi purana page (destroy ho chuki activity ka WebView)
-   khud khamosh ho jata hai (wpZombie): room se hat jata hai, apna player rok deta hai, koi command apply nahi karta. */
-let wpLastPlayingAt = 0, wpBgBlocked = false, wpZombie = false;
-const WP_BG_IDLE_MS = 6000;
-function wpLocalPlaying() {
-  try {
-    if (currentType === 'youtube') return !!(ytReady && ytPlayer && ytPlayer.getPlayerState && ytIsPlayingNow());
-    if (currentType === 'mp4' || currentType === 'mp3' || currentType === 'hls') return !mp4.paused && !mp4.ended;
-  } catch (e) {}
-  return false;
-}
-setInterval(() => { try { if (wpLocalPlaying()) wpLastPlayingAt = Date.now(); } catch (e) {} }, 1000);
-function wpBgShouldBlock(action) {
-  try {
-    if (wpZombie) return true;
-    if (!document.hidden) return false;
-    if (wpBgBlocked) return true;
-    if (action !== 'load' && action !== 'play' && action !== 'sync') return false;
-    if (wpLocalPlaying()) { wpLastPlayingAt = Date.now(); return false; }
-    if (Date.now() - wpLastPlayingAt < WP_BG_IDLE_MS) return false;
-    wpBgBlocked = true;
-    return true;
-  } catch (e) { return false; }
-}
-/* kaunsa item laga hua hai — player se (APK me mpv-only ka currentSrc getter = asli URL) ya aakhri load ke record se (browser HLS = blob src) */
-let wpBgLoadedKey = '';
-try {
-  const wpBgBaseLoad = window.loadVideoLocal;
-  if (typeof wpBgBaseLoad === 'function') {
-    window.loadVideoLocal = function (data, autoplay) {
-      try { wpBgLoadedKey = wpBgStateKey(data); } catch (e) {}
-      return wpBgBaseLoad.apply(this, arguments);
-    };
-  }
-} catch (e) {}
-function wpBgStateKey(s) {
-  if (!s || !s.type || s.type === 'none') return '';
-  return s.type === 'youtube' ? 'youtube|' + (s.videoId || '') : s.type + '|' + (s.url || '');
-}
-function wpBgSameItem(s) {
-  try {
-    const want = wpBgStateKey(s);
-    if (!want) return true;                                   /* room me kuch laga hi nahi — karne ko kuch nahi */
-    if (s.type !== currentType) return false;
-    let have = '';
-    if (currentType === 'youtube') { const d = (ytPlayer && ytPlayer.getVideoData && ytPlayer.getVideoData()) || {}; have = d.video_id ? 'youtube|' + d.video_id : ''; }
-    else { const cur = mp4.currentSrc || mp4.src || ''; have = cur ? currentType + '|' + cur : ''; }
-    return have === want || wpBgLoadedKey === want;
-  } catch (e) { return false; }
-}
-function wpBgCatchup() {
-  try {
-    const s = stateLocal;
-    if (!joined || wpZombie || !s || !s.type || s.type === 'none') return;
-    const c = Object.assign({}, s);   /* copy — asli stateLocal.time ko baar baar aage na dhakelo */
-    if (c.playing && c.at) c.time = Math.max(0, (c.time || 0) + (Date.now() - c.at) / 1000);
-    syncQuiet = Date.now() + 8000; suppressYT = true; suppressMP4 = true; localHoldUntil = 0; iPausedByMe = false;
-    setTimeout(() => { suppressYT = false; suppressMP4 = false; }, 4000);
-    if (wpBgSameItem(c)) {
-      /* wahi movie/gaana pehle se laga hai -> sirf seek + play/pause (reload nahi: buffer bacha rahe, koi jhatka nahi) */
-      if (c.type === 'youtube') {
-        if (ytReady && ytPlayer && ytPlayer.seekTo) { ytPlayer.seekTo(c.time || 0, true); if (c.playing) ytPlayer.playVideo(); else ytPlayer.pauseVideo(); return; }
-      } else if (!mp4.error) {
-        mp4.currentTime = c.time || 0; if (c.playing) mp4.play().catch(() => {}); else mp4.pause(); return;
-      }
-    }
-    applyState(c);
-  } catch (e) {}
-}
-document.addEventListener('visibilitychange', () => {
-  try {
-    if (document.visibilityState !== 'visible' || !wpBgBlocked) return;
-    wpBgBlocked = false;
-    if (!joined || wpZombie) return;
-    setTimeout(wpBgCatchup, 2500);
-    setTimeout(() => { if (!wpBgSameItem(stateLocal)) wpBgCatchup(); }, 9000);   /* APK: native handoff khatam hone ke baad dobara */
-  } catch (e) {}
-});
-(function () {
-  try {
-    if (BGMODE || !window.YaarNative) return;   /* sirf APK ka main page; browser me kai tabs jaiz hain */
-    const KEY = 'wpPageEpoch', mine = Date.now() + '-' + Math.random().toString(36).slice(2, 8);
-    localStorage.setItem(KEY, mine);
-    const check = () => {
-      try {
-        if (wpZombie) return;
-        const cur = localStorage.getItem(KEY);
-        if (!cur || cur === mine) return;
-        wpZombie = true; joined = false; wpBgBlocked = false;
-        try { suppressYT = true; suppressMP4 = true; syncQuiet = Date.now() + 8000; } catch (e) {}
-        try { if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo(); } catch (e) {}
-        try { mp4.pause(); } catch (e) {}
-        try { if (client && mqttUp) client.unsubscribe([TP.cmd, TP.state, TP.queue, TP.chat, TP.events, TP.react, TP.members, TP.typing]); } catch (e) {}
-        setTimeout(() => { suppressYT = false; suppressMP4 = false; }, 4000);
-      } catch (e) {}
-    };
-    window.addEventListener('storage', (e) => { try { if (e.key === KEY) check(); } catch (e2) {} });
-    setInterval(check, 4000);
-  } catch (e) {}
-})();
-
 /* ---------- 📩 MESSAGES ---------- */
 function onMsg(topic, buf) {
   try { if (wpSleepAt) wpSleepTick(); } catch (e) {}   /* 🌙 sote page ka catch-up */
@@ -2812,15 +2694,8 @@ function onMsg(topic, buf) {
     let c; try { c = JSON.parse(str); } catch (e) { return; }
     if (!c || c.from === myId || dup(c.rid)) return;
     /* v56: Party join ke bagair (joined=false) doston ke playback commands apply na hon — warna inbox/background me
-       gaana khud chal parta tha. State (TP.state) alag aata hai, Party dabate hi catch-up (doCatchup) waise hi hota hai.
-       v58: chhupa bg page (BGMODE), bhoola-hua purana page (wpZombie) aur 'page chhupa + kuch chal nahi raha'
-       (wpBgShouldBlock) bhi rokte hain — wapas saamne aane par catch-up khud ho jata hai. */
-    if (c.action === 'load' || c.action === 'play' || c.action === 'pause' || c.action === 'seek' || c.action === 'sync') {
-      if (!joined || BGMODE || wpBgShouldBlock(c.action)) {
-        if (joined && !wpZombie && c.action === 'load' && c.video && c.by) { try { addSysMsg('🎬 ' + c.by + ' ne nayi video lagai'); } catch (e) {} }
-        return;
-      }
-    }
+       gaana khud chal parta tha. State (TP.state) alag aata hai, Party dabate hi catch-up (doCatchup) waise hi hota hai. */
+    if (!joined && (c.action === 'load' || c.action === 'play' || c.action === 'pause' || c.action === 'seek' || c.action === 'sync')) return;
     applyCmd(c);
   } else if (topic === TP.state) {
     try { stateLocal = JSON.parse(str); } catch (e) {}
@@ -3054,7 +2929,7 @@ async function join() {
     ROOM = newRoom;
     buildTopics();
     subscribeRoom();
-    try { if (client) client.options.will = { topic: ROOM + '/members/' + myId, payload: '', qos: 1, retain: true }; } catch (e) {}
+    try { if (client && !(window.YaarNative && window.YaarNative.wpPresence)) client.options.will = { topic: ROOM + '/members/' + myId, payload: '', qos: 1, retain: true }; } catch (e) {}
     stateLocal = null;
     queueLocal = { items: [], index: -1, lastAdvance: 0 };
     membersCache = {}; typingMap = {}; seenMid = {}; seenCount = 0; shownLeaves = {};
@@ -3121,6 +2996,7 @@ window.wpRoomLeave = function (reason) {
   try {
     if (!joined) return false;
     publishLeaveNow();                       /* 'leave' event -> sab ko "Left 👋" + apna retained member clear */
+    try { if (window.YaarNative && window.YaarNative.wpPresenceStop) window.YaarNative.wpPresenceStop(); } catch (e0) {}   /* v59 ACT5: native presence bhi band + clean Left */
     joined = false;                          /* ab party member nahi — heartbeat bhi band */
     iPausedByMe = false; localHoldUntil = 0;
     try { renderMembers(); } catch (e1) {}
