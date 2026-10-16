@@ -4259,35 +4259,84 @@ gifQ.addEventListener('keydown', (e) => { if (e.key === 'Enter') { clearTimeout(
 /* ---------- 🖼️ PHOTO: gallery → compress → 🔒 E2E → Litterbox (72h) ---------- */
 const localPhotos = {};      /* apni bheji hui pic foran dikhane ke liye */
 let photoBusy = false;
-function fileToDataURL(f) {
-  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(f); });
+function photoLikelyImage(f) {
+  if (!f) return false;
+  var mime = String(f.type || '').toLowerCase();
+  var name = String(f.name || '');
+  if (/^image\//.test(mime)) return true;
+  if (/\.(jpe?g|png|webp|gif|bmp|heic|heif|avif)$/i.test(name)) return true;
+  /* Android document providers kabhi valid gallery photo ka MIME/name blank ya generic dete hain.
+     File chooser image-only hai; browser decoder neeche asli bytes ko safely validate karega. */
+  return !mime || mime === 'application/octet-stream';
 }
-function imgDownscale(dataUrl, maxSide, q) {
+function photoDecodeFile(file) {
   return new Promise((res, rej) => {
-    const im = new Image();
-    im.onload = () => {
-      const sc = Math.min(1, maxSide / Math.max(im.width, im.height));
-      const c = document.createElement('canvas');
-      c.width = Math.max(1, Math.round(im.width * sc));
-      c.height = Math.max(1, Math.round(im.height * sc));
-      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
-      res(c.toDataURL('image/jpeg', q));
+    var objectUrl = '', im = new Image(), done = false;
+    function release() {
+      try { im.onload = im.onerror = null; im.src = ''; } catch (e) {}
+      try { if (objectUrl) URL.revokeObjectURL(objectUrl); } catch (e) {}
+      objectUrl = '';
+    }
+    function fail(code) {
+      if (done) return;
+      done = true; clearTimeout(timer); release(); rej(new Error(code));
+    }
+    var timer = setTimeout(function () { fail('photo-decode-timeout'); }, 20000);
+    im.onload = function () {
+      if (done) return;
+      var w = Number(im.naturalWidth || im.width || 0), h = Number(im.naturalHeight || im.height || 0);
+      if (!w || !h) { fail('photo-dimensions'); return; }
+      done = true; clearTimeout(timer);
+      res({ source: im, width: w, height: h, release: release });
     };
-    im.onerror = rej; im.src = dataUrl;
+    im.onerror = function () { fail('photo-format'); };
+    try {
+      objectUrl = URL.createObjectURL(file);
+      im.decoding = 'async';
+      im.src = objectUrl;
+    } catch (e) { fail('photo-read'); }
   });
 }
-/* v41: photo ka size cap — bari file = slow upload. steps me quality ghata kar
-   target ke andar le aate hain (1280 se shuru, zaroorat pe chhota). */
-async function imgFit(dataUrl, maxSide, q, targetBytes) {
+/* Source photo ko Blob URL se sirf ek dafa decode karke canvas me fit karte hain. Is se purana
+   full-size base64 copy aur har quality step par repeat decode nahi hota — WebView memory bachi rehti hai. */
+function imgFitSource(decoded, maxSide, q, targetBytes) {
   var steps = [[maxSide, q], [Math.round(maxSide * 0.88), Math.max(0.55, q - 0.08)],
                [Math.round(maxSide * 0.78), Math.max(0.5, q - 0.15)], [Math.round(maxSide * 0.68), Math.max(0.45, q - 0.22)]];
   var out = null;
   for (var i = 0; i < steps.length; i++) {
-    out = await imgDownscale(dataUrl, steps[i][0], steps[i][1]);
+    var sc = Math.min(1, steps[i][0] / Math.max(decoded.width, decoded.height));
+    var c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(decoded.width * sc));
+    c.height = Math.max(1, Math.round(decoded.height * sc));
+    var cx = c.getContext('2d');
+    if (!cx) throw new Error('photo-canvas');
+    cx.drawImage(decoded.source, 0, 0, c.width, c.height);
+    out = c.toDataURL('image/jpeg', steps[i][1]);
+    c.width = c.height = 1;
+    if (!out || out === 'data:,') throw new Error('photo-canvas');
     var bytes = Math.round((out.length - (out.indexOf(',') + 1)) * 0.75);
     if (bytes <= targetBytes || i === steps.length - 1) break;
   }
   return out;
+}
+
+/* Pure HTML/WebView photo path: no Android wrapper update or new APK build required. */
+async function photoPrepareFile(file) {
+  if (!photoLikelyImage(file)) throw new Error('photo-type');
+  if (Number(file.size || 0) > 36 * 1024 * 1024) throw new Error('photo-too-large');
+  var decoded = await photoDecodeFile(file);
+  try { return imgFitSource(decoded, 1280, 0.8, 300000); }
+  finally { decoded.release(); }
+}
+function photoSendError(err, roomMode) {
+  var code = String((err && err.message) || err || '');
+  if (/photo-type/.test(code)) return '📷 Yeh photo format select nahi hua';
+  if (/photo-too-large/.test(code)) return '📷 Photo 36 MB se bari hai — screenshot ya chhoti copy bhejo';
+  if (/photo-format|photo-decode|photo-dimensions|photo-canvas|photo-read/.test(code)) {
+    return '📷 Is photo ko phone read nahi kar saka — JPG/PNG ya screenshot bhejo';
+  }
+  return roomMode ? '⚠️ Photo upload nahi hui — tower check karke dobara try karo' :
+                    '⚠️ Photo nahi gayi — connection check karke dobara try karo';
 }
 
 function showPhoto(holder, url) {
@@ -4557,15 +4606,14 @@ if (recSendBtn) recSendBtn.onclick = () => WPVoice.stop();
 
 async function sendPhotoFile(file) {
   if (!file || photoBusy) return;
-  if (!/^image\//.test(file.type || '')) { addSysMsg('📷 Sirf photo select karo'); return; }
+  if (!photoLikelyImage(file)) { addSysMsg('📷 Sirf photo select karo'); return; }
   if (!e2eKey) { addSysMsg('🔒 Chaabi ban rahi hai — 1 second baad dobara try karo'); return; }
   if (!mqttUp) { addSysMsg('Tower connect nahi — photo nahi jayegi'); return; }
   photoBusy = true;
   const pb = $('pic-btn'); if (pb) pb.disabled = true;
   addSysMsg('📤 Photo is Uploading...');
   try {
-    const raw = await fileToDataURL(file);
-    const small = await imgFit(raw, 1280, 0.8, 300000);
+    const small = await photoPrepareFile(file);
     const bytes = b64d(small.split(',')[1]).buffer;
     const enc = await e2eEncBytes(bytes);
     const url = await lbUpload(enc.blob, 'wp.jpg');
@@ -4576,7 +4624,7 @@ async function sendPhotoFile(file) {
     if (!w) throw new Error('enc');
     pub(TP.chat, w, false);
   } catch (e) {
-    addSysMsg('⚠️ Photo nahi jayi (tower se connection nahi) — dobara try karo');
+    addSysMsg(photoSendError(e, true));
   } finally {
     photoBusy = false;
     if (pb) pb.disabled = false;
@@ -7789,14 +7837,13 @@ function renderMembers() {
   /* ---------- photo / gif / menu / reply ---------- */
   async function dmSendPhoto(f) {
     if (!curChat || !f) return;
-    if (!/^image\//.test(f.type || '')) { toast('🖼️ Sirf photo select karo'); return; }
+    if (!photoLikelyImage(f)) { toast('🖼️ Sirf photo select karo'); return; }
     if (!connected()) { toast('📡 Tower se connect nahi — photo nahi jayegi'); return; }
-    if (typeof fileToDataURL !== 'function' || typeof imgDownscale !== 'function') { toast('⚠️ Photo bhejne ki sahulat abhi nahi'); return; }
+    if (typeof photoPrepareFile !== 'function') { toast('⚠️ Photo bhejne ki sahulat abhi nahi'); return; }
     var peer = curChat;
     toast('📤 Photo jaa rahi hai…');
     try {
-      var raw = await fileToDataURL(f);
-      var small = await imgFit(raw, 1280, 0.8, 300000);
+      var small = await photoPrepareFile(f);
       var enc = await encBytes(peer, b64d(small.split(',')[1]).buffer);
       var url = await dmLbUpload(new Blob([enc.ct], { type: 'application/octet-stream' }), 'dm-photo.jpg.enc', dmBlobBase(peer));
       var ok = await sendMsg(peer, { t: 'photo', x: '🖼️ Photo', u: url, dv: enc.iv }, true);
@@ -7807,7 +7854,7 @@ function renderMembers() {
         }
         save(); renderAll();
       }
-    } catch (e) { toast('⚠️ Photo nahi jayi (tower connection) — dobara 🖼️ dabao'); }
+    } catch (e) { toast(photoSendError(e, false)); }
   }
   async function dmGifLoad(q) {
     var grid = $('dm-g4g'); if (!grid) return;
